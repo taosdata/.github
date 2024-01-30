@@ -1,3 +1,3 @@
 # .github
 
-[TAOS Data Public Organization Profile](https://github.com/taosdata)
+[TDengine Public Organization Profile](https://github.com/taosdata)
