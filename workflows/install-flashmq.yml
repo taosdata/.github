@@ -4,9 +4,9 @@ name: Install FlashMQ
 #   workflow_call:
 
 on:
-    push:
-        branches:
-        - test/fractal
+  push:
+    branches:
+      - test/fractal
 
 jobs:
   install-flashmq:
