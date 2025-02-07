@@ -10,7 +10,9 @@ on:
 
 jobs:
   install-flashmq:
-    runs-on: [self-hosted, Linux, X64, fractal, edge_td, fractal-edge-1]
+    runs-on:
+        group: fractal
+        labels: [self-hosted, Linux, X64, fractal, edge_td, fractal-edge-1]
 
     steps:
     - name: Check and Install FlashMQ
