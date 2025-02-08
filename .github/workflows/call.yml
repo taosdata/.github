@@ -1,11 +1,13 @@
 name: Call Install TDengine Enterprise
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - test/fractal
 
 jobs:
   call-install:
-    uses: ./.github/workflows/install-tdengine-enterprise.yml
+    uses: taosdata/.github/workflows/install-tdengine-enterprise.yml@test/fractal
     with:
       version: '3.3.5.1'
       group: 'fractal'
