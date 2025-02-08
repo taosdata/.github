@@ -7,7 +7,7 @@ on:
 
 jobs:
   call-install:
-    uses: taosdata/.github/workflows/install-tdengine-enterprise.yml@test/fractal
+    uses: taosdata/.github/.github/workflows/install-tdengine-enterprise.yml@test/fractal
     with:
       version: '3.3.5.1'
       group: 'fractal'
