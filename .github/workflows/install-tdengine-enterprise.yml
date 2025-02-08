@@ -18,6 +18,9 @@ jobs:
     runs-on: ${{ inputs.labels }}
 
     steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
     - name: Set up variables
       run: |
         VERSION=${{ inputs.version }}
