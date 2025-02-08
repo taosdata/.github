@@ -20,6 +20,7 @@ runs:
       uses: actions/checkout@v2
 
     - name: Set up variables
+      shell: bash
       run: |
         VERSION=${{ inputs.version }}
         GROUP=${{ inputs.group }}
@@ -36,14 +37,17 @@ runs:
         echo "URL=$URL" >> $GITHUB_ENV
 
     - name: Download TDengine
+      shell: bash
       run: |
         wget $URL
 
     - name: Extract TDengine
+      shell: bash
       run: |
         tar -xzvf TDengine-enterprise-${VERSION}-Linux-x64.tar.gz
 
     - name: Install TDengine
+      shell: bash
       run: |
         cd TDengine-enterprise-${VERSION}
         yes | ./install.sh
