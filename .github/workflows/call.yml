@@ -11,7 +11,7 @@ jobs:
 
     steps:
     - name: Call Install TDengine Workflow
-      uses: ./.github/workflows/install-tdengine-enterprise.yml
+      uses: ./.github/workflows/install-tdengine-enterprise.yml@test/fractal
       with:
         version: '3.3.5.1'
         group: 'fractal'
