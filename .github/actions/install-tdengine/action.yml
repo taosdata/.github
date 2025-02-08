@@ -24,7 +24,8 @@ runs:
       run: |
         VERSION=${{ inputs.version }}
         GROUP=${{ inputs.group }}
-        BASE_URL=${{ secrets.NAS_DOWNLOAD_URL }}
+        # BASE_URL=${{ secrets.NAS_DOWNLOAD_URL }}
+        BASE_URL=http://192.168.1.131/data/nas/TDengine
 
         # Get major version
         MAJOR_VERSION=$(echo $VERSION | cut -d '.' -f 1-2)
