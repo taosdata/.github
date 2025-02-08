@@ -6,12 +6,15 @@ on:
       version:
         required: true
         type: string
+        description: 'Version number, e.g., 3.3.5.1'
       group:
         required: true
         type: string
+        description: 'Group, e.g., fractal'
       labels:
         required: true
         type: string
+        description: 'Labels, e.g., self-hosted, Linux, X64, fractal, edge_td, fractal-edge-1'
 
 jobs:
   install-tdengine:
