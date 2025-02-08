@@ -13,7 +13,7 @@ inputs:
     required: true
     type: string
     description: 'Labels, e.g., self-hosted, Linux, X64, fractal, edge_td, fractal-edge-1'
-
+# BASE_URL=${{ secrets.NAS_DOWNLOAD_URL }}
 runs:
   steps:
     - name: Checkout code
@@ -24,7 +24,6 @@ runs:
       run: |
         VERSION=${{ inputs.version }}
         GROUP=${{ inputs.group }}
-        # BASE_URL=${{ secrets.NAS_DOWNLOAD_URL }}
         BASE_URL=http://192.168.1.131/data/nas/TDengine
 
         # Get major version
