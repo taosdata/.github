@@ -18,3 +18,4 @@ jobs:
           version: 3.3.5.1
           group: fractal
           labels: '[self-hosted, Linux, X64, fractal, edge_td, fractal-edge-1]'
+          secrets: ${{ secrets.NAS_DOWNLOAD_URL }}

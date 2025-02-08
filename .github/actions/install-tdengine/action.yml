@@ -13,6 +13,11 @@ inputs:
     required: true
     type: string
     description: 'Labels, e.g., self-hosted, Linux, X64, fractal, edge_td, fractal-edge-1'
+  secrets:
+    required: true
+    type: string
+    description: 'Secrets, e.g., NAS_DOWNLOAD_URL'
+
 # BASE_URL=${{ secrets.NAS_DOWNLOAD_URL }}
 runs:
   using: 'composite'
@@ -25,7 +30,7 @@ runs:
       run: |
         VERSION=${{ inputs.version }}
         GROUP=${{ inputs.group }}
-        BASE_URL=http://192.168.1.131/data/nas/TDengine
+        BASE_URL=${{ inputs.secrets }}
 
         # Get major version
         MAJOR_VERSION=$(echo $VERSION | cut -d '.' -f 1-2)
