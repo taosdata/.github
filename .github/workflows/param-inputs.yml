@@ -1,0 +1,26 @@
+name: Custom Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      parameter1:
+        description: "First parameter"
+        required: true
+        default: "default-value-1"
+      parameter2:
+        description: "Second parameter"
+        required: false
+        default: "default-value-2"
+
+jobs:
+  example-job:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use input parameters
+        run: |
+          echo "Parameter 1: ${{ github.event.inputs.parameter1 }}"
+          echo "Parameter 2: ${{ github.event.inputs.parameter2 }}"
+              
