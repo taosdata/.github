@@ -14,10 +14,6 @@ inputs:
     type: string
     description: 'Labels, e.g., self-hosted, Linux, X64, fractal, edge_td, fractal-edge-1'
 
-        OTP_INSTALL_PATH="$HOME/otp/${{ inputs.otp }}"
-        case ${{ inputs.os }} in
-
-
 runs:
   steps:
     - name: Checkout code
