@@ -15,6 +15,7 @@ inputs:
     description: 'Labels, e.g., self-hosted, Linux, X64, fractal, edge_td, fractal-edge-1'
 # BASE_URL=${{ secrets.NAS_DOWNLOAD_URL }}
 runs:
+  using: 'composite'
   steps:
     - name: Checkout code
       uses: actions/checkout@v2
