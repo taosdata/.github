@@ -1,18 +1,13 @@
 name: Call Install TDengine Enterprise
 
 on:
-  push:
-    branches:
-      - test/fractal
+  workflow_dispatch:
+
 
 jobs:
   call-install:
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Call Install TDengine Workflow
-      uses: ./.github/workflows/install-tdengine-enterprise.yml@test/fractal
-      with:
-        version: '3.3.5.1'
-        group: 'fractal'
-        labels: 'self-hosted, Linux, X64, fractal, edge_td, fractal-edge-1'
+    uses: ./.github/workflows/install-tdengine-enterprise.yml@test/fractal
+    with:
+      version: '3.3.5.1'
+      group: 'fractal'
+      labels: 'self-hosted, Linux, X64, fractal, edge_td, fractal-edge-1'
