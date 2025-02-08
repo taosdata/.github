@@ -1,0 +1,15 @@
+name: Deploy taosX
+description: build and install taosX
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Check out repository code
+      uses: actions/checkout@v4
+
+
+    - name: build and install
+      shell: bash
+      run:
+        echo "Building taosX"
+        cargo make taosx
