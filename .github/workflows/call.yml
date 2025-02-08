@@ -3,10 +3,9 @@ name: Call Install TDengine Enterprise
 on:
   workflow_dispatch:
 
-
 jobs:
   call-install:
-    uses: ./.github/workflows/install-tdengine-enterprise.yml@test/fractal
+    uses: ./.github/workflows/install-tdengine-enterprise.yml
     with:
       version: '3.3.5.1'
       group: 'fractal'
