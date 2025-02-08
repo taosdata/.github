@@ -1,0 +1,48 @@
+name: Install TDengine Enterprise
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+      group:
+        required: true
+        type: string
+      labels:
+        required: true
+        type: string
+
+jobs:
+  install-tdengine:
+    runs-on: ${{ inputs.labels }}
+
+    steps:
+    - name: Set up variables
+      run: |
+        VERSION=${{ inputs.version }}
+        GROUP=${{ inputs.group }}
+        BASE_URL=${{ secrets.NAS_DOWNLOAD_URL }}
+
+        # Get major version
+        MAJOR_VERSION=$(echo $VERSION | cut -d '.' -f 1-2)
+
+        # Get download URL
+        URL="${BASE_URL}/${MAJOR_VERSION}/v${VERSION}/enterprise/TDengine-enterprise-${VERSION}-Linux-x64.tar.gz"
+        echo "Download URL: $URL"
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+        echo "GROUP=$GROUP" >> $GITHUB_ENV
+        echo "URL=$URL" >> $GITHUB_ENV
+
+    - name: Download TDengine
+      run: |
+        wget $URL
+
+    - name: Extract TDengine
+      run: |
+        tar -xzvf TDengine-enterprise-${VERSION}-Linux-x64.tar.gz
+
+    - name: Install TDengine
+      run: |
+        cd TDengine-enterprise-${VERSION}
+        yes | ./install.sh
