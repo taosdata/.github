@@ -1,21 +1,37 @@
 name: Call Install TDengine Enterprise
 
+# on:
+#   push:
+#     branches:
+#       - test/fractal
+
 on:
-  push:
-    branches:
-      - test/fractal
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Enter the version of TDengine to install'
+        required: true
+        default: '3.3.5.1'
+      group:
+        description: 'Enter the group for the runner'
+        required: true
+        default: 'default'
+      labels:
+        description: 'Enter the labels for the runner'
+        required: true
+        default: '[self-hosted, Linux, X64, fractal, edge_td, fractal-edge-1]'
 
 jobs:
 
   call-install:
     runs-on:
-      group: fractal
-      labels: [self-hosted, Linux, X64, fractal, edge_td, fractal-edge-1]
+      group: ${{ github.event.inputs.group }}
+      labels: ${{ fromJson(github.event.inputs.labels) }}
     steps:
-      - name: Check and Install FlashMQ
+      - name: Check and Install TDengine Enterprise
         uses: taosdata/.github/.github/actions/install-tdengine@test/fractal
         with:
-          version: 3.3.5.1
-          group: fractal
-          labels: '[self-hosted, Linux, X64, fractal, edge_td, fractal-edge-1]'
-          secrets: ${{ secrets.NAS_DOWNLOAD_URL }}
+          version: ${{ github.event.inputs.version }}
+          group: ${{ github.event.inputs.group }}
+          labels: ${{ github.event.inputs.labels }}
+          NAS_DOWNLOAD_URL: ${{ secrets.NAS_DOWNLOAD_URL }}

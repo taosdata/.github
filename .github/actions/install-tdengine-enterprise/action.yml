@@ -12,13 +12,12 @@ inputs:
   labels:
     required: true
     type: string
-    description: 'Labels, e.g., self-hosted, Linux, X64, fractal, edge_td, fractal-edge-1'
-  secrets:
+    description: 'Labels, e.g., [self-hosted, Linux, X64, fractal, edge_td, fractal-edge-1]'
+  NAS_DOWNLOAD_URL:
     required: true
     type: string
-    description: 'Secrets, e.g., NAS_DOWNLOAD_URL'
+    description: 'A secrets'
 
-# BASE_URL=${{ secrets.NAS_DOWNLOAD_URL }}
 runs:
   using: 'composite'
   steps:
@@ -30,7 +29,7 @@ runs:
       run: |
         VERSION=${{ inputs.version }}
         GROUP=${{ inputs.group }}
-        BASE_URL=${{ inputs.secrets }}
+        BASE_URL=${{ inputs.NAS_DOWNLOAD_URL }}
 
         # Get major version
         MAJOR_VERSION=$(echo $VERSION | cut -d '.' -f 1-2)
@@ -56,4 +55,4 @@ runs:
       shell: bash
       run: |
         cd TDengine-enterprise-${VERSION}
-        yes | ./install.sh
+        echo 'y' | ./install.sh
