@@ -6,7 +6,7 @@ name: Install FlashMQ
 on:
   push:
     branches:
-      - test/fractal
+      - main
 
 jobs:
   install-flashmq:
