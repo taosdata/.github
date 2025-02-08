@@ -10,8 +10,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
     - name: Call Install TDengine Workflow
-      uses: ./.github/workflows/install-tdengine-enterprise.yml
+      uses: taosdata/.github/.github/workflows/install-tdengine-enterprise.yml@test/fractal
       with:
         version: '3.3.5.1'
         group: 'fractal'
