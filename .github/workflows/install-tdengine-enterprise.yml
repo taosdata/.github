@@ -18,8 +18,9 @@ on:
 
 jobs:
   install-tdengine:
-    runs-on: ${{ inputs.labels }}
-
+    runs-on:
+        group: ${{ inputs.group }}
+        labels: ${{ inputs.labels }}
     steps:
     - name: Checkout code
       uses: actions/checkout@v2
