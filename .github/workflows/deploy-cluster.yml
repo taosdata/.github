@@ -21,10 +21,7 @@ on:
 #         required: true
 #         default: '2'
 
-permissions:
-  actions: read
-  checks: read
-  contents: read
+permissions: read-all
 
 jobs:
   find-runners:
