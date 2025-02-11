@@ -47,7 +47,6 @@ jobs:
         - Linux
         - X64
         - fractal
-        - edge_td
         - ${{ matrix.runner }}
     steps:
       - name: Checkout code
