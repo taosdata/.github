@@ -28,12 +28,14 @@ jobs:
       runners: ${{ steps.get-runners.outputs.runners }}
     steps:
       - name: Get Available Runners
+        env:
+          GH_TOKEN: ${{ github.token }}
         id: get-runners
         run: |
           echo "Fetching available runners..."
           available_runners=$(gh api /repos/${{ github.repository }}/actions/runners/list | jq -r '.runners[] | select(.labels | any(.name | contains("fractal") or contains("edge_td"))) | {name: .name, ip: .ip_address}')
           echo "Available runners: $available_runners"
-          echo "::set-output name=runners::$available_runners"
+          echo "runners=$available_runners" >> $GITHUB_OUTPUT
 
   # call-install:
   #   runs-on:
