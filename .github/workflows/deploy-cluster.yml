@@ -23,10 +23,8 @@ on:
 
 permissions:
   actions: read
-  checks: write
+  checks: read
   contents: read
-  pull-requests: write
-  issues: write
 
 jobs:
   find-runners:
