@@ -61,14 +61,17 @@ runs:
           echo "running=false" >> $GITHUB_ENV
         fi
 
-    - name: Start MinIO Server
+    - name: Start MinIO Server with screen
       shell: bash
       if: env.running == 'false'
       run: |
+        if ! command -v screen &> /dev/null; then
+            echo "screen could not be found, installing..."
+            apt-get update && apt-get install -y screen
+        fi
         export MINIO_ROOT_USER=${{ inputs.MINIO_ROOT_USER }}
         export MINIO_ROOT_PASSWORD=${{ inputs.MINIO_ROOT_PASSWORD }}
-        nohup minio server /mnt/data --console-address ":9001" > $HOME/minio.log 2>&1 &
-        disown
+        screen -d -m  minio server /mnt/data --console-address ":9001" > $HOME/minio.log
 
     - name: Check MinIO Server is up
       shell: bash
@@ -77,7 +80,7 @@ runs:
           echo 'Waiting for MinIO to start...'
           sleep 5
         done
-        echo "MinIO is up and running."
+        echo "MinIO is running."
 
     - name: Create Bucket and Access Key
       shell: bash
