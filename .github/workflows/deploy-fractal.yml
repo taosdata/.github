@@ -39,8 +39,8 @@ jobs:
     needs: set-runners
     strategy:
       matrix:
-        runner: self-hosted,Linux,X64,mqtt,fractal,${{ fromJSON(needs.set-runners.outputs.mqtt_clients) }}
-    runs-on: ${{ matrix.runner }}
+        runner: ${{ fromJSON(needs.set-runners.outputs.mqtt_clients) }}
+    runs-on: self-hosted,Linux,X64,mqtt,fractal,${{ matrix.runner }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
