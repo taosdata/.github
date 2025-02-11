@@ -1,0 +1,49 @@
+name: Deploy TDengine Cluster
+
+on:
+  push:
+    branches:
+      - test/fractal
+
+# on:
+#   workflow_dispatch:
+#     inputs:
+#       version:
+#         description: 'Enter the version of TDengine to install'
+#         required: true
+#         default: '3.3.5.1'
+#       group:
+#         description: 'Enter the group for the runner'
+#         required: true
+#         default: 'default'
+#       dnode_count:
+#         description: 'Number of nodes to deploy'
+#         required: true
+#         default: '2'
+
+jobs:
+  find-runners:
+    runs-on: ubuntu-latest
+    outputs:
+      runners: ${{ steps.get-runners.outputs.runners }}
+    steps:
+      - name: Get Available Runners
+        id: get-runners
+        run: |
+          echo "Fetching available runners..."
+          available_runners=$(gh api /repos/${{ github.repository }}/actions/runners/list | jq -r '.runners[] | select(.labels | any(.name | contains("fractal") or contains("edge_td"))) | {name: .name, ip: .ip_address}')
+          echo "Available runners: $available_runners"
+          echo "::set-output name=runners::$available_runners"
+
+  # call-install:
+  #   runs-on:
+  #     group: ${{ github.event.inputs.group }}
+  #     labels: ${{ fromJson(github.event.inputs.labels) }}
+  #   steps:
+  #     - name: Check and Install TDengine Enterprise
+  #       uses: taosdata/.github/.github/actions/install-tdengine@test/fractal
+  #       with:
+  #         version: ${{ github.event.inputs.version }}
+  #         group: ${{ github.event.inputs.group }}
+  #         labels: ${{ github.event.inputs.labels }}
+  #         NAS_DOWNLOAD_URL: ${{ secrets.NAS_DOWNLOAD_URL }}
