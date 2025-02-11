@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       runner_number:
-        description: 'Runner number (1-5)'
+        description: 'Runner number (1-2)'
         required: true
         type: choice
         options:
