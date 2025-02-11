@@ -21,61 +21,60 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    steps:
-      - name: Install MinIO Server
-        run: |
-          if [ ! -f /usr/local/bin/minio ]; then
-            wget https://dl.min.io/server/minio/release/linux-amd64/minio
-            chmod +x minio
-            mv minio /usr/local/bin/
-          fi
+    - name: Install MinIO Server
+      run: |
+        if [ ! -f /usr/local/bin/minio ]; then
+          wget https://dl.min.io/server/minio/release/linux-amd64/minio
+          chmod +x minio
+          mv minio /usr/local/bin/
+        fi
 
-      - name: Create Data Directory
-        run: mkdir -p /mnt/data
+    - name: Create Data Directory
+      run: mkdir -p /mnt/data
 
-      - name: Set Environment Variables
-        run: |
-          echo "MINIO_ROOT_USER=${{ inputs.MINIO_ROOT_USER }}" >> $GITHUB_ENV
-          echo "MINIO_ROOT_PASSWORD=${{ inputs.MINIO_ROOT_PASSWORD }}" >> $GITHUB_ENV
+    - name: Set Environment Variables
+      run: |
+        echo "MINIO_ROOT_USER=${{ inputs.MINIO_ROOT_USER }}" >> $GITHUB_ENV
+        echo "MINIO_ROOT_PASSWORD=${{ inputs.MINIO_ROOT_PASSWORD }}" >> $GITHUB_ENV
 
-      - name: Start MinIO Server
-        run: |
-          export MINIO_ROOT_USER=${{ inputs.MINIO_ROOT_USER }}
-          export MINIO_ROOT_PASSWORD=${{ inputs.MINIO_ROOT_PASSWORD }}
-          minio server /mnt/data --console-address ":9001" > $HOME/minio.log 2>&1 &
+    - name: Start MinIO Server
+      run: |
+        export MINIO_ROOT_USER=${{ inputs.MINIO_ROOT_USER }}
+        export MINIO_ROOT_PASSWORD=${{ inputs.MINIO_ROOT_PASSWORD }}
+        minio server /mnt/data --console-address ":9001" > $HOME/minio.log 2>&1 &
 
-      - name: Check MinIO Server is up
-        run: |
-          until curl -s http://localhost:9000/minio/health/live; do
-            echo 'Waiting for MinIO to start...'
-            sleep 5
-          done
+    - name: Check MinIO Server is up
+      run: |
+        until curl -s http://localhost:9000/minio/health/live; do
+          echo 'Waiting for MinIO to start...'
+          sleep 5
+        done
 
-      - name: Install MinIO Client
-        run: |
-          if [ ! -f /usr/local/bin/mc ]; then
-            wget https://dl.min.io/client/mc/release/linux-amd64/mc
-            chmod +x mc
-            mv mc /usr/local/bin/
-          fi
+    - name: Install MinIO Client
+      run: |
+        if [ ! -f /usr/local/bin/mc ]; then
+          wget https://dl.min.io/client/mc/release/linux-amd64/mc
+          chmod +x mc
+          mv mc /usr/local/bin/
+        fi
 
-      - name: Configure MinIO Client
-        run: |
-          mc alias set myminio http://127.0.0.1:9000 ${{ inputs.MINIO_ACCESS_KEY }} ${{ inputs.MINIO_SECRET_KEY }}
+    - name: Configure MinIO Client
+      run: |
+        mc alias set myminio http://127.0.0.1:9000 ${{ inputs.MINIO_ACCESS_KEY }} ${{ inputs.MINIO_SECRET_KEY }}
 
-      - name: Create Bucket and Access Key
-        run: |
-          mc mb myminio/td-bucket
-          mc admin user add myminio ${{ inputs.MINIO_ROOT_USER }} ${{ inputs.MINIO_ACCESS_KEY }} ${{ inputs.MINIO_SECRET_KEY }}
-          mc admin policy set myminio readwrite user=${{ inputs.MINIO_ROOT_USER }}
+    - name: Create Bucket and Access Key
+      run: |
+        mc mb myminio/td-bucket
+        mc admin user add myminio ${{ inputs.MINIO_ROOT_USER }} ${{ inputs.MINIO_ACCESS_KEY }} ${{ inputs.MINIO_SECRET_KEY }}
+        mc admin policy set myminio readwrite user=${{ inputs.MINIO_ROOT_USER }}
 
-      - name: Capture logs
-        run: |
-          tail -f $HOME/minio.log > minio-runtime.log &
-          echo "Tailing MinIO logs to 'minio-runtime.log'"
+    - name: Capture logs
+      run: |
+        tail -f $HOME/minio.log > minio-runtime.log &
+        echo "Tailing MinIO logs to 'minio-runtime.log'"
 
-      - name: Upload logs as artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: minio-logs
-          path: minio-runtime.log
+    - name: Upload logs as artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: minio-logs
+        path: minio-runtime.log
