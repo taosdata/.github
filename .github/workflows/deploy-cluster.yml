@@ -21,6 +21,13 @@ on:
 #         required: true
 #         default: '2'
 
+permissions:
+  actions: read
+  checks: write
+  contents: read
+  pull-requests: write
+  issues: write
+
 jobs:
   find-runners:
     runs-on: ubuntu-latest
@@ -33,6 +40,11 @@ jobs:
         id: get-runners
         run: |
           echo "Fetching available runners..."
+          response=$(gh api /repos/${{ github.repository }}/actions/runners/list)
+          if [ -z "$response" ]; then
+            echo "No response from GitHub API"
+            exit 1
+          fi
           available_runners=$(gh api /repos/${{ github.repository }}/actions/runners/list | jq -r '.runners[] | select(.labels | any(.name | contains("fractal") or contains("edge_td"))) | {name: .name, ip: .ip_address}')
           echo "Available runners: $available_runners"
           echo "runners=$available_runners" >> $GITHUB_OUTPUT
