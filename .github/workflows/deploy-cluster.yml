@@ -32,9 +32,12 @@ jobs:
     outputs:
       runners: ${{ steps.get-runners.outputs.runners }}
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
       - name: Get Available Runners
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         id: get-runners
         run: |
           echo "Fetching available runners..."
