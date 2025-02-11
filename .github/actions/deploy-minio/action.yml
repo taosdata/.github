@@ -64,17 +64,11 @@ runs:
           mv mc /usr/local/bin/
         fi
 
-    - name: Configure MinIO Client
-      shell: bash
-      run: |
-        mc alias set myminio http://127.0.0.1:9000 ${{ inputs.MINIO_ACCESS_KEY }} ${{ inputs.MINIO_SECRET_KEY }}
-
     - name: Create Bucket and Access Key
       shell: bash
       run: |
         mc mb myminio/td-bucket
-        mc admin user add myminio ${{ inputs.MINIO_ROOT_USER }} ${{ inputs.MINIO_ACCESS_KEY }} ${{ inputs.MINIO_SECRET_KEY }}
-        mc admin policy set myminio readwrite user=${{ inputs.MINIO_ROOT_USER }}
+        mc admin accesskey create  myminio/ admin --access-key ${{ inputs.MINIO_ACCESS_KEY }} --secret-key ${{ inputs.MINIO_SECRET_KEY }}
 
     - name: Capture logs
       shell: bash
