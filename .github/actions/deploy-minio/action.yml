@@ -68,17 +68,27 @@ runs:
       shell: bash
       run: |
         mc alias set myminio http://127.0.0.1:9000 ${{ inputs.MINIO_ROOT_USER }} ${{ inputs.MINIO_ROOT_PASSWORD }}
-        mc mb myminio/td-bucket
-        mc admin accesskey create  myminio/ admin --access-key ${{ inputs.MINIO_ACCESS_KEY }} --secret-key ${{ inputs.MINIO_SECRET_KEY }}
+        if mc ls myminio | grep -q 'td-bucket'; then
+          echo "Bucket 'td-bucket' already exists."
+        else
+          mc mb myminio/td-bucket
+          echo "Bucket 'td-bucket' created."
+        fi
+        if mc admin accesskey ls myminio admin | grep ${{ inputs.MINIO_ACCESS_KEY }}; then
+          echo "Access key ${{ inputs.MINIO_ACCESS_KEY }} already exists."
+        else
+          mc admin accesskey create  myminio/ admin --access-key ${{ inputs.MINIO_ACCESS_KEY }} --secret-key ${{ inputs.MINIO_SECRET_KEY }}
+          echo "Access key created."
+        fi
 
-    - name: Capture logs
-      shell: bash
-      run: |
-        tail -f $HOME/minio.log > minio-runtime.log &
-        echo "Tailing MinIO logs to 'minio-runtime.log'"
+    # - name: Capture logs
+    #   shell: bash
+    #   run: |
+    #     tail -f $HOME/minio.log > minio-runtime.log &
+    #     echo "Tailing MinIO logs to 'minio-runtime.log'"
 
-    - name: Upload logs as artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: minio-logs
-        path: minio-runtime.log
+    # - name: Upload logs as artifact
+    #   uses: actions/upload-artifact@v4
+    #   with:
+    #     name: minio-logs
+    #     path: minio-runtime.log
