@@ -67,6 +67,7 @@ runs:
     - name: Create Bucket and Access Key
       shell: bash
       run: |
+        mc alias set myminio http://127.0.0.1:9000 ${{ inputs.MINIO_ROOT_USER }} ${{ inputs.MINIO_ROOT_PASSWORD }}
         mc mb myminio/td-bucket
         mc admin accesskey create  myminio/ admin --access-key ${{ inputs.MINIO_ACCESS_KEY }} --secret-key ${{ inputs.MINIO_SECRET_KEY }}
 
