@@ -24,7 +24,7 @@ jobs:
         run: |
           echo "Setting MQTT Clients"
           clients=$(seq -s ',' 1 ${{ github.event.inputs.runner_number }} | sed 's/[0-9]\+/mqtt-client&/g')
-          clients_json = $(echo -n clients | jq -R -s -c 'split(",")')
+          clients_json=$(echo -n $clients | jq -R -s -c 'split(",")')
           echo "::set-output name=mqtt_clients::[$clients_json]"
 
       - name: Set Fractal Edges
@@ -32,7 +32,7 @@ jobs:
         run: |
           echo "Setting Fractal Edges"
           edges=$(seq -s ',' 1 ${{ github.event.inputs.runner_number }} | sed 's/[0-9]\+/fractal-edge&/g')
-          edges_json = $(echo -n edges | jq -R -s -c 'split(",")')
+          edges_json=$(echo -n $edges | jq -R -s -c 'split(",")')
           echo "::set-output name=fractal_edges::[$edges_json]"
 
   run-on-mqtt-clients:
