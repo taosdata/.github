@@ -24,18 +24,30 @@ jobs:
         run: |
           echo "Setting MQTT Clients"
           clients=$(seq -s ',' 1 ${{ github.event.inputs.runner_number }} | sed 's/[0-9]\+/mqtt-client&/g')
-          echo "::set-output name=mqtt_clients::[$clients]"
+          clients_json=$(echo -n $clients | jq -R -s -c 'split(",")')
+          echo "::set-output name=mqtt_clients::$clients_json"
 
       - name: Set Fractal Edges
         id: set-fractal-edges
         run: |
           echo "Setting Fractal Edges"
-          edges=$(seq -s ',' 1 ${{ github.event.inputs.runner_number }} | sed 's/[0-9]\+/fractal-edge&/g')
-          echo "::set-output name=fractal_edges::[$edges]"
+          edges=$(seq -s ',' 1 ${{ github.event.inputs.runner_number }} | sed 's/[0-9]\+/fractal-edge-&/g')
+          edges_json=$(echo -n $edges | jq -R -s -c 'split(",")')
+          echo "::set-output name=fractal_edges::$edges_json"
 
-  run-on-mqtt-clients:
+  run-on-mqtt-client:
     needs: set-runners
-    runs-on: ${{ fromJSON(needs.set-runners.outputs.mqtt_clients) }}
+    strategy:
+      matrix:
+        runner: ${{ fromJSON(needs.set-runners.outputs.mqtt_clients) }}
+    runs-on: 
+      group: fractal
+      labels: 
+        - self-hosted
+        - Linux
+        - X64
+        - fractal
+        - ${{ matrix.runner }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -43,9 +55,20 @@ jobs:
       - name: Run a script on MQTT Clients
         run: echo "Running on ${{ runner.name }}"
 
-  run-on-fractal-edges:
+  run-on-fractal-edge:
     needs: set-runners
-    runs-on: ${{ fromJSON(needs.set-runners.outputs.fractal_edges) }}
+    strategy:
+      matrix:
+        runner: ${{ fromJSON(needs.set-runners.outputs.fractal_edges) }}
+    runs-on: 
+      group: fractal
+      labels: 
+        - self-hosted
+        - Linux
+        - X64
+        - edge_td
+        - fractal
+        - ${{ matrix.runner }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
