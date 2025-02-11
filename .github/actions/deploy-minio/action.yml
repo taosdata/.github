@@ -68,6 +68,7 @@ runs:
         export MINIO_ROOT_USER=${{ inputs.MINIO_ROOT_USER }}
         export MINIO_ROOT_PASSWORD=${{ inputs.MINIO_ROOT_PASSWORD }}
         nohup minio server /mnt/data --console-address ":9001" > $HOME/minio.log 2>&1 &
+        disown
 
     - name: Check MinIO Server is up
       shell: bash
