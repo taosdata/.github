@@ -30,6 +30,15 @@ runs:
           mv minio /usr/local/bin/
         fi
 
+    - name: Install MinIO Client
+      shell: bash
+      run: |
+        if [ ! -f /usr/local/bin/mc ]; then
+          wget https://dl.min.io/client/mc/release/linux-amd64/mc
+          chmod +x mc
+          mv mc /usr/local/bin/
+        fi
+
     - name: Create Data Directory
       shell: bash
       run: mkdir -p /mnt/data
@@ -40,12 +49,24 @@ runs:
         echo "MINIO_ROOT_USER=${{ inputs.MINIO_ROOT_USER }}" >> $GITHUB_ENV
         echo "MINIO_ROOT_PASSWORD=${{ inputs.MINIO_ROOT_PASSWORD }}" >> $GITHUB_ENV
 
+    - name: Check if MinIO is running
+      id: check_minio
+      run: |
+        if curl -s http://localhost:9000/minio/health/live; then
+          echo "MinIO is already running."
+          echo "running=true" >> $GITHUB_ENV
+        else
+          echo "MinIO is not running."
+          echo "running=false" >> $GITHUB_ENV
+        fi
+
     - name: Start MinIO Server
       shell: bash
+      if: env.running == 'false'
       run: |
         export MINIO_ROOT_USER=${{ inputs.MINIO_ROOT_USER }}
         export MINIO_ROOT_PASSWORD=${{ inputs.MINIO_ROOT_PASSWORD }}
-        minio server /mnt/data --console-address ":9001" > $HOME/minio.log 2>&1 &
+        nohup minio server /mnt/data --console-address ":9001" > $HOME/minio.log 2>&1 &
 
     - name: Check MinIO Server is up
       shell: bash
@@ -54,15 +75,7 @@ runs:
           echo 'Waiting for MinIO to start...'
           sleep 5
         done
-
-    - name: Install MinIO Client
-      shell: bash
-      run: |
-        if [ ! -f /usr/local/bin/mc ]; then
-          wget https://dl.min.io/client/mc/release/linux-amd64/mc
-          chmod +x mc
-          mv mc /usr/local/bin/
-        fi
+        echo "MinIO is up and running."
 
     - name: Create Bucket and Access Key
       shell: bash

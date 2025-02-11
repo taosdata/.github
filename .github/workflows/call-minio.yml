@@ -12,7 +12,7 @@ jobs:
       labels: [self-hosted, Linux, X64, fractal, edge_td, fractal-edge-1]
 
     steps:
-      - name: Check and Install TDengine Enterprise
+      - name: Check and Deploy MinIO
         uses: taosdata/.github/.github/actions/deploy-minio@test/fractal
         with:
           MINIO_ROOT_USER: ${{ secrets.MINIO_ROOT_USER }}
