@@ -21,7 +21,7 @@ on:
 #         required: true
 #         default: '2'
 
-permissions: read-all
+permissions: write-all
 
 jobs:
   find-runners:
