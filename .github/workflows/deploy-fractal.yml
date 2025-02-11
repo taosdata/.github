@@ -42,7 +42,13 @@ jobs:
         runner: ${{ fromJSON(needs.set-runners.outputs.mqtt_clients) }}
     runs-on: 
       group: fractal
-      labels: self-hosted, Linux, X64, fractal, edge_td, ${{ matrix.runner }}
+      labels: 
+        - self-hosted
+        - Linux
+        - X64
+        - fractal
+        - edge_td
+        - ${{ matrix.runner }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -57,7 +63,13 @@ jobs:
         runner: ${{ fromJSON(needs.set-runners.outputs.fractal_edges) }}
     runs-on: 
       group: fractal
-      labels: self-hosted,Linux,X64,edge_td,fractal,${{ matrix.runner }}
+      labels: 
+        - self-hosted
+        - Linux
+        - X64
+        - edge_td
+        - fractal
+        - ${{ matrix.runner }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
