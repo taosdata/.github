@@ -13,7 +13,7 @@ jobs:
 
     steps:
       - name: Check and Install TDengine Enterprise
-        uses: taosdata/.github/.github/actions/install-tdengine@test/fractal
+        uses: taosdata/.github/.github/actions/deploy-minio@test/fractal
         with:
           version: 3.3.5.1
           group: fractal
