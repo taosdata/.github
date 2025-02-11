@@ -50,6 +50,7 @@ runs:
         echo "MINIO_ROOT_PASSWORD=${{ inputs.MINIO_ROOT_PASSWORD }}" >> $GITHUB_ENV
 
     - name: Check if MinIO is running
+      shell: bash
       id: check_minio
       run: |
         if curl -s http://localhost:9000/minio/health/live; then
