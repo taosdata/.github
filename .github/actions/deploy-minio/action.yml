@@ -22,6 +22,7 @@ runs:
   using: 'composite'
   steps:
     - name: Install MinIO Server
+      shell: bash
       run: |
         if [ ! -f /usr/local/bin/minio ]; then
           wget https://dl.min.io/server/minio/release/linux-amd64/minio
@@ -30,20 +31,24 @@ runs:
         fi
 
     - name: Create Data Directory
+      shell: bash
       run: mkdir -p /mnt/data
 
     - name: Set Environment Variables
+      shell: bash
       run: |
         echo "MINIO_ROOT_USER=${{ inputs.MINIO_ROOT_USER }}" >> $GITHUB_ENV
         echo "MINIO_ROOT_PASSWORD=${{ inputs.MINIO_ROOT_PASSWORD }}" >> $GITHUB_ENV
 
     - name: Start MinIO Server
+      shell: bash
       run: |
         export MINIO_ROOT_USER=${{ inputs.MINIO_ROOT_USER }}
         export MINIO_ROOT_PASSWORD=${{ inputs.MINIO_ROOT_PASSWORD }}
         minio server /mnt/data --console-address ":9001" > $HOME/minio.log 2>&1 &
 
     - name: Check MinIO Server is up
+      shell: bash
       run: |
         until curl -s http://localhost:9000/minio/health/live; do
           echo 'Waiting for MinIO to start...'
@@ -51,6 +56,7 @@ runs:
         done
 
     - name: Install MinIO Client
+      shell: bash
       run: |
         if [ ! -f /usr/local/bin/mc ]; then
           wget https://dl.min.io/client/mc/release/linux-amd64/mc
@@ -59,16 +65,19 @@ runs:
         fi
 
     - name: Configure MinIO Client
+      shell: bash
       run: |
         mc alias set myminio http://127.0.0.1:9000 ${{ inputs.MINIO_ACCESS_KEY }} ${{ inputs.MINIO_SECRET_KEY }}
 
     - name: Create Bucket and Access Key
+      shell: bash
       run: |
         mc mb myminio/td-bucket
         mc admin user add myminio ${{ inputs.MINIO_ROOT_USER }} ${{ inputs.MINIO_ACCESS_KEY }} ${{ inputs.MINIO_SECRET_KEY }}
         mc admin policy set myminio readwrite user=${{ inputs.MINIO_ROOT_USER }}
 
     - name: Capture logs
+      shell: bash
       run: |
         tail -f $HOME/minio.log > minio-runtime.log &
         echo "Tailing MinIO logs to 'minio-runtime.log'"
