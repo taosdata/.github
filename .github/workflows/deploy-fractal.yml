@@ -37,10 +37,12 @@ jobs:
 
   run-on-mqtt-client:
     needs: set-runners
-    # strategy:
-    #   matrix:
-    #     runner: ${{ fromJSON(needs.set-runners.outputs.mqtt_clients) }}
-    runs-on: self-hosted,Linux,X64,mqtt,fractal,mqtt-client1
+    strategy:
+      matrix:
+        runner: ${{ fromJSON(needs.set-runners.outputs.mqtt_clients) }}
+    runs-on: 
+      group: fractal
+      labels: self-hosted,Linux,X64,mqtt,fractal,${{ matrix.runner }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -50,10 +52,12 @@ jobs:
 
   run-on-fractal-edge:
     needs: set-runners
-    # strategy:
-    #   matrix:
-    #     runner: ${{ fromJSON(needs.set-runners.outputs.fractal_edges) }}
-    runs-on: self-hosted,Linux,X64,edge_td,fractal,fractal-edge-1
+    strategy:
+      matrix:
+        runner: ${{ fromJSON(needs.set-runners.outputs.fractal_edges) }}
+    runs-on: 
+      group: fractal
+      labels: self-hosted,Linux,X64,edge_td,fractal,${{ matrix.runner }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
