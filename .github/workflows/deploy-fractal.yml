@@ -35,7 +35,7 @@ jobs:
           edges_json=$(echo -n $edges | jq -R -s -c 'split(",")')
           echo "::set-output name=fractal_edges::$edges_json"
 
-  run-on-mqtt-client:
+  deploy-mqtt-client:
     needs: set-runners
     strategy:
       matrix:
@@ -52,10 +52,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Get MQTT Client IP
+        id: ip
+        uses: candidob/get-runner-ip@v1.0.0
+
       - name: Run a script on MQTT Clients
         run: echo "Running on ${{ runner.name }}"
 
-  run-on-fractal-edge:
+      - name: See IP Addresses
+        run: |
+          echo "IPv4 Address: ${{ steps.ip.outputs.ipv4 }}"
+  deploy-fractal-edge:
     needs: set-runners
     strategy:
       matrix:
@@ -72,6 +79,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-
+      
+      - name: Get fractal edge IP
+        id: ip
+        uses: candidob/get-runner-ip@v1.0.0
+      
+      - name: See IP Addresses
+        run: |
+          echo "IPv4 Address: ${{ steps.ip.outputs.ipv4 }}"
       - name: Run a script on Fractal Edges
         run: echo "Running on ${{ runner.name }}"
