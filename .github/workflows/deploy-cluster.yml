@@ -59,6 +59,11 @@ jobs:
               )
               | {
                   name,
+                  group: (
+                    if .labels | map(.name) | index("fractal") != null then "fractal"
+                    else "default"
+                    end
+                  ),
                   labels: (
                     .labels | map(.name) | join(", ") |
                     split(", ") |
@@ -86,7 +91,7 @@ jobs:
       matrix:
         runner: ${{ fromJson(needs.filter-runners.outputs.runners || '[]') }}
     runs-on:
-      group: fractal
+      group: ${{ matrix.runner.group }}
       labels: ${{ matrix.runner.labels }}
     steps:
       - name: Print Runner Info
