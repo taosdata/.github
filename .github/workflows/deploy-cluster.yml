@@ -26,7 +26,7 @@ permissions:
   contents: read
 
 jobs:
-  find-runners:
+  filter-runners:
     runs-on: ubuntu-latest
     outputs:
       runners: ${{ steps.get-runners.outputs.runners }}
@@ -70,7 +70,35 @@ jobs:
 
           echo "✅ Selected runners with formatted labels:"
           echo "$filtered_runners"
+  update-hosts:
+    needs: filter-runners
+    runs-on:
+      group: fractal
+      labels: ${{ matrix.labels }}
+    strategy:
+      matrix: ${{ fromJson(needs.filter-runners.outputs.matrix) }}
+    steps:
+      - name: Print Runner Info
+        run: |
+          echo "🔄 Running on group: ${{ matrix.group }}"
+          echo "🔄 Labels: ${{ matrix.labels }}"
 
+      - name: Get IP and Hostname
+        run: |
+          echo "🔄 Getting IP and hostname for the runner..."
+
+          # 假设通过某种方式获取 IP 和主机名
+          ip="192.168.1.100"  # 替换为实际获取 IP 的逻辑
+          hostname="runner.example.com"  # 替换为实际获取主机名的逻辑
+
+          echo "IP: $ip"
+          echo "Hostname: $hostname"
+
+          # 将 IP 和主机名写入 /etc/hosts
+          echo "$ip $hostname" | sudo tee -a /etc/hosts
+
+          echo "✅ Updated /etc/hosts with runner IP and hostname:"
+          cat /etc/hosts
           # response_file=$(mktemp)
 
           # if ! gh api "/orgs/${{ github.repository_owner }}/actions/runners" \
