@@ -100,6 +100,7 @@ jobs:
           echo "🔄 Name: ${{ matrix.runner.name }}"
 
       - name: Get IP and Hostname
+        id: get-ip-hostname
         run: |
           echo "🔄 Getting IP and hostname for the runner..."
 
@@ -110,29 +111,29 @@ jobs:
           echo "IP: $ip"
           echo "Hostname: $hostname"
 
-          # 将 IP 和主机名写入 /etc/hosts
-          echo "$ip $hostname" | sudo tee -a /etc/hosts
+          # 将 IP 和主机名保存为输出
+          echo "ip_hostname=$ip $hostname" >> $GITHUB_OUTPUT
 
-          echo "✅ Updated /etc/hosts with runner IP and hostname:"
-          cat /etc/hosts
-
-      - name: Combine Runner Info
+      - name: Combine IP and Hostname Info
         run: |
-          echo "🔄 Combining runner info..."
+          echo "🔄 Combining IP and hostname info..."
 
-          # 获取所有 runners 的 IP 和主机名
-          runner_info=$(jq -c '
-            map(
-              "\(.name) \(.ip)"  # 拼接 name 和 ip
-            ) | join("\n")' <<< "${{ toJson(needs.filter-runners.outputs.runners) }}")
+          # 获取所有 runner 的 IP 和主机名信息
+          ip_hostname_info=$(echo '${{ steps.get-ip-hostname.outputs.ip_hostname }}' | jq -r '.')
 
-          echo "✅ Combined runner info:"
-          echo "$runner_info"
+          # 将所有信息保存为环境变量，供后续步骤使用
+          echo "ip_hostname_info<<EOF" >> $GITHUB_ENV
+          echo "$ip_hostname_info" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
 
-          # 将 runner info 写入 /etc/hosts
-          echo "$runner_info" | sudo tee -a /etc/hosts
+      - name: Update /etc/hosts
+        run: |
+          echo "🔄 Updating /etc/hosts..."
 
-          echo "✅ Updated /etc/hosts with all runner IPs and hostnames:"
+          # 将所有 IP 和主机名信息写入 /etc/hosts
+          echo "$ip_hostname_info" | sudo tee -a /etc/hosts
+
+          echo "✅ Updated /etc/hosts with runner IPs and hostnames:"
           cat /etc/hosts
 
           # response_file=$(mktemp)
