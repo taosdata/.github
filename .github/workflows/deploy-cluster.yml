@@ -42,46 +42,76 @@ jobs:
           set -euo pipefail
           echo "Fetching available runners..."
           response_file=$(mktemp)
-
-          if ! gh api "/orgs/${{ github.repository_owner }}/actions/runners" \
-            --method GET \
+          gh api /orgs/${{ github.repository_owner }}/actions/runners \
             --paginate \
-            --jq '.runners' > "$response_file";
-          then
-            echo "❌ Failed to fetch runners"
-            exit 1
-          fi
+            --jq '.runners' > "$response_file"
 
-          # 验证响应内容
-          if [ ! -s "$response_file" ]; then
-            echo "⚠️ Empty API response"
-            exit 1
-          fi
+          # 设置 dnode_count 的值
+          dnode_count=2
 
-          # 处理JSON数据
-          filtered_runners=$(jq -c '
+          # 过滤并格式化 runners
+          filtered_runners=$(jq -c --argjson count "$dnode_count" '
             map(
               select(
-                .labels |
-                (map(.name) |
-                  contains(["fractal"]) and
-                  contains(["edge_td"])
+                .labels | all(
+                  .name | test("fractal|edge_td"; "i")
                 )
               )
-              | {name, labels}
-            )' "$response_file")
+              | {
+                  name,
+                  labels: (
+                    .labels | map(.name) | join(", ") |
+                    split(", ") |
+                    map(select(. != "")) |
+                    ["self-hosted", "Linux", "X64"] + .
+                  )
+                }
+            )[:$count]' "$response_file")
 
-          # 验证JSON有效性
-          if ! jq -e . >/dev/null 2>&1 <<< "$filtered_runners"; then
-            echo "❌ Invalid JSON output"
-            exit 1
-          fi
+          echo "✅ Selected runners with formatted labels:"
+          echo "$filtered_runners"
 
-          echo "✅ Filtered runners:"
-          jq . <<< "$filtered_runners"
+          # response_file=$(mktemp)
 
-          # 使用JSON格式输出
-          echo "runners=$filtered_runners" >> $GITHUB_OUTPUT
+          # if ! gh api "/orgs/${{ github.repository_owner }}/actions/runners" \
+          #   --method GET \
+          #   --paginate \
+          #   --jq '.runners' > "$response_file";
+          # then
+          #   echo "❌ Failed to fetch runners"
+          #   exit 1
+          # fi
+
+          # # 验证响应内容
+          # if [ ! -s "$response_file" ]; then
+          #   echo "⚠️ Empty API response"
+          #   exit 1
+          # fi
+
+          # # 处理JSON数据
+          # filtered_runners=$(jq -c '
+          #   map(
+          #     select(
+          #       .labels |
+          #       (map(.name) |
+          #         contains(["fractal"]) and
+          #         contains(["edge_td"])
+          #       )
+          #     )
+          #     | {name, labels}
+          #   )' "$response_file")
+
+          # # 验证JSON有效性
+          # if ! jq -e . >/dev/null 2>&1 <<< "$filtered_runners"; then
+          #   echo "❌ Invalid JSON output"
+          #   exit 1
+          # fi
+
+          # echo "✅ Filtered runners:"
+          # jq . <<< "$filtered_runners"
+
+          # # 使用JSON格式输出
+          # echo "runners=$filtered_runners" >> $GITHUB_OUTPUT
 
   # call-install:
   #   runs-on:
