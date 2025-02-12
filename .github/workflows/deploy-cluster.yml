@@ -53,9 +53,9 @@ jobs:
           filtered_runners=$(jq -c --argjson count "$dnode_count" '
             map(
               select(
-                .labels | all(
-                  .name | test("fractal|edge_td"; "i")
-                )
+                .labels |
+                (map(.name) | index("fractal")) != null and
+                (map(.name) | index("edge_td")) != null
               )
               | {
                   name,
