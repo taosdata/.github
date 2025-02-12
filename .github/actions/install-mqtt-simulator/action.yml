@@ -1,0 +1,51 @@
+name: Install MQTT simulator
+description: Install MQTT simulator
+
+
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Install Rust
+      uses: ./.github/actions/install-rust
+      with:
+        rust-version: 'stable'
+      
+    - name: Generate GitHub App Token
+      id: app-token
+      uses: tibdex/github-app-token@v1
+      with:
+        app_id: ${{ secrets.APP_ID }}
+        private_key: ${{ secrets.APP_PEM }}
+
+    - name: Set GitHub App Token as secret
+      run: echo "GITHUB_APP_TOKEN=${{ steps.app-token.outputs.token }}" >> $GITHUB_ENV
+      shell: bash
+    
+
+    - name: Check out another private repository
+      uses: actions/checkout@v4
+      with:
+        repository: taosdata/taosx  # 替换为你要拉取的私有仓库
+        token: ${{ env.GITHUB_APP_TOKEN }}  # 使用 GitHub App 生成的访问令牌
+    
+    - name: Build MQTT CLI
+      run: |
+        cd taosx && cargo build --release -p taosx-tools --bin mqtt_pub
+      shell: bash
+
+    - name: Find mqtt_pub binary
+      run: |
+        mqtt_pub_path=$(find . -name mqtt_pub 2>/dev/null)
+          if [ -n "$mqtt_pub_path" ]; then
+            echo "mqtt_pub found at $mqtt_pub_path"
+          else
+            echo "mqtt_pub not found"
+          fi
+      shell: bash
+
+
+      

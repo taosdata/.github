@@ -1,0 +1,22 @@
+name: Install Rust
+description: Install Rust with a specified version
+
+inputs:
+  rust-version:
+    description: 'The version of Rust to install'
+    required: true
+    default: 'stable'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install Rust
+      run: |
+        if ! command -v rustc &> /dev/null; then
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain ${{ inputs.rust-version }}
+          source $HOME/.cargo/env
+        else
+          echo "Rust is already installed"
+          rustc --version
+        fi
+      shell: bash
