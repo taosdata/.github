@@ -136,10 +136,17 @@ jobs:
           echo "🔄 Downloading IP and hostname info for each runner..."
 
           # 获取所有 runner 的名称
-          runners=$(echo '${{ fromJson(needs.filter-runners.outputs.runners) }}' | jq -c '.[]')
-          echo "runners: $runner"
-          # 遍历每个 runner，下载对应的 Artifact
-          for runner in $runners; do
+          runners=${{ needs.filter-runners.outputs.runners }}
+          echo "Runners JSON: $runners"
+
+          # 检查 runners 是否为空
+          if [ -z "$runners" ]; then
+            echo "No runners found. Skipping download."
+            exit 0
+          fi
+
+          # 解析 runners JSON 数据
+          echo "$runners" | jq -c '.[]' | while read -r runner; do
             runner_name=$(echo "$runner" | jq -r '.name')
             echo "Downloading artifact for runner: $runner_name"
 
