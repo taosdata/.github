@@ -68,7 +68,7 @@ jobs:
                   contains(["edge_td"])
                 )
               )
-              | {name, ip: .ip_address}
+              | {name, labels}
             )' "$response_file")
 
           # 验证JSON有效性
@@ -82,16 +82,6 @@ jobs:
 
           # 使用JSON格式输出
           echo "runners=$filtered_runners" >> $GITHUB_OUTPUT
-          # response=$(/orgs/${{ github.repository_owner }}/actions/runners)
-          # if [ -z "$response" ]; then
-          #   echo "No response from GitHub API"
-          #   exit 1
-          # else
-          #   echo "Response from GitHub API: $response"
-          # fi
-          # available_runners=$(/orgs/${{ github.repository_owner }}/actions/runners | jq -r '.runners[] | select(.labels | any(.name | contains("fractal") or contains("edge_td"))) | {name: .name, ip: .ip_address}')
-          # echo "Available runners: $available_runners"
-          # echo "runners=$available_runners" >> $GITHUB_OUTPUT
 
   # call-install:
   #   runs-on:
