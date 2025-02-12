@@ -42,6 +42,7 @@ jobs:
           set -euo pipefail
           echo "Fetching available runners..."
           response_file=$(mktemp)
+
           if ! gh api "/orgs/${{ github.repository_owner }}/actions/runners" \
             --method GET \
             --paginate \
@@ -61,8 +62,10 @@ jobs:
           filtered_runners=$(jq -c '
             map(
               select(
-                .labels | any(
-                  .name | test("fractal|edge_td"; "i")
+                .labels |
+                (map(.name) |
+                  contains(["fractal"]) and
+                  contains(["edge_td"])
                 )
               )
               | {name, ip: .ip_address}
