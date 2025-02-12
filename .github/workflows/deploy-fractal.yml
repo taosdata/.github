@@ -54,7 +54,7 @@ jobs:
 
       - name: Replace sources
         run: |
-          cd /root/tools/deploy/setup_system.sh && ./setup_system.sh replace_sources
+          cd /root/tools/deploy && ./setup_system.sh replace_sources
       - name: Install MQTT CLI
         uses: ./.github/actions/install-mqtt-simulator
         with:
