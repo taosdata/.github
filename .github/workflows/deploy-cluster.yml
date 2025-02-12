@@ -115,6 +115,26 @@ jobs:
 
           echo "✅ Updated /etc/hosts with runner IP and hostname:"
           cat /etc/hosts
+
+      - name: Combine Runner Info
+        run: |
+          echo "🔄 Combining runner info..."
+
+          # 获取所有 runners 的 IP 和主机名
+          runner_info=$(jq -c '
+            map(
+              "\(.name) \(.ip)"  # 拼接 name 和 ip
+            ) | join("\n")' <<< "${{ toJson(needs.filter-runners.outputs.runners) }}")
+
+          echo "✅ Combined runner info:"
+          echo "$runner_info"
+
+          # 将 runner info 写入 /etc/hosts
+          echo "$runner_info" | sudo tee -a /etc/hosts
+
+          echo "✅ Updated /etc/hosts with all runner IPs and hostnames:"
+          cat /etc/hosts
+
           # response_file=$(mktemp)
 
           # if ! gh api "/orgs/${{ github.repository_owner }}/actions/runners" \
