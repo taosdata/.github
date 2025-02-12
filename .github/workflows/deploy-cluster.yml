@@ -22,6 +22,7 @@ on:
 #         default: '2'
 
 permissions:
+  actions: read
   id-token: write
   contents: read
 
