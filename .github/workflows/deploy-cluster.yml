@@ -132,10 +132,18 @@ jobs:
       labels: ${{ matrix.runner.labels }}
     steps:
       - name: Download IP and Hostname Info
-        uses: actions/download-artifact@v4
-        with:
-          name: ip_hostname_*
-          path: ip_hostname
+        run: |
+          echo "🔄 Downloading IP and hostname info for each runner..."
+
+          # 创建目录存放下载的 Artifact
+          mkdir -p ip_hostname
+
+          # 遍历每个 runner, 下载对应的 Artifact
+          for runner in ${{ toJson(needs.filter-runners.outputs.runners) }}; do
+            runner_name=$(echo "$runner" | jq -r '.name')
+            echo "Downloading artifact for runner: $runner_name"
+            gh run download ${{ github.run_id }} --name "ip_hostname_$runner_name" --dir ip_hostname
+          done
 
       - name: Combine IP and Hostname Info
         run: |

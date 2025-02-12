@@ -3,7 +3,7 @@ name: Call Deploy MinIO
 on:
   push:
     branches:
-      - test/fractal
+      - main
 
 jobs:
   call-install:
