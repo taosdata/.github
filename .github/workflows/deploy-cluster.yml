@@ -137,7 +137,7 @@ jobs:
 
           # 获取所有 runner 的名称
           runners=$(echo '${{ fromJson(needs.filter-runners.outputs.runners) }}' | jq -c '.[]')
-
+          echo "runners: $runner"
           # 遍历每个 runner，下载对应的 Artifact
           for runner in $runners; do
             runner_name=$(echo "$runner" | jq -r '.name')
