@@ -40,6 +40,7 @@ runs:
     
     - name: Build MQTT CLI
       run: |
+        source $HOME/.cargo/env
         cd taosx && cargo build --release -p taosx-tools --bin mqtt_pub
       shell: bash
 
