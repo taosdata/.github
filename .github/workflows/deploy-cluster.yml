@@ -117,9 +117,8 @@ jobs:
       - name: Upload IP and Hostname Info
         uses: actions/upload-artifact@v4
         with:
-          name: ip_hostname
+          name: ip_hostname_${{ matrix.runner.name }}
           path: ip_hostname.txt
-          overwrite: true
 
   combine-and-update-hosts:
     needs:
@@ -135,7 +134,7 @@ jobs:
       - name: Download IP and Hostname Info
         uses: actions/download-artifact@v4
         with:
-          name: ip_hostname
+          name: ip_hostname_*
           path: ip_hostname
 
       - name: Combine IP and Hostname Info
