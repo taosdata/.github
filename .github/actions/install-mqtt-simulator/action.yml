@@ -52,6 +52,9 @@ runs:
     
     - name: Build MQTT CLI
       run: |
+        cargo_env_path=$(find /root /opt -name env -path "*/.cargo/env" 2>/dev/null)
+        echo "cargo_env_path: $cargo_env_path"
+        . "$cargo_env_path"
         cd taosx && cargo build --release -p taosx-tools --bin mqtt_pub
       shell: bash
 
