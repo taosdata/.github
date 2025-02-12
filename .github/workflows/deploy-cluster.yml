@@ -145,14 +145,9 @@ jobs:
           IFS=',' read -r -a names_array <<< "$runner_name"
           echo "Extracted names:"
           for name in "${names_array[@]}"; do
-            echo "runner_name----:$name"
+            echo "Downloading artifact for runner: $name"
+            gh run download $GITHUB_RUN_ID --name "ip_hostname_$name" --dir ip_hostname
           done
-
-          # # 检查 runners 是否为空
-          # if [ -z "$runners" ]; then
-          #   echo "No runners found. Skipping download."
-          #   exit 0
-          # fi
 
           # # 解析 runners JSON 数据
           # echo "$runners" | jq -c '.[]' | while read -r runner; do
