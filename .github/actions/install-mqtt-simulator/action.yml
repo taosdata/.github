@@ -1,7 +1,13 @@
 name: Install MQTT simulator
 description: Install MQTT simulator
 
-
+inputs:
+  res_app_id:
+    description: 'GitHub App ID'
+    required: true
+  res_app_key:
+    description: 'GitHub App Key'
+    required: true
 
 runs:
   using: 'composite'
@@ -18,8 +24,8 @@ runs:
       id: app-token
       uses: tibdex/github-app-token@v1
       with:
-        app_id: ${{ vars.RES_APP_ID }}
-        private_key: ${{ secrets.RES_APP_KEY }}
+        app_id: ${{ inputs.res_app_id }}
+        private_key: ${{ inputs.res_app_key }}
 
     - name: Set GitHub App Token as secret
       run: echo "GITHUB_APP_TOKEN=${{ steps.app-token.outputs.token }}" >> $GITHUB_ENV
