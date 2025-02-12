@@ -154,7 +154,7 @@ jobs:
           echo "Extracted names: $names_array"
           for name in "${names_array[@]}"; do
             echo "Downloading artifact for runner: $name"
-            gh run download $GITHUB_RUN_ID --name "ip_hostname_$name" --dir ip_hostname --overwrite
+            gh run download $GITHUB_RUN_ID --name "ip_hostname_$name" --dir ip_hostname
           done
 
           # # 解析 runners JSON 数据
