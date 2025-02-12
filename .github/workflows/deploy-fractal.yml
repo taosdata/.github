@@ -52,6 +52,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Install Rust
+        uses: ./.github/actions/install-rust
+        with:
+          rust-version: 'stable'
       - name: Install MQTT CLI
         uses: ./.github/actions/install-mqtt-simulator
         with:
