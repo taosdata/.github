@@ -20,11 +20,11 @@ runs:
 
     - name: Install Rust
       run: |
+        export CARGO_HOME="$HOME/.cargo"
         if ! command -v rustc &> /dev/null; then
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain ${{ inputs.rust-version }}
-          cargo_env_path=$(find /root /opt -name env -path "*/.cargo/env" 2>/dev/null)
-          echo "cargo_env_path=$cargo_env_path" >> $GITHUB_ENV
-          . "$cargo_env_path"
+          source "$CARGO_HOME/env"
+          echo "$CARGO_HOME/bin" >> $GITHUB_PATH
         else
           echo "Rust is already installed"
           rustc --version
@@ -53,8 +53,6 @@ runs:
     
     - name: Build MQTT CLI
       run: |
-        . "$cargo_env_path"
-        echo "cargo_env_path=$cargo_env_path"
         cd taosx && cargo build --release -p taosx-tools --bin mqtt_pub
       shell: bash
 
