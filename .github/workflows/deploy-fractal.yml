@@ -52,16 +52,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Get MQTT Client IP
-        id: ip
-        uses: candidob/get-runner-ip@v1.0.0
 
       - name: Run a script on MQTT Clients
         run: echo "Running on ${{ runner.name }}"
 
-      - name: See IP Addresses
+      - name: Get IP Addresses
         run: |
-          echo "IPv4 Address: ${{ steps.ip.outputs.ipv4 }}"
+          local_ip=$(hostname -I | awk '{print $1}')
+          echo "Local IP Address: $local_ip"
   deploy-fractal-edge:
     needs: set-runners
     strategy:
@@ -80,12 +78,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
       
-      - name: Get fractal edge IP
-        id: ip
-        uses: candidob/get-runner-ip@v1.0.0
-      
-      - name: See IP Addresses
+
+      - name: Get IP Addresses
         run: |
-          echo "IPv4 Address: ${{ steps.ip.outputs.ipv4 }}"
+          local_ip=$(hostname -I | awk '{print $1}')
+          echo "Local IP Address: $local_ip"
       - name: Run a script on Fractal Edges
         run: echo "Running on ${{ runner.name }}"
