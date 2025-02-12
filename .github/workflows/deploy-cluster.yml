@@ -120,8 +120,8 @@ jobs:
 
           # 获取所有 runner 的 IP 和主机名信息
           ip_hostname_info=""
-          for job_id in $(jq -r '.[] | .id' <<< '${{ toJson(matrix.runner) }}'); do
-            job_outputs=$(echo '${{ toJson(matrix.runner) }}' | jq -r --arg job_id "$job_id" '.[$job_id]')
+          for job_id in $(echo '${{ toJson(needs.update-hosts) }}' | jq -r '.result | keys[]'); do
+            job_outputs=$(echo '${{ toJson(needs.update-hosts.outputs) }}' | jq -r --arg job_id "$job_id" '.[$job_id]')
             ip_hostname=$(echo "$job_outputs" | jq -r '.ip_hostname')
             ip_hostname_info+="$ip_hostname\n"
           done
