@@ -18,7 +18,7 @@ runs:
       id: app-token
       uses: tibdex/github-app-token@v1
       with:
-        app_id: ${{ var.RES_APP_ID }}
+        app_id: ${{ vars.RES_APP_ID }}
         private_key: ${{ secrets.RES_APP_KEY }}
 
     - name: Set GitHub App Token as secret
