@@ -97,7 +97,7 @@ jobs:
       - name: Print Runner Info
         run: |
           echo "🔄 Running on group: ${{ matrix.runner.group }}"
-          echo "🔄 Labels: ${{ matrix.runner.labels }}"
+          echo "🔄 Name: ${{ matrix.runner.name }}"
 
       - name: Get IP and Hostname
         run: |
