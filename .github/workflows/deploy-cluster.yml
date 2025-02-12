@@ -119,7 +119,13 @@ jobs:
           echo "🔄 Combining IP and hostname info..."
 
           # 获取所有 runner 的 IP 和主机名信息
-          ip_hostname_info=$(echo '${{ steps.get-ip-hostname.outputs.ip_hostname }}' | jq -r '.')
+          ip_hostname_info=""
+          for job_id in $(jq -r '.[] | .id' <<< '${{ toJson(needs.update-hosts.outputs) }}'); do
+            job_outputs=$(echo '${{ toJson(needs.update-hosts.outputs) }}' | jq -r --arg job_id "$job_id" '.[$job_id]')
+            ip_hostname=$(echo "$job_outputs" | jq -r '.ip_hostname')
+            ip_hostname_info+="$ip_hostname\n"
+          done
+          # ip_hostname_info=$(echo '${{ steps.get-ip-hostname.outputs.ip_hostname }}' | jq -r '.')
 
           # 将所有信息保存为环境变量，供后续步骤使用
           echo "ip_hostname_info<<EOF" >> $GITHUB_ENV
