@@ -16,9 +16,16 @@ runs:
       uses: actions/checkout@v3
 
     - name: Install Rust
-      uses: ./.github/actions/install-rust
-      with:
-        rust-version: 'stable'
+      run: |
+        if ! command -v rustc &> /dev/null; then
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain ${{ inputs.rust-version }}
+          cargo_env_path=$(find /root /opt -name env -path "*/.cargo/env" 2>/dev/null)
+          . "$cargo_env_path"
+        else
+          echo "Rust is already installed"
+          rustc --version
+        fi
+      shell: bash
       
     
     - name: Generate GitHub App Token
