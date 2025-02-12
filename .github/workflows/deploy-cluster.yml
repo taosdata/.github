@@ -29,8 +29,7 @@ jobs:
   filter-runners:
     runs-on: ubuntu-latest
     outputs:
-      # runners: ${{ steps.get-runners.outputs.runners }}
-      runners: ${{ steps.set-matrix.outputs.matrix }}
+      runners: ${{ steps.get-runners.outputs.matrix}}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
