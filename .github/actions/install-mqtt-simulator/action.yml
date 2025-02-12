@@ -20,7 +20,7 @@ runs:
 
     - name: Install Rust
       run: |
-        export CARGO_HOME="$HOME/.cargo"
+        export CARGO_HOME="/opt/.cargo"
         if ! command -v rustc &> /dev/null; then
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain ${{ inputs.rust-version }}
           source "$CARGO_HOME/env"
@@ -50,10 +50,11 @@ runs:
         repository: taosdata/taosx  # 替换为你要拉取的私有仓库
         token: ${{ env.GITHUB_APP_TOKEN }}  # 使用 GitHub App 生成的访问令牌
         path: taosx
+        ref: 3.0
     
     - name: Build MQTT CLI
       run: |
-        cd taosx && cargo build --release -p taosx-tools --bin mqtt_pub
+        cargo update && cargo build --release -p taosx-tools --bin mqtt_pub
       shell: bash
 
     - name: Find mqtt_pub binary
