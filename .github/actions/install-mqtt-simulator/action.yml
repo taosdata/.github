@@ -50,7 +50,7 @@ runs:
         repository: taosdata/taosx  # 替换为你要拉取的私有仓库
         token: ${{ env.GITHUB_APP_TOKEN }}  # 使用 GitHub App 生成的访问令牌
         path: taosx
-        ref: 3.0
+        ref: '3.0'
     
     - name: Build MQTT CLI
       run: |
