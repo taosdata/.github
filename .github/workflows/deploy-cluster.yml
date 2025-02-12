@@ -70,18 +70,29 @@ jobs:
 
           echo "✅ Selected runners with formatted labels:"
           echo "$filtered_runners"
+
+          # 确保 filtered_runners 是有效的 JSON 数组
+          if [ -z "$filtered_runners" ]; then
+            echo "No runners found. Setting empty matrix."
+            echo "matrix=[]" >> $GITHUB_OUTPUT
+          else
+            echo "matrix=$filtered_runners" >> $GITHUB_OUTPUT
+          fi
+
   update-hosts:
     needs: filter-runners
+
+    strategy:
+      matrix:
+        runner: ${{ fromJson(needs.filter-runners.outputs.runners || '[]') }}
     runs-on:
       group: fractal
-      labels: ${{ matrix.labels }}
-    strategy:
-      matrix: ${{ fromJson(needs.filter-runners.outputs.matrix) }}
+      labels: ${{ matrix.runner.labels }}
     steps:
       - name: Print Runner Info
         run: |
-          echo "🔄 Running on group: ${{ matrix.group }}"
-          echo "🔄 Labels: ${{ matrix.labels }}"
+          echo "🔄 Running on group: ${{ matrix.runner.group }}"
+          echo "🔄 Labels: ${{ matrix.runner.labels }}"
 
       - name: Get IP and Hostname
         run: |
