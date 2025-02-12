@@ -8,7 +8,10 @@ inputs:
   res_app_key:
     description: 'GitHub App Key'
     required: true
-
+  rust-version:
+    description: 'The version of Rust to install'
+    required: true
+    default: 'stable'
 runs:
   using: 'composite'
   steps:
