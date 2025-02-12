@@ -123,7 +123,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ip_hostname_${{ matrix.runner.name }}
-          path: ip_hostname.txt
+          path: ip_hostname_${{ matrix.runner.name }}.txt
 
   combine-and-update-hosts:
     needs:
@@ -151,10 +151,10 @@ jobs:
           echo "Runner Name: $runner_name"
 
           IFS=',' read -r -a names_array <<< "$runner_name"
-          echo "Extracted names:"
+          echo "Extracted names: $names_array"
           for name in "${names_array[@]}"; do
             echo "Downloading artifact for runner: $name"
-            gh run download $GITHUB_RUN_ID --name "ip_hostname_$name" --dir ip_hostname
+            gh run download $GITHUB_RUN_ID --name "ip_hostname_$name" --dir ip_hostname --overwrite
           done
 
           # # 解析 runners JSON 数据
