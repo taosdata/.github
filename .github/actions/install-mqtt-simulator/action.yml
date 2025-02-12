@@ -52,9 +52,7 @@ runs:
     
     - name: Build MQTT CLI
       run: |
-        echo cargo_env_path=$(find /root /opt -name env -path "*/.cargo/env" 2>/dev/null) >> $GITHUB_ENV
-        . "$cargo_env_path"
-        cargo build --release -p taosx-tools --bin mqtt_pub
+        cd taosx && cargo build --release -p taosx-tools --bin mqtt_pub
       shell: bash
 
     - name: Find mqtt_pub binary

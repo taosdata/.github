@@ -52,14 +52,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Install Rust
-        uses: ./.github/actions/install-rust
-        with:
-          rust-version: 'stable'
-      - name: source env
-        run: |
-          cargo_env_path=$(find /root /opt -name env -path "*/.cargo/env" 2>/dev/null)
-          . "$cargo_env_path"
       - name: Install MQTT CLI
         uses: ./.github/actions/install-mqtt-simulator
         with:
