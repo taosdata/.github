@@ -142,6 +142,12 @@ jobs:
           runner_name=${{ needs.filter-runners.outputs.runner_names }}
           echo "Runner Name: $runner_name"
 
+          IFS=',' read -r -a names_array <<< "$runner_name"
+          echo "Extracted names:"
+          for name in "${names_array[@]}"; do
+            echo "runner_name----:$name"
+          done
+
           # # 检查 runners 是否为空
           # if [ -z "$runners" ]; then
           #   echo "No runners found. Skipping download."
