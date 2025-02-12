@@ -38,10 +38,11 @@ runs:
       with:
         repository: taosdata/taosx  # 替换为你要拉取的私有仓库
         token: ${{ env.GITHUB_APP_TOKEN }}  # 使用 GitHub App 生成的访问令牌
+        path: taosx
     
     - name: Build MQTT CLI
       run: |
-        cd taosx && cargo build --release -p taosx-tools --bin mqtt_pub
+        cargo build --release -p taosx-tools --bin mqtt_pub
       shell: bash
 
     - name: Find mqtt_pub binary
