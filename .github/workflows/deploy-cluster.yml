@@ -37,7 +37,7 @@ jobs:
 
       - name: Get Available Runners
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.RUNNER_PAT }}
         id: get-runners
         run: |
           set -euo pipefail
