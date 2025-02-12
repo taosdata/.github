@@ -54,7 +54,7 @@ runs:
     
     - name: Build MQTT CLI
       run: |
-        cd taosx && cargo update && cargo build --release -p taosx-tools --bin mqtt_pub
+        cd taosx && cargo build --release -p taosx-tools --bin mqtt_pub
       shell: bash
 
     - name: Find mqtt_pub binary
