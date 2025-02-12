@@ -23,7 +23,6 @@ on:
 
 permissions:
   actions: read
-  id-token: write
   contents: read
 
 jobs:
@@ -37,13 +36,13 @@ jobs:
 
       - name: Get Available Runners
         env:
-          GITHUB_TOKEN: ${{ secrets.RUNNER_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         id: get-runners
         run: |
           set -euo pipefail
           echo "Fetching available runners..."
           response_file=$(mktemp)
-          if ! gh api "/repos/${{ github.repository }}/actions/runners" \
+          if ! gh api "/orgs/${{ github.repository_owner }}/actions/runners" \
             --method GET \
             --paginate \
             --jq '.runners' > "$response_file";
@@ -80,14 +79,14 @@ jobs:
 
           # 使用JSON格式输出
           echo "runners=$filtered_runners" >> $GITHUB_OUTPUT
-          # response=$(gh api /repos/${{ github.repository }}/actions/runners/list)
+          # response=$(/orgs/${{ github.repository_owner }}/actions/runners)
           # if [ -z "$response" ]; then
           #   echo "No response from GitHub API"
           #   exit 1
           # else
           #   echo "Response from GitHub API: $response"
           # fi
-          # available_runners=$(gh api /repos/${{ github.repository }}/actions/runners/list | jq -r '.runners[] | select(.labels | any(.name | contains("fractal") or contains("edge_td"))) | {name: .name, ip: .ip_address}')
+          # available_runners=$(/orgs/${{ github.repository_owner }}/actions/runners | jq -r '.runners[] | select(.labels | any(.name | contains("fractal") or contains("edge_td"))) | {name: .name, ip: .ip_address}')
           # echo "Available runners: $available_runners"
           # echo "runners=$available_runners" >> $GITHUB_OUTPUT
 
