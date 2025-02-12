@@ -112,7 +112,7 @@ jobs:
           echo "Hostname: $hostname"
 
           # 将 IP 和主机名保存为输出
-          echo "$ip $hostname" >> ip_hostname.txt
+          echo "$ip $hostname" > ip_hostname.txt
 
       - name: Upload IP and Hostname Info
         uses: actions/upload-artifact@v4
@@ -143,7 +143,7 @@ jobs:
           echo "🔄 Combining IP and hostname info..."
 
           # 读取所有 runner 的 IP 和主机名信息
-          ip_hostname_info=$(cat ip_hostname/*.txt)
+          ip_hostname_info=$(cat ip_hostname/*.txt | sort | uniq)  # 去重
 
           # 将所有信息保存为环境变量，供后续步骤使用
           echo "ip_hostname_info<<EOF" >> $GITHUB_ENV
