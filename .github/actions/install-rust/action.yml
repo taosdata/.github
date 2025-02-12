@@ -14,7 +14,8 @@ runs:
       run: |
         if ! command -v rustc &> /dev/null; then
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain ${{ inputs.rust-version }}
-          . "$HOME/.cargo/env"
+          cargo_env_path=$(find $HOME -name env -path "*/.cargo/env" 2>/dev/null)
+          . "$cargo_env_path"
         else
           echo "Rust is already installed"
           rustc --version
