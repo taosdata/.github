@@ -103,9 +103,9 @@ jobs:
         run: |
           echo "🔄 Getting IP and hostname for the runner..."
 
-          # 假设通过某种方式获取 IP 和主机名
-          ip="192.168.1.100"  # 替换为实际获取 IP 的逻辑
-          hostname="runner.example.com"  # 替换为实际获取主机名的逻辑
+          # 获取 IP 和主机名
+          ip=$(hostname -I | awk '{print $1}')  # 获取 IP 地址
+          hostname=$(hostname)  # 获取主机名
 
           echo "IP: $ip"
           echo "Hostname: $hostname"
