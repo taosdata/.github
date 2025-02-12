@@ -20,6 +20,7 @@ runs:
       with:
         rust-version: 'stable'
       
+    
     - name: Generate GitHub App Token
       id: app-token
       uses: tibdex/github-app-token@v1
@@ -40,7 +41,6 @@ runs:
     
     - name: Build MQTT CLI
       run: |
-        source $HOME/.cargo/env
         cd taosx && cargo build --release -p taosx-tools --bin mqtt_pub
       shell: bash
 
