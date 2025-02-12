@@ -21,7 +21,9 @@ on:
 #         required: true
 #         default: '2'
 
-permissions: write-all
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   find-runners:
@@ -30,24 +32,63 @@ jobs:
       runners: ${{ steps.get-runners.outputs.runners }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Get Available Runners
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         id: get-runners
         run: |
+          set -euo pipefail
           echo "Fetching available runners..."
-          response=$(gh api /repos/${{ github.repository }}/actions/runners/list)
-          if [ -z "$response" ]; then
-            echo "No response from GitHub API"
+          response_file=$(mktemp)
+          if ! gh api "/repos/${{ github.repository }}/actions/runners" \
+            --method GET \
+            --paginate \
+            --jq '.runners' > "$response_file";
+          then
+            echo "❌ Failed to fetch runners"
             exit 1
-          else
-            echo "Response from GitHub API: $response"
           fi
-          available_runners=$(gh api /repos/${{ github.repository }}/actions/runners/list | jq -r '.runners[] | select(.labels | any(.name | contains("fractal") or contains("edge_td"))) | {name: .name, ip: .ip_address}')
-          echo "Available runners: $available_runners"
-          echo "runners=$available_runners" >> $GITHUB_OUTPUT
+
+          # 验证响应内容
+          if [ ! -s "$response_file" ]; then
+            echo "⚠️ Empty API response"
+            exit 1
+          fi
+
+          # 处理JSON数据
+          filtered_runners=$(jq -c '
+            map(
+              select(
+                .labels | any(
+                  .name | test("fractal|edge_td"; "i")
+                )
+              )
+              | {name, ip: .ip_address}
+            )' "$response_file")
+
+          # 验证JSON有效性
+          if ! jq -e . >/dev/null 2>&1 <<< "$filtered_runners"; then
+            echo "❌ Invalid JSON output"
+            exit 1
+          fi
+
+          echo "✅ Filtered runners:"
+          jq . <<< "$filtered_runners"
+
+          # 使用JSON格式输出
+          echo "runners=$filtered_runners" >> $GITHUB_OUTPUT
+          # response=$(gh api /repos/${{ github.repository }}/actions/runners/list)
+          # if [ -z "$response" ]; then
+          #   echo "No response from GitHub API"
+          #   exit 1
+          # else
+          #   echo "Response from GitHub API: $response"
+          # fi
+          # available_runners=$(gh api /repos/${{ github.repository }}/actions/runners/list | jq -r '.runners[] | select(.labels | any(.name | contains("fractal") or contains("edge_td"))) | {name: .name, ip: .ip_address}')
+          # echo "Available runners: $available_runners"
+          # echo "runners=$available_runners" >> $GITHUB_OUTPUT
 
   # call-install:
   #   runs-on:
