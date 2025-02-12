@@ -135,14 +135,16 @@ jobs:
         run: |
           echo "🔄 Downloading IP and hostname info for each runner..."
 
-          # 创建目录存放下载的 Artifact
-          mkdir -p ip_hostname
+          # 获取所有 runner 的名称
+          runners=$(echo '${{ fromJson(needs.filter-runners.outputs.runners) }}' | jq -c '.[]')
 
-          # 遍历每个 runner, 下载对应的 Artifact
-          for runner in ${{ toJson(needs.filter-runners.outputs.runners) }}; do
+          # 遍历每个 runner，下载对应的 Artifact
+          for runner in $runners; do
             runner_name=$(echo "$runner" | jq -r '.name')
             echo "Downloading artifact for runner: $runner_name"
-            gh run download ${{ github.run_id }} --name "ip_hostname_$runner_name" --dir ip_hostname
+
+            # 下载 Artifact
+            gh run download $GITHUB_RUN_ID --name "ip_hostname_$runner_name" --dir ip_hostname
           done
 
       - name: Combine IP and Hostname Info
