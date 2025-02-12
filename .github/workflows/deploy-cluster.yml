@@ -30,6 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       runners: ${{ steps.get-runners.outputs.matrix}}
+      runner_names: ${{ steps.get-runners.outputs.names}}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -80,8 +81,12 @@ jobs:
           if [ -z "$filtered_runners" ]; then
             echo "No runners found. Setting empty matrix."
             echo "matrix=[]" >> $GITHUB_OUTPUT
+            echo "names=[]" >> $GITHUB_OUTPUT
           else
             echo "matrix=$filtered_runners" >> $GITHUB_OUTPUT
+            names=$(echo "$filtered_runners" | jq -r '.[].name' | tr '\n' ',')
+            names=${names%,}
+            echo "names=${names}" >> $GITHUB_OUTPUT
           fi
 
   update-hosts:
@@ -134,25 +139,23 @@ jobs:
       - name: Download IP and Hostname Info
         run: |
           echo "🔄 Downloading IP and hostname info for each runner..."
+          runner_name=${{ needs.filter-runners.outputs.runner_names }}
+          echo "Runner Name: $runner_name"
 
-          # 获取所有 runner 的名称
-          runners=${{ needs.filter-runners.outputs.runners }}
-          echo "Runners JSON: $runners"
+          # # 检查 runners 是否为空
+          # if [ -z "$runners" ]; then
+          #   echo "No runners found. Skipping download."
+          #   exit 0
+          # fi
 
-          # 检查 runners 是否为空
-          if [ -z "$runners" ]; then
-            echo "No runners found. Skipping download."
-            exit 0
-          fi
+          # # 解析 runners JSON 数据
+          # echo "$runners" | jq -c '.[]' | while read -r runner; do
+          #   runner_name=$(echo "$runner" | jq -r '.name')
+          #   echo "Downloading artifact for runner: $runner_name"
 
-          # 解析 runners JSON 数据
-          echo "$runners" | jq -c '.[]' | while read -r runner; do
-            runner_name=$(echo "$runner" | jq -r '.name')
-            echo "Downloading artifact for runner: $runner_name"
-
-            # 下载 Artifact
-            gh run download $GITHUB_RUN_ID --name "ip_hostname_$runner_name" --dir ip_hostname
-          done
+          #   # 下载 Artifact
+          #   gh run download $GITHUB_RUN_ID --name "ip_hostname_$runner_name" --dir ip_hostname
+          # done
 
       - name: Combine IP and Hostname Info
         run: |
