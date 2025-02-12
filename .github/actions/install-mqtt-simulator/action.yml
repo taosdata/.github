@@ -18,8 +18,8 @@ runs:
       id: app-token
       uses: tibdex/github-app-token@v1
       with:
-        app_id: ${{ var.TAOSDATA_BOT_ID }}
-        private_key: ${{ secrets.TAOSDATA_BOT_KEY }}
+        app_id: ${{ var.RES_APP_ID }}
+        private_key: ${{ secrets.RES_APP_KEY }}
 
     - name: Set GitHub App Token as secret
       run: echo "GITHUB_APP_TOKEN=${{ steps.app-token.outputs.token }}" >> $GITHUB_ENV
