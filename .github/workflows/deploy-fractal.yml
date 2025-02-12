@@ -52,10 +52,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-
-      - name: Run a script on MQTT Clients
-        run: echo "Running on ${{ runner.name }}"
-
+      - name: Install MQTT CLI
+        uses: ./.github/actions/install-mqtt-simulator
+      
+      - name: Find mqtt_pub binary
+        run: |
+          if command -v mqtt_pub &> /dev/null; then
+            echo "mqtt_pub found at $(command -v mqtt_pub)"
+          else
+            echo "mqtt_pub not found"
+          fi
       - name: Get IP Addresses
         run: |
           local_ip=$(hostname -I | awk '{print $1}')
