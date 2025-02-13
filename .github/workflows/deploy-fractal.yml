@@ -18,8 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       runner_combinations: ${{ steps.set-runner-combinations.outputs.runner_combinations }}  
-    #   mqtt_clients: ${{ steps.set-mqtt-clients.outputs.mqtt_clients }}
-    #   fractal_edges: ${{ steps.set-fractal-edges.outputs.fractal_edges }}
+      fractal_ips: ${{ steps.init-fractal-ips.outputs.fractal_ips }}
     steps:
       - name: Set Runner Combinations
         id: set-runner-combinations
@@ -40,7 +39,11 @@ jobs:
 
             # 设置输出
             echo "::set-output name=runner_combinations::$combinations"
-            
+      - name: Initialize fractal_ips
+        id: init-fractal-ips
+        run: |
+          fractal_ips='{}'
+          echo "::set-output name=fractal_ips::$fractal_ips" 
   deploy-fractal-edge:
     needs: set-runners
     strategy:
@@ -75,12 +78,8 @@ jobs:
           local_ip=${{ steps.get-ip.outputs.local_ip }}
           # 获取当前任务的 fractal_edge 标识
           fractal_edge=${{ matrix.combination.fractal_edge }}
-          # 如果是第一个任务，初始化 fractal_ips 为一个空对象
-          if [ -z "${{ needs.deploy-fractal-edge.outputs.fractal_ips }}" ]; then
-            fractal_ips='{}'
-          else
-            fractal_ips=${{ needs.deploy-fractal-edge.outputs.fractal_ips }}
-          fi
+          # 获取前面任务累积的 fractal_ips
+          fractal_ips=${{ needs.set-runners.outputs.fractal_ips }}
           # 更新 fractal_ips 对象
           fractal_ips=$(echo "$fractal_ips" | jq --arg key "$fractal_edge" --arg value "$local_ip" '.[$key] = $value' | jq -c .)
           echo "fractal_ips=$fractal_ips" >> $GITHUB_OUTPUT
@@ -91,7 +90,6 @@ jobs:
       - name: Debug
         run: |
           echo "Debugging..."
-          cat $GITHUB_OUTPUT
           echo ${{ needs.deploy-fractal-edge.outputs.fractal_ips }}
   deploy-mqtt-client:
     needs: [set-runners,deploy-fractal-edge]
