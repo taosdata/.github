@@ -183,7 +183,7 @@ jobs:
       - name: Debug
         run: |
           echo "Debugging..."
-          echo "fractal_ips=$fractal_ips"
+          echo "fractal_ips=${{needs.deploy-fractal-edge.outputs.fractal_ips}}"
   deploy-mqtt-client:
     needs: [set-runners,deploy-fractal-edge]
     strategy:
