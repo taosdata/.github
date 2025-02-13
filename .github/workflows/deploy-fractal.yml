@@ -171,6 +171,14 @@ jobs:
           echo "Collecting IPs"
           fractal_ips=$(echo '{}' | jq --arg key "${{ matrix.combination.fractal_edge }}" --arg value "${{ steps.get-ip.outputs.local_ip }}" '.[$key] = $value' | jq -c .)
           echo "fractal_ips=$fractal_ips" >> $GITHUB_OUTPUT
+  
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Debug
+        run: |
+          echo "Debugging..."
+          echo "fractal_ips=$fractal_ips"
   deploy-mqtt-client:
     needs: [set-runners,deploy-fractal-edge]
     strategy:
