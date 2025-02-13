@@ -161,6 +161,7 @@ jobs:
         uses: actions/checkout@v3
       
       - name: Get IP Addresses
+        id: get-ip
         run: |
           local_ip=$(hostname -I | awk '{print $1}')
           echo "Local IP Address: $local_ip"
@@ -169,7 +170,10 @@ jobs:
         id: collect-ips
         run: |
           echo "Collecting IPs"
-          fractal_ips=$(echo '{}' | jq --arg key "${{ matrix.combination.fractal_edge }}" --arg value "${{ steps.get-ip.outputs.local_ip }}" '.[$key] = $value' | jq -c .)
+          # 获取当前 runner 的首个 IP 地址
+          local_ip=${{ steps.get-ip.outputs.local_ip }}
+          # 确保 fractal_ips 是一个单行 JSON 格式
+          fractal_ips=$(echo '{}' | jq --arg key "${{ matrix.combination.fractal_edge }}" --arg value "$local_ip" '.[$key] = $value' | jq -c .)
           echo "fractal_ips=$fractal_ips" >> $GITHUB_OUTPUT
   
   debug:
