@@ -27,16 +27,11 @@ jobs:
             mqtt_client=$(seq 1 2 | sed 's/^/mqtt-client/')
             fractal_edge=$(seq 1 2 | sed 's/^/fractal-edge-/')
 
-            # 将标签转换为 JSON 数组
             mqtt_json=$(echo "$mqtt_client" | jq -R -s -c 'split("\n")[:-1]')  # 去除末尾空元素
             fractal_json=$(echo "$fractal_edge" | jq -R -s -c 'split("\n")[:-1]')
 
-            # 生成组合数组：一一对应的 [{"mqtt_client": "mqtt-client1", "fractal_edge": "fractal-edge-1"}, ...]
             combinations=$(jq -n --argjson a "$mqtt_json" --argjson b "$fractal_json" '$a | to_entries | map({ mqtt_client: .value, fractal_edge: $b[.key] })'| jq -c .)
-            # 调试输出
             echo "Generated combinations: $combinations"
-
-            # 设置输出
             echo "::set-output name=runner_combinations::$combinations"
 
   deploy-fractal-edge:
@@ -72,19 +67,6 @@ jobs:
         with:
           name: ${{ matrix.combination.fractal_edge }}-ip
           path: ${{ matrix.combination.fractal_edge }}.txt
-      # - name: Collect IPs
-      #   id: collect-ips
-      #   run: |
-      #     echo "Collecting IPs"
-      #     # 获取当前 runner 的首个 IP 地址
-      #     local_ip=${{ steps.get-ip.outputs.local_ip }}
-      #     # 获取当前任务的 fractal_edge 标识
-      #     fractal_edge=${{ matrix.combination.fractal_edge }}
-      #     # 更新 fractal_ips 对象
-      #     fractal_ips=$(echo "$fractal_ips" | jq --arg key "$fractal_edge" --arg value "$local_ip" '.[$key] = $value' | jq -c .)
-      #     echo "::set-output name=runner_combinations::$combinations"
-
-
   deploy-mqtt-client:
     needs: [set-runners,deploy-fractal-edge]
     strategy:
@@ -112,20 +94,21 @@ jobs:
         run: |
             fractal_ip=$(cat ./ip_artifacts/${{ matrix.combination.fractal_edge }}.txt)
             echo "Fractal IPs: $fractal_ip"
-          
-    #     run: |
-    #       cd /root/tools/deploy && ./setup_system.sh replace_sources
-    #   - name: Install MQTT CLI
-    #     uses: taosdata/.github/.github/actions/install-mqtt-simulator
-    #     with:
-    #       res_app_id: ${{ vars.TAOSDATA_BOT_ID }}
-    #       res_app_key: ${{ secrets.TAOSDATA_BOT_KEY }}
+            echo "FRACTAL_IP=$fractal_ip" >> $GITHUB_ENV
+      - name: Replace Sources    
+        run: |
+          cd /root/tools/deploy && ./setup_system.sh replace_sources
+      - name: Install MQTT CLI
+        uses: taosdata/.github/.github/actions/install-mqtt-simulator
+        with:
+          res_app_id: ${{ vars.TAOSDATA_BOT_ID }}
+          res_app_key: ${{ secrets.TAOSDATA_BOT_KEY }}
       
-    #   - name: Find mqtt_pub binary
-    #     run: |
-    #       if command -v mqtt_pub &> /dev/null; then
-    #         echo "mqtt_pub found at $(command -v mqtt_pub)"
-    #       else
-    #         echo "mqtt_pub not found"
-    #       fi
+      - name: Find mqtt_pub binary
+        run: |
+          if command -v mqtt_pub &> /dev/null; then
+            echo "mqtt_pub found at $(command -v mqtt_pub)"
+          else
+            echo "mqtt_pub not found"
+          fi
 
