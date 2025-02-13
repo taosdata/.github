@@ -134,8 +134,8 @@ jobs:
 
             # 生成组合数组：一一对应的 [{"mqtt_client": "mqtt-client1", "fractal_edge": "fractal-edge-1"}, ...]
             combinations=$(jq -n --argjson a "$mqtt_json" --argjson b "$fractal_json" '[ $a | to_entries | map({ mqtt_client: .value, fractal_edge: $b[.key] }) ]')
-
-            echo "::set-output name=runner_combinations::$combinations"
+            
+            echo "::set-output name=runner_combinations::($combinations | jq -c '.[0]') "
     #   - name: Set MQTT Clients
     #     id: set-mqtt-clients
     #     run: |
