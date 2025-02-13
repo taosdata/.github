@@ -73,7 +73,7 @@ jobs:
       - name: Setup labels
         id: setup-labels
         run: |
-          labels=[self-hosted, Linux, X64, fractal, edge_td,${{ matrix.combination.fractal_edge }}]
+          labels="[self-hosted, Linux, X64, fractal, edge_td,${{ matrix.combination.fractal_edge }}]"
           echo "fractal_edge_labels=$labels" >> $GITHUB_ENV
       - name: Check and Install TDengine Enterprise
         uses: taosdata/.github/.github/actions/install-tdengine-enterprise@fractal
