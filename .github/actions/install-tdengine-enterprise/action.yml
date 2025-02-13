@@ -54,7 +54,8 @@ runs:
           echo "::error ::Failed to enter TDengine directory"
           exit 1
         }
-        echo 'e no' | ./install.sh
+        ./install.sh -e no
+        # echo 'e no' | ./install.sh
         # if ! echo 'e no' | ./install.sh; then
         #   echo "::error ::Failed to install TDengine"
         #   exit 1
