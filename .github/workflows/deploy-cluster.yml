@@ -182,8 +182,16 @@ jobs:
         run: |
           echo "🔄 Updating /etc/hosts..."
 
-          # 将所有 IP 和主机名信息写入 /etc/hosts
-          echo -e "$ip_hostname_info" | sudo tee -a /etc/hosts
+          # 遍历 ip_hostname_info 的每一行
+          while IFS= read -r line; do
+            # 检查 /etc/hosts 中是否已经存在该行
+            if ! grep -Fxq "$line" /etc/hosts; then
+              # 如果不存在，则追加到 /etc/hosts
+              echo "$line" | sudo tee -a /etc/hosts
+            else
+              echo "✅ Skipping (already exists): $line"
+            fi
+          done <<< "$ip_hostname_info"
 
           echo "✅ Updated /etc/hosts with runner IPs and hostnames:"
           cat /etc/hosts
