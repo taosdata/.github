@@ -65,7 +65,13 @@ jobs:
         run: |
           local_ip=$(hostname -I | awk '{print $1}')
           echo "Local IP Address: $local_ip"
-          echo "local_ip=$local_ip" >> $GITHUB_OUTPUT
+          echo "$local_ip" > ${{ matrix.combination.fractal_edge }}.txt
+
+      - name: Upload IP Address as Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.combination.fractal_edge }}-ip
+          path: ${{ matrix.combination.fractal_edge }}.txt
       # - name: Collect IPs
       #   id: collect-ips
       #   run: |
@@ -84,7 +90,7 @@ jobs:
     strategy:
       matrix:
         combination: ${{ fromJSON(needs.set-runners.outputs.runner_combinations) }}
-        fractal_ip: ${{ needs.deploy-fractal-edge.outputs.fractal_ips }}
+        fractal_ip: ${{ needs.deploy-fractal-edge.outputs.fractal_ip }}
     runs-on: 
       group: fractal
       labels: 
@@ -96,11 +102,17 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-
+      
+      - name: Download IP Address Artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: ${{ matrix.combination.fractal_edge }}-ip
+          path: ./ip_artifacts
+      
       - name: Use Fractal Edges IPs
         run: |
-          fractal_ip=${{ matrix.fractal_ip }}
-          echo "Fractal IPs: $fractal_ip"
+            fractal_ip=$(cat ./ip_artifacts/${{ matrix.combination.fractal_edge }}.txt)
+            echo "Fractal IPs: $fractal_ip"
           
     #     run: |
     #       cd /root/tools/deploy && ./setup_system.sh replace_sources
