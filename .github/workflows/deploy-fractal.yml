@@ -68,7 +68,7 @@ jobs:
           echo "$local_ip" > ${{ matrix.combination.fractal_edge }}.txt
 
       - name: Upload IP Address as Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.combination.fractal_edge }}-ip
           path: ${{ matrix.combination.fractal_edge }}.txt
@@ -104,7 +104,7 @@ jobs:
         uses: actions/checkout@v3
       
       - name: Download IP Address Artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ matrix.combination.fractal_edge }}-ip
           path: ./ip_artifacts
