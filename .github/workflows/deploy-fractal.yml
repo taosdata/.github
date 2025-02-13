@@ -98,7 +98,7 @@ jobs:
         run: |
           cd /root/tools/deploy && ./setup_system.sh replace_sources
       - name: Install MQTT CLI
-        uses: .github/actions/install-mqtt-simulator
+        uses: taosdata/.github/.github/actions/install-mqtt-simulator@fractal
         with:
           res_app_id: ${{ vars.TAOSDATA_BOT_ID }}
           res_app_key: ${{ secrets.TAOSDATA_BOT_KEY }}
