@@ -1,3 +1,103 @@
+# name: deploy-mqttcli
+
+# on:
+#   workflow_dispatch:
+#     inputs:
+#       runner_number:
+#         description: 'Runner number (1-2)'
+#         required: true
+#         type: choice
+#         options:
+#           - 1
+#           - 2
+
+
+# jobs:
+#   set-runners:
+#     runs-on: ubuntu-latest
+#     outputs:
+#       mqtt_clients: ${{ steps.set-mqtt-clients.outputs.mqtt_clients }}
+#       fractal_edges: ${{ steps.set-fractal-edges.outputs.fractal_edges }}
+#     steps:
+#       - name: Set MQTT Clients
+#         id: set-mqtt-clients
+#         run: |
+#           echo "Setting MQTT Clients"
+#           clients=$(seq -s ',' 1 ${{ github.event.inputs.runner_number }} | sed 's/[0-9]\+/mqtt-client&/g')
+#           clients_json=$(echo -n $clients | jq -R -s -c 'split(",")')
+#           echo "::set-output name=mqtt_clients::$clients_json"
+
+#       - name: Set Fractal Edges
+#         id: set-fractal-edges
+#         run: |
+#           echo "Setting Fractal Edges"
+#           edges=$(seq -s ',' 1 ${{ github.event.inputs.runner_number }} | sed 's/[0-9]\+/fractal-edge-&/g')
+#           edges_json=$(echo -n $edges | jq -R -s -c 'split(",")')
+#           echo "::set-output name=fractal_edges::$edges_json"
+
+#   deploy-mqtt-client:
+#     needs: set-runners
+#     strategy:
+#       matrix:
+#         runner: ${{ fromJSON(needs.set-runners.outputs.mqtt_clients) }}
+#     runs-on: 
+#       group: fractal
+#       labels: 
+#         - self-hosted
+#         - Linux
+#         - X64
+#         - fractal
+#         - ${{ matrix.runner }}
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v3
+
+#       - name: Replace sources
+#         run: |
+#           cd /root/tools/deploy && ./setup_system.sh replace_sources
+#       - name: Install MQTT CLI
+#         uses: ./.github/actions/install-mqtt-simulator
+#         with:
+#           res_app_id: ${{ vars.RES_APP_ID }}
+#           res_app_key: ${{ secrets.RES_APP_KEY }}
+      
+#       - name: Find mqtt_pub binary
+#         run: |
+#           if command -v mqtt_pub &> /dev/null; then
+#             echo "mqtt_pub found at $(command -v mqtt_pub)"
+#           else
+#             echo "mqtt_pub not found"
+#           fi
+#       - name: Get IP Addresses
+#         run: |
+#           local_ip=$(hostname -I | awk '{print $1}')
+#           echo "Local IP Address: $local_ip"
+#   deploy-fractal-edge:
+#     needs: set-runners
+#     strategy:
+#       matrix:
+#         runner: ${{ fromJSON(needs.set-runners.outputs.fractal_edges) }}
+#     runs-on: 
+#       group: fractal
+#       labels: 
+#         - self-hosted
+#         - Linux
+#         - X64
+#         - edge_td
+#         - fractal
+#         - ${{ matrix.runner }}
+#     steps:
+#       - name: Checkout code
+#         uses: actions/checkout@v3
+      
+
+#       - name: Get IP Addresses
+#         run: |
+#           local_ip=$(hostname -I | awk '{print $1}')
+#           echo "Local IP Address: $local_ip"
+#       - name: Run a script on Fractal Edges
+#         run: echo "Running on ${{ runner.name }}"
+
 name: deploy-mqttcli
 
 on:
@@ -16,67 +116,39 @@ jobs:
   set-runners:
     runs-on: ubuntu-latest
     outputs:
-      mqtt_clients: ${{ steps.set-mqtt-clients.outputs.mqtt_clients }}
-      fractal_edges: ${{ steps.set-fractal-edges.outputs.fractal_edges }}
+      runner_combinations: ${{ steps.set-runner-combinations.outputs.runner_combinations }}  
+    #   mqtt_clients: ${{ steps.set-mqtt-clients.outputs.mqtt_clients }}
+    #   fractal_edges: ${{ steps.set-fractal-edges.outputs.fractal_edges }}
     steps:
-      - name: Set MQTT Clients
-        id: set-mqtt-clients
+      - name: Set Runner Combinations
+        id: set-runner-combinations
         run: |
-          echo "Setting MQTT Clients"
-          clients=$(seq -s ',' 1 ${{ github.event.inputs.runner_number }} | sed 's/[0-9]\+/mqtt-client&/g')
-          clients_json=$(echo -n $clients | jq -R -s -c 'split(",")')
-          echo "::set-output name=mqtt_clients::$clients_json"
+            echo "Setting Runner Combinations"
+            mqtt_client=$(seq -s ',' 1 ${{ github.event.inputs.runner_number }} | sed 's/[0-9]\+/mqtt-client&/g')
+            fractal_edge=$(seq -s ',' 1 ${{ github.event.inputs.runner_number }} | sed 's/[0-9]\+/fractal-edge-&/g')
+            combinations=$(jq -n --argjson a "[$(echo $mqtt_client | jq -R -s -c 'split(",")')]" --argjson b "[$(echo $fractal_edge | jq -R -s -c 'split(",")')]" '$a | map({mqtt_client: ., fractal_edge: $b[. | tonumber - 1]})')
+            echo "::set-output name=runner_combinations::$combinations"
+    #   - name: Set MQTT Clients
+    #     id: set-mqtt-clients
+    #     run: |
+    #       echo "Setting MQTT Clients"
+    #       clients=$(seq -s ',' 1 ${{ github.event.inputs.runner_number }} | sed 's/[0-9]\+/mqtt-client&/g')
+    #       clients_json=$(echo -n $clients | jq -R -s -c 'split(",")')
+    #       echo "::set-output name=mqtt_clients::$clients_json"
 
-      - name: Set Fractal Edges
-        id: set-fractal-edges
-        run: |
-          echo "Setting Fractal Edges"
-          edges=$(seq -s ',' 1 ${{ github.event.inputs.runner_number }} | sed 's/[0-9]\+/fractal-edge-&/g')
-          edges_json=$(echo -n $edges | jq -R -s -c 'split(",")')
-          echo "::set-output name=fractal_edges::$edges_json"
-
-  deploy-mqtt-client:
-    needs: set-runners
-    strategy:
-      matrix:
-        runner: ${{ fromJSON(needs.set-runners.outputs.mqtt_clients) }}
-    runs-on: 
-      group: fractal
-      labels: 
-        - self-hosted
-        - Linux
-        - X64
-        - fractal
-        - ${{ matrix.runner }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Replace sources
-        run: |
-          cd /root/tools/deploy && ./setup_system.sh replace_sources
-      - name: Install MQTT CLI
-        uses: ./.github/actions/install-mqtt-simulator
-        with:
-          res_app_id: ${{ vars.RES_APP_ID }}
-          res_app_key: ${{ secrets.RES_APP_KEY }}
-      
-      - name: Find mqtt_pub binary
-        run: |
-          if command -v mqtt_pub &> /dev/null; then
-            echo "mqtt_pub found at $(command -v mqtt_pub)"
-          else
-            echo "mqtt_pub not found"
-          fi
-      - name: Get IP Addresses
-        run: |
-          local_ip=$(hostname -I | awk '{print $1}')
-          echo "Local IP Address: $local_ip"
+    #   - name: Set Fractal Edges
+    #     id: set-fractal-edges
+    #     run: |
+    #       echo "Setting Fractal Edges"
+    #       edges=$(seq -s ',' 1 ${{ github.event.inputs.runner_number }} | sed 's/[0-9]\+/fractal-edge-&/g')
+    #       edges_json=$(echo -n $edges | jq -R -s -c 'split(",")')
+    #       echo "::set-output name=fractal_edges::$edges_json"
+            
   deploy-fractal-edge:
     needs: set-runners
     strategy:
       matrix:
-        runner: ${{ fromJSON(needs.set-runners.outputs.fractal_edges) }}
+        combination: ${{ fromJSON(needs.set-runners.outputs.runner_combinations) }}
     runs-on: 
       group: fractal
       labels: 
@@ -85,15 +157,67 @@ jobs:
         - X64
         - edge_td
         - fractal
-        - ${{ matrix.runner }}
+        - ${{ matrix.combination.fractal_edge }}
+    outputs:
+      fractal_ips: ${{ steps.collect-ips.outputs.fractal_ips }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
       
-
       - name: Get IP Addresses
         run: |
           local_ip=$(hostname -I | awk '{print $1}')
           echo "Local IP Address: $local_ip"
-      - name: Run a script on Fractal Edges
-        run: echo "Running on ${{ runner.name }}"
+
+      - name: Collect IPs
+        id: collect-ips
+        run: |
+          echo "Collecting IPs"
+          fractal_ips=$(echo '{}' | jq --arg key "${{ matrix.combination.fractal_edge }}" --arg value "${{ steps.get-ip.outputs.local_ip }}" '.[$key] = $value')
+          echo "::set-output name=fractal_ips::$fractal_ips"
+  deploy-mqtt-client:
+    needs: deploy-fractal-edge
+    strategy:
+      matrix:
+        combination: ${{ fromJSON(needs.set-runners.outputs.runner_combinations) }}
+    runs-on: 
+      group: fractal
+      labels: 
+        - self-hosted
+        - Linux
+        - X64
+        - fractal
+        - ${{ matrix.combination.mqtt_client }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Use Fractal Edges IPs
+        run: |
+          fractal_ips=${{ needs.deploy-fractal-edge.outputs.fractal_ips }}
+          echo "Fractal Edges IPs: $fractal_ips"
+          echo "IP for runner ${{ matrix.combination.fractal_edge }}: $(echo $fractal_ips | jq -r --arg key "${{ matrix.combination.fractal_edge }}" '.[$key]')"
+    #   - name: Replace sources
+    #     run: |
+    #       cd /root/tools/deploy && ./setup_system.sh replace_sources
+    #   - name: Install MQTT CLI
+    #     uses: taosdata/.github/.github/actions/install-mqtt-simulator
+    #     with:
+    #       res_app_id: ${{ vars.TAOSDATA_BOT_ID }}
+    #       res_app_key: ${{ secrets.TAOSDATA_BOT_KEY }}
+      
+    #   - name: Find mqtt_pub binary
+    #     run: |
+    #       if command -v mqtt_pub &> /dev/null; then
+    #         echo "mqtt_pub found at $(command -v mqtt_pub)"
+    #       else
+    #         echo "mqtt_pub not found"
+    #       fi
+    #   - name: Get IP Addresses
+    #     run: |
+    #       local_ip=$(hostname -I | awk '{print $1}')
+    #       echo "Local IP Address: $local_ip"
+    #   - name: Get fractal edge IP
+    #     run: |
+    #       edge_ip=$(hostname -I | awk '{print $1}')
+    #       echo "Fractal Edge IP Address: $edge_ip"
