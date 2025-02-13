@@ -82,17 +82,10 @@ jobs:
           fractal_ips=${{ needs.set-runners.outputs.fractal_ips }}
           # 更新 fractal_ips 对象
           fractal_ips=$(echo "$fractal_ips" | jq --arg key "$fractal_edge" --arg value "$local_ip" '.[$key] = $value' | jq -c .)
-          echo "fractal_ips=$fractal_ips" >> $GITHUB_OUTPUT
+          echo "${{ matrix.combination.fractal_edge }}=$fractal_ips" >> $GITHUB_OUTPUT
           echo $fractal_ips
 
-  debug:
-    runs-on: ubuntu-latest
-    needs: deploy-fractal-edge
-    steps:
-      - name: Debug
-        run: |
-          echo "Debugging..."
-          echo ${{ needs.deploy-fractal-edge.outputs.fractal_ips }}
+
   deploy-mqtt-client:
     needs: [set-runners,deploy-fractal-edge]
     strategy:
