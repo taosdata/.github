@@ -54,11 +54,11 @@ runs:
           echo "::error ::Failed to enter TDengine directory"
           exit 1
         }
-
-        if ! echo 'e no' | ./install.sh; then
-          echo "::error ::Failed to install TDengine"
-          exit 1
-        fi
+        echo 'e no' | ./install.sh
+        # if ! echo 'e no' | ./install.sh; then
+        #   echo "::error ::Failed to install TDengine"
+        #   exit 1
+        # fi
 
     - name: Clean up temporary files
       shell: bash
