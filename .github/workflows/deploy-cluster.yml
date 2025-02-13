@@ -117,7 +117,7 @@ jobs:
           echo "Hostname: $hostname"
 
           # 将 IP 和主机名保存为输出
-          echo "$ip $hostname" > ip_hostname.txt
+          echo "$ip $hostname" > ip_hostname_${{ matrix.runner.name }}.txt
 
       - name: Upload IP and Hostname Info
         uses: actions/upload-artifact@v4
