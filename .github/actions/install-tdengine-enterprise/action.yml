@@ -5,14 +5,6 @@ inputs:
     required: true
     type: string
     description: 'Version number, e.g., 3.3.5.1'
-  group:
-    required: true
-    type: string
-    description: 'Group, e.g., fractal'
-  labels:
-    required: true
-    type: string
-    description: 'Labels, e.g., [self-hosted, Linux, X64, fractal, edge_td, fractal-edge-1]'
   NAS_DOWNLOAD_URL:
     required: true
     type: string
@@ -28,7 +20,6 @@ runs:
       shell: bash
       run: |
         VERSION=${{ inputs.version }}
-        GROUP=${{ inputs.group }}
         BASE_URL=${{ inputs.NAS_DOWNLOAD_URL }}
 
         # Get major version
@@ -38,21 +29,39 @@ runs:
         URL="${BASE_URL}/${MAJOR_VERSION}/v${VERSION}/enterprise/TDengine-enterprise-${VERSION}-Linux-x64.tar.gz"
         echo "Download URL: $URL"
         echo "VERSION=$VERSION" >> $GITHUB_ENV
-        echo "GROUP=$GROUP" >> $GITHUB_ENV
         echo "URL=$URL" >> $GITHUB_ENV
 
     - name: Download TDengine
       shell: bash
       run: |
-        wget $URL
+        if ! wget "$URL"; then
+          echo "::error ::Failed to download TDengine from $URL"
+          exit 1
+        fi
 
     - name: Extract TDengine
       shell: bash
       run: |
-        tar -xzvf TDengine-enterprise-${VERSION}-Linux-x64.tar.gz
+        if ! tar -xzvf "TDengine-enterprise-${VERSION}-Linux-x64.tar.gz"; then
+          echo "::error ::Failed to extract TDengine archive"
+          exit 1
+        fi
 
     - name: Install TDengine
       shell: bash
       run: |
-        cd TDengine-enterprise-${VERSION}
-        echo 'y' | ./install.sh
+        cd "TDengine-enterprise-${VERSION}" || {
+          echo "::error ::Failed to enter TDengine directory"
+          exit 1
+        }
+
+        if ! echo 'y' | ./install.sh; then
+          echo "::error ::Failed to install TDengine"
+          exit 1
+        fi
+
+    - name: Clean up temporary files
+      shell: bash
+      run: |
+        rm -f "TDengine-enterprise-${VERSION}-Linux-x64.tar.gz"
+        rm -rf "TDengine-enterprise-${VERSION}"
