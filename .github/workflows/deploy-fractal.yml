@@ -205,8 +205,9 @@ jobs:
         run: |
           fractal_ips=${{ needs.deploy-fractal-edge.outputs.fractal_ips }}
           echo "Fractal Edges IPs: $fractal_ips"
+          # 确保正确解析 JSON 数据
           ip=$(echo $fractal_ips | jq -r --arg key "${{ matrix.combination.fractal_edge }}" '.[$key]')
-          echo "IP for runner ${{ matrix.combination.fractal_edge }}: $ip"#   - name: Replace sources
+          echo "IP for runner ${{ matrix.combination.fractal_edge }}: $ip"
     #     run: |
     #       cd /root/tools/deploy && ./setup_system.sh replace_sources
     #   - name: Install MQTT CLI
