@@ -55,7 +55,7 @@ runs:
           exit 1
         }
 
-        if ! echo 'y' | ./install.sh; then
+        if ! echo 'e no' | ./install.sh; then
           echo "::error ::Failed to install TDengine"
           exit 1
         fi
