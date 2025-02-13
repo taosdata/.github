@@ -1,4 +1,6 @@
+
 name: Install FlashMQ
+description: Install FlashMQ and start the service
 
 runs:
   using: 'composite'

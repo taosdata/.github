@@ -51,7 +51,7 @@ runs:
 
     - name: Find mqtt_pub binary
       run: |
-        mqtt_pub_path=$(find . -name mqtt_pub 2>/dev/null)
+        mqtt_pub_path=$(find /root /opt -name mqtt_pub 2>/dev/null)
           if [ -n "$mqtt_pub_path" ]; then
             echo "mqtt_pub found at $mqtt_pub_path"
           else

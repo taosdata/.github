@@ -1,5 +1,5 @@
 name: Install TDengine Enterprise
-
+description: Install TDengine Enterprise and start the service
 inputs:
   version:
     required: true
@@ -54,11 +54,12 @@ runs:
           echo "::error ::Failed to enter TDengine directory"
           exit 1
         }
-
-        if ! echo 'y' | ./install.sh; then
-          echo "::error ::Failed to install TDengine"
-          exit 1
-        fi
+        ./install.sh -e no
+        # echo 'e no' | ./install.sh
+        # if ! echo 'e no' | ./install.sh; then
+        #   echo "::error ::Failed to install TDengine"
+        #   exit 1
+        # fi
 
     - name: Clean up temporary files
       shell: bash
