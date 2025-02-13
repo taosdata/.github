@@ -1,102 +1,3 @@
-# name: deploy-mqttcli
-
-# on:
-#   workflow_dispatch:
-#     inputs:
-#       runner_number:
-#         description: 'Runner number (1-2)'
-#         required: true
-#         type: choice
-#         options:
-#           - 1
-#           - 2
-
-
-# jobs:
-#   set-runners:
-#     runs-on: ubuntu-latest
-#     outputs:
-#       mqtt_clients: ${{ steps.set-mqtt-clients.outputs.mqtt_clients }}
-#       fractal_edges: ${{ steps.set-fractal-edges.outputs.fractal_edges }}
-#     steps:
-#       - name: Set MQTT Clients
-#         id: set-mqtt-clients
-#         run: |
-#           echo "Setting MQTT Clients"
-#           clients=$(seq -s ',' 1 ${{ github.event.inputs.runner_number }} | sed 's/[0-9]\+/mqtt-client&/g')
-#           clients_json=$(echo -n $clients | jq -R -s -c 'split(",")')
-#           echo "::set-output name=mqtt_clients::$clients_json"
-
-#       - name: Set Fractal Edges
-#         id: set-fractal-edges
-#         run: |
-#           echo "Setting Fractal Edges"
-#           edges=$(seq -s ',' 1 ${{ github.event.inputs.runner_number }} | sed 's/[0-9]\+/fractal-edge-&/g')
-#           edges_json=$(echo -n $edges | jq -R -s -c 'split(",")')
-#           echo "::set-output name=fractal_edges::$edges_json"
-
-#   deploy-mqtt-client:
-#     needs: set-runners
-#     strategy:
-#       matrix:
-#         runner: ${{ fromJSON(needs.set-runners.outputs.mqtt_clients) }}
-#     runs-on: 
-#       group: fractal
-#       labels: 
-#         - self-hosted
-#         - Linux
-#         - X64
-#         - fractal
-#         - ${{ matrix.runner }}
-#     steps:
-#       - name: Checkout code
-#         uses: actions/checkout@v3
-
-#       - name: Replace sources
-#         run: |
-#           cd /root/tools/deploy && ./setup_system.sh replace_sources
-#       - name: Install MQTT CLI
-#         uses: ./.github/actions/install-mqtt-simulator
-#         with:
-#           res_app_id: ${{ vars.RES_APP_ID }}
-#           res_app_key: ${{ secrets.RES_APP_KEY }}
-      
-#       - name: Find mqtt_pub binary
-#         run: |
-#           if command -v mqtt_pub &> /dev/null; then
-#             echo "mqtt_pub found at $(command -v mqtt_pub)"
-#           else
-#             echo "mqtt_pub not found"
-#           fi
-#       - name: Get IP Addresses
-#         run: |
-#           local_ip=$(hostname -I | awk '{print $1}')
-#           echo "Local IP Address: $local_ip"
-#   deploy-fractal-edge:
-#     needs: set-runners
-#     strategy:
-#       matrix:
-#         runner: ${{ fromJSON(needs.set-runners.outputs.fractal_edges) }}
-#     runs-on: 
-#       group: fractal
-#       labels: 
-#         - self-hosted
-#         - Linux
-#         - X64
-#         - edge_td
-#         - fractal
-#         - ${{ matrix.runner }}
-#     steps:
-#       - name: Checkout code
-#         uses: actions/checkout@v3
-      
-
-#       - name: Get IP Addresses
-#         run: |
-#           local_ip=$(hostname -I | awk '{print $1}')
-#           echo "Local IP Address: $local_ip"
-#       - name: Run a script on Fractal Edges
-#         run: echo "Running on ${{ runner.name }}"
 
 name: deploy-mqttcli
 
@@ -167,8 +68,16 @@ jobs:
           echo "Local IP Address: $local_ip"
           echo "local_ip=$local_ip" >> $GITHUB_OUTPUT
           echo "::set-output name=fractal_ips::$local_ip"
-
-        
+      - name: Collect IPs
+        id: collect-ips
+        run: |
+          echo "Collecting IPs"
+          # 获取当前 runner 的首个 IP 地址
+          local_ip=${{ steps.get-ip.outputs.local_ip }}
+          # 将当前 runner 的 IP 地址存储到 fractal_ips 中
+          fractal_ips=$(echo '{}' | jq --arg key "${{ matrix.combination.fractal_edge }}" --arg value "$local_ip" '.[$key] = $value' | jq -c .)
+          echo "fractal_ips=$fractal_ips" >> $GITHUB_OUTPUT
+          echo "::set-output name=fractal_ips::$fractal_ips"
   deploy-mqtt-client:
     needs: [set-runners,deploy-fractal-edge]
     strategy:
@@ -207,11 +116,4 @@ jobs:
     #       else
     #         echo "mqtt_pub not found"
     #       fi
-    #   - name: Get IP Addresses
-    #     run: |
-    #       local_ip=$(hostname -I | awk '{print $1}')
-    #       echo "Local IP Address: $local_ip"
-    #   - name: Get fractal edge IP
-    #     run: |
-    #       edge_ip=$(hostname -I | awk '{print $1}')
-    #       echo "Fractal Edge IP Address: $edge_ip"
+
