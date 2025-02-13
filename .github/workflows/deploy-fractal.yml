@@ -90,7 +90,6 @@ jobs:
     strategy:
       matrix:
         combination: ${{ fromJSON(needs.set-runners.outputs.runner_combinations) }}
-        fractal_ip: ${{ needs.deploy-fractal-edge.outputs.fractal_ip }}
     runs-on: 
       group: fractal
       labels: 
