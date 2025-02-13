@@ -1,4 +1,4 @@
-name: deploy mqttcli
+name: deploy fractal environment
 
 on:
   workflow_dispatch:
@@ -10,7 +10,18 @@ on:
         options:
           - 1
           - 2
-
+      version:
+        description: 'Enter the version of TDengine to install'
+        required: true
+        default: '3.3.5.1'
+      group:
+        description: 'Enter the group for the runner'
+        required: true
+        default: 'default'
+      labels:
+        description: 'Enter the labels for the runner'
+        required: true
+        default: '[self-hosted, Linux, X64, fractal, edge_td, fractal-edge-1]'
 
 jobs:
   set-runners:
@@ -66,6 +77,14 @@ jobs:
         with:
           name: ${{ matrix.combination.fractal_edge }}-ip
           path: ${{ matrix.combination.fractal_edge }}.txt
+
+      - name: Check and Install TDengine Enterprise
+        uses: taosdata/.github/.github/actions/install-tdengine@test/fractal
+        with:
+          version: ${{ github.event.inputs.version }}
+          group: ${{ github.event.inputs.group }}
+          labels: ${{ github.event.inputs.labels }}
+          NAS_DOWNLOAD_URL: ${{ secrets.NAS_DOWNLOAD_URL }}
   deploy-mqtt-client:
     needs: [set-runners,deploy-fractal-edge]
     strategy:
@@ -82,18 +101,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+      - name: Install flashmq
+        uses: taosdata/.github/.github/actions/install-flashmq@test/fractal
+
       
-      - name: Download IP Address Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: ${{ matrix.combination.fractal_edge }}-ip
-          path: ./ip_artifacts
-      
-      - name: Use Fractal Edges IPs
-        run: |
-            fractal_ip=$(cat ./ip_artifacts/${{ matrix.combination.fractal_edge }}.txt)
-            echo "Fractal IPs: $fractal_ip"
-            echo "FRACTAL_IP=$fractal_ip" >> $GITHUB_ENV
       - name: Replace Sources    
         run: |
           cd /root/tools/deploy && ./setup_system.sh replace_sources
@@ -110,4 +121,15 @@ jobs:
           else
             echo "mqtt_pub not found"
           fi
+      - name: Download IP Address Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.combination.fractal_edge }}-ip
+          path: ./ip_artifacts
+        
+      - name: Use Fractal Edges IPs
+        run: |
+              fractal_ip=$(cat ./ip_artifacts/${{ matrix.combination.fractal_edge }}.txt)
+              echo "Fractal IPs: $fractal_ip"
+              echo "FRACTAL_IP=$fractal_ip" >> $GITHUB_ENV
 
