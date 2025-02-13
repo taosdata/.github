@@ -100,8 +100,8 @@ jobs:
       - name: Install MQTT CLI
         uses: taosdata/.github/.github/actions/install-mqtt-simulator@fractal
         with:
-          res_app_id: ${{ vars.TAOSDATA_BOT_ID }}
-          res_app_key: ${{ secrets.TAOSDATA_BOT_KEY }}
+          res_app_id: ${{ vars.RES_APP_ID }}
+          res_app_key: ${{ secrets.RES_APP_KEY }}
       
       - name: Find mqtt_pub binary
         run: |
