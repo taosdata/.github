@@ -166,7 +166,7 @@ jobs:
           local_ip=$(hostname -I | awk '{print $1}')
           echo "Local IP Address: $local_ip"
           echo "local_ip=$local_ip" >> $GITHUB_OUTPUT
-
+          echo "::set-output name=fractal_ips::$local_ip"
 
         
   deploy-mqtt-client:
