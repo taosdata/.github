@@ -113,11 +113,13 @@ jobs:
       
       - name: Find mqtt_pub binary
         run: |
-          if command -v mqtt_pub &> /dev/null; then
-            echo "mqtt_pub found at $(command -v mqtt_pub)"
-          else
-            echo "mqtt_pub not found"
-          fi
+            mqtt_pub_path=$(find /root /opt -name mqtt_pub 2>/dev/null)
+              if [ -n "$mqtt_pub_path" ]; then
+                echo "mqtt_pub found at $mqtt_pub_path"
+              else
+                echo "mqtt_pub not found"
+              fi
+        shell: bash
       - name: Download IP Address Artifact
         uses: actions/download-artifact@v4
         with:
