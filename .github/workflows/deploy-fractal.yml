@@ -184,7 +184,7 @@ jobs:
           fractal_ips=$(echo '{}' | jq --arg key "${{ matrix.combination.fractal_edge }}" --arg value "${{ steps.get-ip.outputs.local_ip }}" '.[$key] = $value')
           echo "::set-output name=fractal_ips::$fractal_ips"
   deploy-mqtt-client:
-    needs: deploy-fractal-edge
+    needs: [set-runners,deploy-fractal-edge]
     strategy:
       matrix:
         combination: ${{ fromJSON(needs.set-runners.outputs.runner_combinations) }}
