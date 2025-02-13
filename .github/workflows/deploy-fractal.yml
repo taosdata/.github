@@ -138,7 +138,7 @@ jobs:
             echo "Generated combinations: $combinations"
 
             # 设置输出
-            echo "::set-output name=runner_combinations::$combinations"#   - name: Set MQTT Clients
+            echo "::set-output name=runner_combinations::$combinations"
     #     id: set-mqtt-clients
     #     run: |
     #       echo "Setting MQTT Clients"
@@ -162,60 +162,60 @@ jobs:
         run: |
           echo "Debugging"
           echo "Runner Combinations: ${{ needs.set-runners.outputs.runner_combinations }}"
-  # deploy-fractal-edge:
-  #   needs: set-runners
-  #   strategy:
-  #     matrix:
-  #       combination: ${{ fromJSON(needs.set-runners.outputs.runner_combinations) }}
-  #   runs-on: 
-  #     group: fractal
-  #     labels: 
-  #       - self-hosted
-  #       - Linux
-  #       - X64
-  #       - edge_td
-  #       - fractal
-  #       - ${{ matrix.combination.fractal_edge }}
-  #   outputs:
-  #     fractal_ips: ${{ steps.collect-ips.outputs.fractal_ips }}
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v3
+  deploy-fractal-edge:
+    needs: set-runners
+    strategy:
+      matrix:
+        combination: ${{ fromJSON(needs.set-runners.outputs.runner_combinations) }}
+    runs-on: 
+      group: fractal
+      labels: 
+        - self-hosted
+        - Linux
+        - X64
+        - edge_td
+        - fractal
+        - ${{ matrix.combination.fractal_edge }}
+    outputs:
+      fractal_ips: ${{ steps.collect-ips.outputs.fractal_ips }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
       
-  #     - name: Get IP Addresses
-  #       run: |
-  #         local_ip=$(hostname -I | awk '{print $1}')
-  #         echo "Local IP Address: $local_ip"
+      - name: Get IP Addresses
+        run: |
+          local_ip=$(hostname -I | awk '{print $1}')
+          echo "Local IP Address: $local_ip"
 
-  #     - name: Collect IPs
-  #       id: collect-ips
-  #       run: |
-  #         echo "Collecting IPs"
-  #         fractal_ips=$(echo '{}' | jq --arg key "${{ matrix.combination.fractal_edge }}" --arg value "${{ steps.get-ip.outputs.local_ip }}" '.[$key] = $value')
-  #         echo "::set-output name=fractal_ips::$fractal_ips"
-  # deploy-mqtt-client:
-  #   needs: [set-runners,deploy-fractal-edge]
-  #   strategy:
-  #     matrix:
-  #       combination: ${{ fromJSON(needs.set-runners.outputs.runner_combinations) }}
-  #   runs-on: 
-  #     group: fractal
-  #     labels: 
-  #       - self-hosted
-  #       - Linux
-  #       - X64
-  #       - fractal
-  #       - ${{ matrix.combination.mqtt_client }}
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v3
+      - name: Collect IPs
+        id: collect-ips
+        run: |
+          echo "Collecting IPs"
+          fractal_ips=$(echo '{}' | jq --arg key "${{ matrix.combination.fractal_edge }}" --arg value "${{ steps.get-ip.outputs.local_ip }}" '.[$key] = $value')
+          echo "::set-output name=fractal_ips::$fractal_ips"
+  deploy-mqtt-client:
+    needs: [set-runners,deploy-fractal-edge]
+    strategy:
+      matrix:
+        combination: ${{ fromJSON(needs.set-runners.outputs.runner_combinations) }}
+    runs-on: 
+      group: fractal
+      labels: 
+        - self-hosted
+        - Linux
+        - X64
+        - fractal
+        - ${{ matrix.combination.mqtt_client }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-  #     - name: Use Fractal Edges IPs
-  #       run: |
-  #         fractal_ips=${{ needs.deploy-fractal-edge.outputs.fractal_ips }}
-  #         echo "Fractal Edges IPs: $fractal_ips"
-  #         echo "IP for runner ${{ matrix.combination.fractal_edge }}: $(echo $fractal_ips | jq -r --arg key "${{ matrix.combination.fractal_edge }}" '.[$key]')"
-  #   #   - name: Replace sources
+      - name: Use Fractal Edges IPs
+        run: |
+          fractal_ips=${{ needs.deploy-fractal-edge.outputs.fractal_ips }}
+          echo "Fractal Edges IPs: $fractal_ips"
+          echo "IP for runner ${{ matrix.combination.fractal_edge }}: $(echo $fractal_ips | jq -r --arg key "${{ matrix.combination.fractal_edge }}" '.[$key]')"
+    #   - name: Replace sources
     #     run: |
     #       cd /root/tools/deploy && ./setup_system.sh replace_sources
     #   - name: Install MQTT CLI
