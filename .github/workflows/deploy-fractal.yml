@@ -18,7 +18,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       runner_combinations: ${{ steps.set-runner-combinations.outputs.runner_combinations }}  
-      fractal_ips: ${{ steps.init-fractal-ips.outputs.fractal_ips }}
     steps:
       - name: Set Runner Combinations
         id: set-runner-combinations
@@ -39,16 +38,13 @@ jobs:
 
             # 设置输出
             echo "::set-output name=runner_combinations::$combinations"
-      - name: Initialize fractal_ips
-        id: init-fractal-ips
-        run: |
-          fractal_ips='{}'
-          echo "::set-output name=fractal_ips::$fractal_ips" 
+
   deploy-fractal-edge:
     needs: set-runners
     strategy:
       matrix:
         combination: ${{ fromJSON(needs.set-runners.outputs.runner_combinations) }}
+
     runs-on: 
       group: fractal
       labels: 
@@ -59,7 +55,7 @@ jobs:
         - fractal
         - ${{ matrix.combination.fractal_edge }}
     outputs:
-      fractal_ips: ${{ matrix.combination.fractal_edge }}_ip
+      fractal_ip: ${{ steps.get-ip.outputs.local_ip }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -70,20 +66,17 @@ jobs:
           local_ip=$(hostname -I | awk '{print $1}')
           echo "Local IP Address: $local_ip"
           echo "local_ip=$local_ip" >> $GITHUB_OUTPUT
-      - name: Collect IPs
-        id: collect-ips
-        run: |
-          echo "Collecting IPs"
-          # 获取当前 runner 的首个 IP 地址
-          local_ip=${{ steps.get-ip.outputs.local_ip }}
-          # 获取当前任务的 fractal_edge 标识
-          fractal_edge=${{ matrix.combination.fractal_edge }}
-          # 获取前面任务累积的 fractal_ips
-          fractal_ips=${{ needs.set-runners.outputs.fractal_ips }}
-          # 更新 fractal_ips 对象
-          fractal_ips=$(echo "$fractal_ips" | jq --arg key "$fractal_edge" --arg value "$local_ip" '.[$key] = $value' | jq -c .)
-          echo "::set ${{ matrix.combination.fractal_edge }}=$fractal_ips" >> $GITHUB_OUTPUT
-          echo "::set-output name=${{ matrix.combination.fractal_edge }}_ip::$fractal_ips"
+      # - name: Collect IPs
+      #   id: collect-ips
+      #   run: |
+      #     echo "Collecting IPs"
+      #     # 获取当前 runner 的首个 IP 地址
+      #     local_ip=${{ steps.get-ip.outputs.local_ip }}
+      #     # 获取当前任务的 fractal_edge 标识
+      #     fractal_edge=${{ matrix.combination.fractal_edge }}
+      #     # 更新 fractal_ips 对象
+      #     fractal_ips=$(echo "$fractal_ips" | jq --arg key "$fractal_edge" --arg value "$local_ip" '.[$key] = $value' | jq -c .)
+      #     echo "::set-output name=runner_combinations::$combinations"
 
 
   deploy-mqtt-client:
@@ -91,6 +84,7 @@ jobs:
     strategy:
       matrix:
         combination: ${{ fromJSON(needs.set-runners.outputs.runner_combinations) }}
+        fractal_ip: ${{ needs.deploy-fractal-edge.outputs.fractal_ips }}
     runs-on: 
       group: fractal
       labels: 
@@ -105,8 +99,7 @@ jobs:
 
       - name: Use Fractal Edges IPs
         run: |
-          
-          fractal_ip=${{ needs.deploy-fractal-edge.outputs.fractal_ips }}
+          fractal_ip=${{ matrix.fractal_ip }}
           echo "Fractal IPs: $fractal_ip"
           
     #     run: |
