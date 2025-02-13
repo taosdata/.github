@@ -56,7 +56,7 @@ jobs:
         - fractal
         - ${{ matrix.combination.fractal_edge }}
     outputs:
-      fractal_ips: ${{ steps.get-ip.outputs.fractal_ips }}
+      fractal_ips: ${{ steps.collect-ips.outputs.fractal_ips }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
