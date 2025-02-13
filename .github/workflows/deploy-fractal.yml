@@ -67,7 +67,6 @@ jobs:
           local_ip=$(hostname -I | awk '{print $1}')
           echo "Local IP Address: $local_ip"
           echo "local_ip=$local_ip" >> $GITHUB_OUTPUT
-          echo "::set-output name=fractal_ips::$local_ip"
       - name: Collect IPs
         id: collect-ips
         run: |
@@ -85,7 +84,6 @@ jobs:
           # 更新 fractal_ips 对象
           fractal_ips=$(echo "$fractal_ips" | jq --arg key "$fractal_edge" --arg value "$local_ip" '.[$key] = $value' | jq -c .)
           echo "fractal_ips=$fractal_ips" >> $GITHUB_OUTPUT
-          # echo "::set-output name=fractal_ips::$fractal_ips"
   debug:
     runs-on: ubuntu-latest
     needs: deploy-fractal-edge
