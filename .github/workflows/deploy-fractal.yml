@@ -124,9 +124,17 @@ jobs:
         id: set-runner-combinations
         run: |
             echo "Setting Runner Combinations"
-            mqtt_client=$(seq -s ',' 1 ${{ github.event.inputs.runner_number }} | sed 's/[0-9]\+/mqtt-client&/g')
-            fractal_edge=$(seq -s ',' 1 ${{ github.event.inputs.runner_number }} | sed 's/[0-9]\+/fractal-edge-&/g')
-            combinations=$(jq -n --argjson a "[$(echo $mqtt_client | jq -R -s -c 'split(",")')]" --argjson b "[$(echo $fractal_edge | jq -R -s -c 'split(",")')]" '$a | map({mqtt_client: ., fractal_edge: $b[. | tonumber - 1]})')
+            # 生成 mqtt-client 和 fractal-edge 的标签数组
+            mqtt_client=$(seq 1 2 | sed 's/^/mqtt-client/')
+            fractal_edge=$(seq 1 2 | sed 's/^/fractal-edge-/')
+
+            # 将标签转换为 JSON 数组
+            mqtt_json=$(echo "$mqtt_client" | jq -R -s -c 'split("\n")[:-1]')  # 去除末尾空元素
+            fractal_json=$(echo "$fractal_edge" | jq -R -s -c 'split("\n")[:-1]')
+
+            # 生成组合数组：一一对应的 [{"mqtt_client": "mqtt-client1", "fractal_edge": "fractal-edge-1"}, ...]
+            combinations=$(jq -n --argjson a "$mqtt_json" --argjson b "$fractal_json" '[ $a | to_entries | map({ mqtt_client: .value, fractal_edge: $b[.key] }) ]')
+
             echo "::set-output name=runner_combinations::$combinations"
     #   - name: Set MQTT Clients
     #     id: set-mqtt-clients
