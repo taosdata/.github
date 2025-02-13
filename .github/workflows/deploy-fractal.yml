@@ -59,7 +59,7 @@ jobs:
         - fractal
         - ${{ matrix.combination.fractal_edge }}
     outputs:
-      fractal_ips: ${{ steps.collect-ips.outputs.fractal_ips }}
+      fractal_ips: ${{ matrix.combination.fractal_edge }}_ip
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -82,8 +82,8 @@ jobs:
           fractal_ips=${{ needs.set-runners.outputs.fractal_ips }}
           # 更新 fractal_ips 对象
           fractal_ips=$(echo "$fractal_ips" | jq --arg key "$fractal_edge" --arg value "$local_ip" '.[$key] = $value' | jq -c .)
-          echo "${{ matrix.combination.fractal_edge }}=$fractal_ips" >> $GITHUB_OUTPUT
-          echo $fractal_ips
+          echo "::set ${{ matrix.combination.fractal_edge }}=$fractal_ips" >> $GITHUB_OUTPUT
+          echo "::set-output name=${{ matrix.combination.fractal_edge }}_ip::$fractal_ips"
 
 
   deploy-mqtt-client:
@@ -105,13 +105,10 @@ jobs:
 
       - name: Use Fractal Edges IPs
         run: |
-          # 获取所有 fractal_edge 的 IP 地址
-          fractal_ips=${{ needs.deploy-fractal-edge.outputs.fractal_ips }}
-          echo "Fractal IPs: $fractal_ips"
-          # 解析当前 fractal_edge 的 IP 地址
-          fractal_edge=${{ matrix.combination.fractal_edge }}
-          ip=$(echo $fractal_ips | jq -r --arg key "$fractal_edge" '.[$key]')
-          echo "IP for runner $fractal_edge: $ip"
+          
+          fractal_ip=${{ needs.deploy-fractal-edge.outputs.fractal_ips }}
+          echo "Fractal IPs: $fractal_ip"
+          
     #     run: |
     #       cd /root/tools/deploy && ./setup_system.sh replace_sources
     #   - name: Install MQTT CLI
