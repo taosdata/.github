@@ -133,7 +133,7 @@ jobs:
             fractal_json=$(echo "$fractal_edge" | jq -R -s -c 'split("\n")[:-1]')
 
             # 生成组合数组：一一对应的 [{"mqtt_client": "mqtt-client1", "fractal_edge": "fractal-edge-1"}, ...]
-            combinations=$(jq -n --argjson a "$mqtt_json" --argjson b "$fractal_json" '$a | to_entries | map({ mqtt_client: .value, fractal_edge: $b[.key] })')
+            combinations=$(jq -n --argjson a "$mqtt_json" --argjson b "$fractal_json" '$a | to_entries | map({ mqtt_client: .value, fractal_edge: $b[.key] })'| jq -c .)
             # 调试输出
             echo "Generated combinations: $combinations"
 
