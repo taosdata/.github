@@ -111,7 +111,7 @@ jobs:
           res_app_id: ${{ vars.RES_APP_ID }}
           res_app_key: ${{ secrets.RES_APP_KEY }}
       
-      - name: Find mqtt_pub binary
+      - name: Find mqtt_pub binary and fractal toml
         run: |
             mqtt_pub_path=$(find /root /opt -name mqtt_pub 2>/dev/null)
               if [ -n "$mqtt_pub_path" ]; then
@@ -120,6 +120,13 @@ jobs:
                 echo "mqtt_pub not found"
               fi
               echo "MQTT_PUB_PATH=$mqtt_pub_path" >> $GITHUB_ENV
+            fractal_toml=$(find /root /opt -name fractal.toml 2>/dev/null)
+              if [ -n "$fractal_toml" ]; then
+                echo "fractal.toml found at $fractal_toml"
+              else
+                echo "fractal.toml not found"
+              fi
+              echo "FRACTAL_TOML=$fractal_toml" >> $GITHUB_ENV
         shell: bash
       - name: Download IP Address Artifact
         uses: actions/download-artifact@v4
@@ -132,7 +139,11 @@ jobs:
               fractal_ip=$(cat ./ip_artifacts/${{ matrix.combination.fractal_edge }}.txt)
               echo "Fractal IPs: $fractal_ip"
               echo "FRACTAL_IP=$fractal_ip" >> $GITHUB_ENV
-      # - name: Run MQTT CLI
+      - name: Run MQTT CLI
+        run: |
+          mqtt_pub_path=$MQTT_PUB_PATH
+          fractal_ip=$FRACTAL_IP
+          nohup $MQTT_PUB_PATH --schema $FRACTAL_TOML --host $FRACTAL_IP --interval 0ms 2>1&
       
   # TODO
   # deploy-center-cluster:
