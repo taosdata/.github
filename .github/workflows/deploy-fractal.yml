@@ -3,8 +3,8 @@ name: deploy fractal environment
 on:
   workflow_dispatch:
     inputs:
-      runner_number:
-        description: 'Runner number (1-2)'
+      edge-dnode-count:
+        description: 'edge-dnode-count (1-2)'
         required: true
         type: choice
         options:
@@ -14,6 +14,7 @@ on:
         description: 'Enter the version of TDengine to install'
         required: true
         default: '3.3.5.1'
+        type: string
 
 jobs:
   set-runners:
@@ -35,7 +36,6 @@ jobs:
             combinations=$(jq -n --argjson a "$mqtt_json" --argjson b "$fractal_json" '$a | to_entries | map({ mqtt_client: .value, fractal_edge: $b[.key] })'| jq -c .)
             echo "Generated combinations: $combinations"
             echo "::set-output name=runner_combinations::$combinations"
-
   deploy-fractal-edge:
     needs: set-runners
     strategy:
@@ -56,6 +56,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+      - name: Install flashmq
+        uses: taosdata/.github/.github/actions/install-flashmq@fractal
+
       
       - name: Get IP Addresses
         id: get-ip
@@ -98,9 +101,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      - name: Install flashmq
-        uses: taosdata/.github/.github/actions/install-flashmq@fractal
-
       
       - name: Replace Sources    
         run: |
@@ -119,6 +119,7 @@ jobs:
               else
                 echo "mqtt_pub not found"
               fi
+              echo "MQTT_PUB_PATH=$mqtt_pub_path" >> $GITHUB_ENV
         shell: bash
       - name: Download IP Address Artifact
         uses: actions/download-artifact@v4
@@ -131,4 +132,15 @@ jobs:
               fractal_ip=$(cat ./ip_artifacts/${{ matrix.combination.fractal_edge }}.txt)
               echo "Fractal IPs: $fractal_ip"
               echo "FRACTAL_IP=$fractal_ip" >> $GITHUB_ENV
-
+      # - name: Run MQTT CLI
+      
+  # TODO
+  # deploy-center-cluster:
+  #   runs-on:
+  #     group: fractal
+  #     labels:
+  #       - self-hosted
+  #       - Linux
+  #       - X64
+  #       - center_cluster
+  #       - fractal

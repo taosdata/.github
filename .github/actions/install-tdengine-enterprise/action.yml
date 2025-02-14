@@ -3,11 +3,9 @@ description: Install TDengine Enterprise and start the service
 inputs:
   version:
     required: true
-    type: string
     description: 'Version number, e.g., 3.3.5.1'
   NAS_DOWNLOAD_URL:
     required: true
-    type: string
     description: 'A secrets'
 
 runs:
