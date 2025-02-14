@@ -32,6 +32,9 @@ runs:
         systemctl start flashmq
         systemctl enable flashmq
       fi
+      # Append allow_anonymous true to FlashMQ configuration file
+        echo "allow_anonymous true" >> /etc/flashmq/flashmq.conf
+        systemctl restart flashmq
 
   - name: Check FlashMQ Status
     shell: bash
