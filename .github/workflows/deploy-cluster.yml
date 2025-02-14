@@ -39,7 +39,7 @@ jobs:
         id: app-token
         uses: tibdex/github-app-token@v1
         with:
-          app_id: ${{ secrets.TAOSDATA_BOT_ID }}
+          app_id: ${{ vars.TAOSDATA_BOT_ID }}
           private_key: ${{ secrets.TAOSDATA_BOT_KEY }}
 
       # - name: Get Available Runners
@@ -153,7 +153,7 @@ jobs:
         id: app-token
         uses: tibdex/github-app-token@v1
         with:
-          app_id: ${{ secrets.TAOSDATA_BOT_ID }}
+          app_id: ${{ vars.TAOSDATA_BOT_ID }}
           private_key: ${{ secrets.TAOSDATA_BOT_KEY }}
 
 
