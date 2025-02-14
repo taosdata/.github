@@ -35,9 +35,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Generate GitHub App Token
+        id: app-token
+        uses: tibdex/github-app-token@v1
+        with:
+          app_id: ${{ secrets.TAOSDATA_BOT_ID }}
+          private_key: ${{ secrets.TAOSDATA_BOT_KEY }}
+
+      # - name: Get Available Runners
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.RUNNER_PAT }}
       - name: Get Available Runners
         env:
-          GITHUB_TOKEN: ${{ secrets.RUNNER_PAT }}
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         id: get-runners
         run: |
           set -euo pipefail
@@ -139,10 +149,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Generate GitHub App Token
+        id: app-token
+        uses: tibdex/github-app-token@v1
+        with:
+          app_id: ${{ secrets.TAOSDATA_BOT_ID }}
+          private_key: ${{ secrets.TAOSDATA_BOT_KEY }}
+
+
       - name: Authenticate GitHub CLI
         run: |
           echo "🔄 Authenticating GitHub CLI..."
-          echo "${{ secrets.RUNNER_PAT }}" | gh auth login --with-token
+          echo "${{ steps.app-token.outputs.token }}" | gh auth login --with-token
 
       - name: Download IP and Hostname Info
         run: |
