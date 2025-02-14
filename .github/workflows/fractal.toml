@@ -1,0 +1,72 @@
+# string type
+
+[[schema]]
+topics = [
+    "ems/site/site_controller_1/root/abc/string",
+    "ems/site/site_controller_2/root/abc/string",
+    "ems/site/site_controller_3/root/abc/string",
+    "ems/site/site_controller_4/root/abc/string",
+]
+qos = 0
+
+[schema.payload]
+type = "object"
+
+[schema.payload.properties]
+ts = { type = "timestamp", start_time = 2025-10-01T00:00:00.888000999, interval = "1ms", tick = 4 }
+value = { type = "option", value = { type = "string", length = { range = { min = 10, max = 100 } } } }
+
+# number type
+
+[[schema]]
+topics = [
+    "ems/site/site_controller_1/root/{def:4}/integer",
+    "ems/site/site_controller_2/root/{def:4}/integer",
+    "ems/site/site_controller_3/root/{def:4}/integer",
+    "ems/site/site_controller_4/root/{def:4}/integer",
+]
+qos = 0
+
+[schema.payload]
+type = "object"
+
+[schema.payload.properties]
+ts = { type = "timestamp", start_time = 2025-10-01T00:00:00.888, interval = "1ms", tick = 200 }
+value = { type = "number", range = { min = 1, max = 1000 } }
+
+# float type
+
+[[schema]]
+topics = [
+    "ems/site/site_controller_1/root/{ghi:4}/float",
+    "ems/site/site_controller_2/root/{ghi:4}/float",
+    "ems/site/site_controller_3/root/{ghi:4}/float",
+    "ems/site/site_controller_4/root/{ghi:4}/float",
+]
+qos = 0
+
+[schema.payload]
+type = "object"
+
+[schema.payload.properties]
+ts = { type = "timestamp", start_time = 2025-10-01T00:00:00.888, interval = "1ms", tick = 200 }
+value = { type = "float", range = { min = 0.1, max = 0.9 } }
+
+# bool type
+
+[[schema]]
+topics = [
+    "ems/site/site_controller_1/root/{jkl:4}/boolean_integer",
+    "ems/site/site_controller_2/root/{jkl:4}/boolean_integer",
+    "ems/site/site_controller_3/root/{jkl:4}/boolean_integer",
+    "ems/site/site_controller_4/root/{jkl:4}/boolean_integer",
+]
+qos = 0
+
+[schema.payload]
+type = "object"
+
+[schema.payload.properties]
+ts = { type = "timestamp", start_time = 2025-10-01T00:00:00.888, interval = "1ms", tick = 200 }
+value = { type = "number", range = { min = 0, max = 1 } }
+
