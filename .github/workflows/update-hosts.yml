@@ -30,7 +30,9 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       runners: ${{ steps.get-runners.outputs.matrix}}
+      td_runners: ${{ steps.get-runners.outputs.td_matrix}}
       runner_names: ${{ steps.get-runners.outputs.names}}
+      td_runner_names: ${{ steps.get-runners.outputs.td_names}}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -90,9 +92,13 @@ jobs:
           echo "$filtered_edge_runners"
           echo "$filtered_center_runners"
 
+          # all runners
           filtered_runners=$(jq -s '[.[][]]' <(echo "$filtered_mqtt_runners") <(echo "$filtered_edge_runners") <(echo "$filtered_center_runners"))
           echo "✅ Selected runners with formatted labels:"
           echo "$filtered_runners"
+
+          # TDengine runners
+          td_runners=$(jq -s '[.[][]]' <(echo "$filtered_edge_runners") <(echo "$filtered_center_runners"))
 
           # make sure filtered_runners is a valid JSON array
           if [ -z "$filtered_runners" ]; then
@@ -104,6 +110,11 @@ jobs:
             names=$(echo "$filtered_runners" | jq -r '.[].name' | tr '\n' ',')
             names=${names%,}
             echo "names=${names}" >> $GITHUB_OUTPUT
+
+            echo "td_runners="$td_runners"" >> $GITHUB_OUTPUT
+            td_runner_names=$(echo "$td_runners" | jq -r '.[].name' | tr '\n' ',')
+            td_runner_names=${td_runner_names%,}
+            echo "td_runner_names=${td_runner_names}" >> $GITHUB_OUTPUT
           fi
 
   update-hosts:
@@ -212,10 +223,12 @@ jobs:
           cat /etc/hosts
 
   install-tdengine:
-    needs: combine-and-update-hosts
+    needs:
+      - combine-and-update-hosts
+      - filter-runners
     strategy:
       matrix:
-        runner: ${{ fromJson((needs.filter-runners.outputs.runners || '[]')).map(select(.labels | any(. == "center_td") or any(. == "edge_td"))) }}
+        runner: ${{ fromJson(needs.filter-runners.outputs.td_runners || '[]') }}
     runs-on:
       group: ${{ matrix.runner.group }}
       labels: ${{ matrix.runner.labels }}
@@ -223,7 +236,6 @@ jobs:
       - name: Print Runner Info
         run: |
           echo "🔄 Running on group: ${{ matrix.runner.group }}"
-          echo "🔄 Name: ${{ matrix.runner.name }}"
 
       - name: Install TDengine Enterprise
         uses: taosdata/.github/.github/actions/install-tdengine-enterprise@fractal
