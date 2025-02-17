@@ -1,4 +1,4 @@
-name: Deploy TDengine Cluster
+name: Update Hosts
 
 on:
   push:
@@ -73,7 +73,7 @@ jobs:
                     ["self-hosted", "Linux", "X64"] + .
                   )
                 }
-            )[:$count]' "$response_file") # only select the first $count runners
+            ).[:$count]' "$response_file") # only select the first $count runners
 
           filtered_edge_runners=$(jq -c --argjson count "$edge_dnode_count" '
             map(
@@ -96,7 +96,7 @@ jobs:
                     ["self-hosted", "Linux", "X64"] + .
                   )
                 }
-            )[:$count]' "$response_file") # only select the first $count runners
+            ).[:$count]' "$response_file") # only select the first $count runners
 
           filtered_center_runners=$(jq -c --argjson count "$center_dnode_count" '
             map(
@@ -119,8 +119,12 @@ jobs:
                     ["self-hosted", "Linux", "X64"] + .
                   )
                 }
-            )[:$count]' "$response_file") # only select the first $count runners
+            )/[:$count]' "$response_file") # only select the first $count runners
 
+          echo "✅ Selected runners with formatted labels:"
+          echo "$filtered_mqtt_runners"
+          echo "$filtered_edge_runners"
+          echo "$filtered_center_runners"
 
           filtered_runners=$(jq -s '[.[][]]' <(echo "$filtered_mqtt_runners") <(echo "$filtered_edge_runners") <(echo "$filtered_center_runners"))
 
