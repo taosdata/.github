@@ -242,6 +242,6 @@ jobs:
       - name: Install TDengine Enterprise
         uses: taosdata/.github/.github/actions/install-tdengine-enterprise@fractal
         with:
-          version: ${{ github.event.inputs.version }}
+          version: 3.3.5.0
           nas_download_url: ${{ secrets.NAS_DOWNLOAD_URL }}
 
