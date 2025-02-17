@@ -136,7 +136,7 @@ jobs:
             echo "matrix=[]" >> $GITHUB_OUTPUT
             echo "names=[]" >> $GITHUB_OUTPUT
           else
-            # echo "matrix=$filtered_runners" >> $GITHUB_OUTPUT
+            echo "matrix="$filtered_runners"" >> $GITHUB_OUTPUT
             names=$(echo "$filtered_runners" | jq -r '.[].name' | tr '\n' ',')
             names=${names%,}
             echo "names=${names}" >> $GITHUB_OUTPUT
