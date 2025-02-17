@@ -99,6 +99,8 @@ jobs:
 
           # TDengine runners
           td_runners=$(jq -s '[.[][]]' <(echo "$filtered_edge_runners") <(echo "$filtered_center_runners"))
+          echo "✅ Selected td-runners with formatted labels:"
+          echo "$td_runners"
 
           # make sure filtered_runners is a valid JSON array
           if [ -z "$filtered_runners" ]; then
@@ -111,7 +113,7 @@ jobs:
             names=${names%,}
             echo "names=${names}" >> $GITHUB_OUTPUT
 
-            echo "td_runners="$td_runners"" >> $GITHUB_OUTPUT
+            echo "td_matrix="$td_runners"" >> $GITHUB_OUTPUT
             td_runner_names=$(echo "$td_runners" | jq -r '.[].name' | tr '\n' ',')
             td_runner_names=${td_runner_names%,}
             echo "td_runner_names=${td_runner_names}" >> $GITHUB_OUTPUT
