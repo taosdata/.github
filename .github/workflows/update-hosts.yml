@@ -119,7 +119,7 @@ jobs:
                     ["self-hosted", "Linux", "X64"] + .
                   )
                 }
-            )/[:$count]' "$response_file") # only select the first $count runners
+            ).[:$count]' "$response_file") # only select the first $count runners
 
           echo "✅ Selected runners with formatted labels:"
           echo "$filtered_mqtt_runners"
