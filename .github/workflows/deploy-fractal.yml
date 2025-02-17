@@ -20,7 +20,7 @@ jobs:
   set-runners:
     runs-on: ubuntu-latest
     outputs:
-      runner_combinations: ${{ steps.set-runner-combinations.outputs.runner_combinations }}  
+      runner_combinations: ${{ steps.set-runner-combinations.outputs.runner_combinations }}
     steps:
       - name: Set Runner Combinations
         id: set-runner-combinations
@@ -42,9 +42,9 @@ jobs:
       matrix:
         combination: ${{ fromJSON(needs.set-runners.outputs.runner_combinations) }}
 
-    runs-on: 
+    runs-on:
       group: fractal
-      labels: 
+      labels:
         - self-hosted
         - Linux
         - X64
@@ -59,7 +59,7 @@ jobs:
       - name: Install flashmq
         uses: taosdata/.github/.github/actions/install-flashmq@fractal
 
-      
+
       - name: Get IP Addresses
         id: get-ip
         run: |
@@ -84,15 +84,15 @@ jobs:
           version: ${{ github.event.inputs.version }}
           group: fractal
           labels: ${{steps.setup-labels.outputs.fractal_edge_labels}}
-          NAS_DOWNLOAD_URL: ${{ secrets.NAS_DOWNLOAD_URL }}
+          nas_download_url: ${{ secrets.NAS_DOWNLOAD_URL }}
   deploy-mqtt-client:
     needs: [set-runners,deploy-fractal-edge]
     strategy:
       matrix:
         combination: ${{ fromJSON(needs.set-runners.outputs.runner_combinations) }}
-    runs-on: 
+    runs-on:
       group: fractal
-      labels: 
+      labels:
         - self-hosted
         - Linux
         - X64
@@ -101,8 +101,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      
-      - name: Replace Sources    
+
+      - name: Replace Sources
         run: |
           cd /root/tools/deploy && ./setup_system.sh replace_sources
       - name: Install MQTT CLI
@@ -110,7 +110,7 @@ jobs:
         with:
           res_app_id: ${{ vars.RES_APP_ID }}
           res_app_key: ${{ secrets.RES_APP_KEY }}
-      
+
       - name: Find mqtt_pub binary and fractal toml
         run: |
             mqtt_pub_path=$(find /root /opt -name mqtt_pub 2>/dev/null)
@@ -133,7 +133,7 @@ jobs:
         with:
           name: ${{ matrix.combination.fractal_edge }}-ip
           path: ./ip_artifacts
-        
+
       - name: Use Fractal Edges IPs
         run: |
               fractal_ip=$(cat ./ip_artifacts/${{ matrix.combination.fractal_edge }}.txt)
@@ -144,7 +144,7 @@ jobs:
           mqtt_pub_path=$MQTT_PUB_PATH
           fractal_ip=$FRACTAL_IP
           nohup $MQTT_PUB_PATH --schema $FRACTAL_TOML --host $FRACTAL_IP --interval 0ms 2>1&
-      
+
   # TODO
   # deploy-center-cluster:
   #   runs-on:

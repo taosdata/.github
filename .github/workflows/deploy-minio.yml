@@ -50,4 +50,4 @@ jobs:
 #           version: ${{ github.event.inputs.version }}
 #           group: ${{ github.event.inputs.group }}
 #           labels: ${{ github.event.inputs.labels }}
-#           NAS_DOWNLOAD_URL: ${{ secrets.NAS_DOWNLOAD_URL }}
+#           nas_download_url: ${{ secrets.NAS_DOWNLOAD_URL }}

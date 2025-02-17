@@ -4,7 +4,7 @@ inputs:
   version:
     required: true
     description: 'Version number, e.g., 3.3.5.1'
-  NAS_DOWNLOAD_URL:
+  nas_dowdnload_url:
     required: true
     description: 'A secrets'
 
@@ -18,7 +18,7 @@ runs:
       shell: bash
       run: |
         VERSION=${{ inputs.version }}
-        BASE_URL=${{ inputs.NAS_DOWNLOAD_URL }}
+        BASE_URL=${{ inputs.nas_dowdnload_url }}
 
         # Get major version
         MAJOR_VERSION=$(echo $VERSION | cut -d '.' -f 1-2)
