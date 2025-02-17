@@ -27,8 +27,8 @@ jobs:
         run: |
             echo "Setting Runner Combinations"
             # 生成 mqtt-client 和 fractal-edge 的标签数组
-            mqtt_client=$(seq 1 2 | sed 's/^/mqtt-client/')
-            fractal_edge=$(seq 1 2 | sed 's/^/fractal-edge-/')
+            mqtt_client=$(seq 1 ${{github.event.inputs.edge-dnode-count}} | sed 's/^/mqtt-client/')
+            fractal_edge=$(seq 1 ${{github.event.inputs.edge-dnode-count}} | sed 's/^/fractal-edge-/')
 
             mqtt_json=$(echo "$mqtt_client" | jq -R -s -c 'split("\n")[:-1]')  # 去除末尾空元素
             fractal_json=$(echo "$fractal_edge" | jq -R -s -c 'split("\n")[:-1]')
