@@ -72,18 +72,10 @@ jobs:
         with:
           name: ${{ matrix.combination.fractal_edge }}-ip
           path: ${{ matrix.combination.fractal_edge }}.txt
-
-      - name: Setup labels
-        id: setup-labels
-        run: |
-          labels="[self-hosted, Linux, X64, fractal, edge_td,${{ matrix.combination.fractal_edge }}]"
-          echo "fractal_edge_labels=$labels" >> $GITHUB_ENV
       - name: Check and Install TDengine Enterprise
         uses: taosdata/.github/.github/actions/install-tdengine-enterprise@fractal
         with:
           version: ${{ github.event.inputs.version }}
-          group: fractal
-          labels: ${{steps.setup-labels.outputs.fractal_edge_labels}}
           NAS_DOWNLOAD_URL: ${{ secrets.NAS_DOWNLOAD_URL }}
   deploy-mqtt-client:
     needs: [set-runners,deploy-fractal-edge]
