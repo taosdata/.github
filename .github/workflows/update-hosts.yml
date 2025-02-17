@@ -215,8 +215,7 @@ jobs:
     needs: combine-and-update-hosts
     strategy:
       matrix:
-        runner: ${{ fromJson(needs.filter-runners.outputs.runners || '[]') |
-         map(select(.labels | any(. == "center_td") or any(. == "edge_td"))) }}
+        runner: ${{ fromJson((needs.filter-runners.outputs.runners || '[]')).map(select(.labels | any(. == "center_td") or any(. == "edge_td"))) }}
     runs-on:
       group: ${{ matrix.runner.group }}
       labels: ${{ matrix.runner.labels }}
