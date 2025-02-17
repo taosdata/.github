@@ -137,14 +137,14 @@ jobs:
             echo "matrix=[]" >> $GITHUB_OUTPUT
             echo "names=[]" >> $GITHUB_OUTPUT
           else
-            echo "step1"
             echo "matrix=$filtered_runners" >> $GITHUB_OUTPUT
-            echo "step2"
+            echo "step1: matrix=$filtered_runners"
             names=$(echo "$filtered_runners" | jq -r '.[].name' | tr '\n' ',')
-            echo "step3"
+            echo "step2: $names"
             names=${names%,}
-            echo "step4"
+            echo "step3: $names"
             echo "names=${names}" >> $GITHUB_OUTPUT
+            echo "step4: names=${names}"
           fi
 
   update-hosts:
