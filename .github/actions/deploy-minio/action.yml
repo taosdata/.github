@@ -98,15 +98,3 @@ runs:
           mc admin accesskey create  myminio/ admin --access-key ${{ inputs.MINIO_ACCESS_KEY }} --secret-key ${{ inputs.MINIO_SECRET_KEY }}
           echo "Access key created."
         fi
-
-    # - name: Capture logs
-    #   shell: bash
-    #   run: |
-    #     tail -f $HOME/minio.log > minio-runtime.log &
-    #     echo "Tailing MinIO logs to 'minio-runtime.log'"
-
-    # - name: Upload logs as artifact
-    #   uses: actions/upload-artifact@v4
-    #   with:
-    #     name: minio-logs
-    #     path: minio-runtime.log

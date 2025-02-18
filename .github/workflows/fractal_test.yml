@@ -27,8 +27,8 @@ jobs:
         run: |
             echo "Setting Runner Combinations"
             # 生成 mqtt-client 和 fractal-edge 的标签数组
-            mqtt_client=$(seq 1 2 | sed 's/^/mqtt-client/')
-            fractal_edge=$(seq 1 2 | sed 's/^/fractal-edge-/')
+            mqtt_client=$(seq 1 ${{github.event.inputs.edge-dnode-count}} | sed 's/^/mqtt-client/')
+            fractal_edge=$(seq 1 ${{github.event.inputs.edge-dnode-count}} | sed 's/^/fractal-edge-/')
 
             mqtt_json=$(echo "$mqtt_client" | jq -R -s -c 'split("\n")[:-1]')  # 去除末尾空元素
             fractal_json=$(echo "$fractal_edge" | jq -R -s -c 'split("\n")[:-1]')
@@ -72,12 +72,6 @@ jobs:
         with:
           name: ${{ matrix.combination.fractal_edge }}-ip
           path: ${{ matrix.combination.fractal_edge }}.txt
-
-      - name: Setup labels
-        id: setup-labels
-        run: |
-          labels="[self-hosted, Linux, X64, fractal, edge_td,${{ matrix.combination.fractal_edge }}]"
-          echo "fractal_edge_labels=$labels" >> $GITHUB_ENV
       - name: Check and Install TDengine Enterprise
         uses: taosdata/.github/.github/actions/install-tdengine-enterprise@fractal
         with:
@@ -85,6 +79,7 @@ jobs:
           group: fractal
           labels: ${{steps.setup-labels.outputs.fractal_edge_labels}}
           nas_download_url: ${{ secrets.NAS_DOWNLOAD_URL }}
+
   deploy-mqtt-client:
     needs: [set-runners,deploy-fractal-edge]
     strategy:

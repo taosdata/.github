@@ -1,10 +1,5 @@
 name: Call Install TDengine Enterprise
 
-# on:
-#   push:
-#     branches:
-#       - test/fractal
-
 on:
   workflow_dispatch:
     inputs:
@@ -15,14 +10,13 @@ on:
       group:
         description: 'Enter the group for the runner'
         required: true
-        default: 'default'
+        default: 'fractal'
       labels:
         description: 'Enter the labels for the runner'
         required: true
         default: '[self-hosted, Linux, X64, fractal, edge_td, fractal-edge-1]'
 
 jobs:
-
   call-install:
     runs-on:
       group: ${{ github.event.inputs.group }}
