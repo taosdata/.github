@@ -1,0 +1,55 @@
+name: Install MQTT simulator
+description: Install MQTT simulator
+
+inputs:
+  res_app_id:
+    description: 'GitHub App ID'
+    required: true
+  res_app_key:
+    description: 'GitHub App Key'
+    required: true
+  rust-version:
+    description: 'The version of Rust to install'
+    required: true
+    default: 'stable'
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Install Rust
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+      with:
+        toolchain: ${{ inputs.rust-version }}
+      
+    - name: Generate GitHub App Token
+      id: app-token
+      uses: tibdex/github-app-token@v1
+      with:
+        app_id: ${{ inputs.res_app_id }}
+        private_key: ${{ inputs.res_app_key }}
+
+    - name: Set GitHub App Token as secret
+      run: echo "GITHUB_APP_TOKEN=${{ steps.app-token.outputs.token }}" >> $GITHUB_ENV
+      shell: bash
+    
+
+    - name: Check out another private repository
+      uses: actions/checkout@v4
+      with:
+        repository: taosdata/taosx  # 替换为你要拉取的私有仓库
+        token: ${{ env.GITHUB_APP_TOKEN }}  # 使用 GitHub App 生成的访问令牌
+        path: taosx
+        ref: '3.0'
+    
+    - name: Build MQTT CLI
+      run: |
+        apt install -y llvm gcc make cmake libssl-dev pkg-config perl g++
+        cd taosx && cargo build --release -p taosx-tools --bin mqtt_pub
+      shell: bash
+
+
+
+
+      
