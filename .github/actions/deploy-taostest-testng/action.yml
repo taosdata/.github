@@ -23,11 +23,6 @@ runs:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Install Rust
-      uses: actions-rust-lang/setup-rust-toolchain@v1
-      with:
-        toolchain: ${{ inputs.rust-version }}
-
     - name: Generate GitHub App Token
       id: app-token
       uses: tibdex/github-app-token@v1
@@ -39,16 +34,6 @@ runs:
       run: echo "GITHUB_APP_TOKEN=${{ steps.app-token.outputs.token }}" >> $GITHUB_ENV
       shell: bash
 
-
-    - name: Check out taos-test-framework private repository
-      uses: actions/checkout@v4
-      with:
-        repository: taosdata/taos-test-framework
-        token: ${{ env.GITHUB_APP_TOKEN }}
-        path: taos-test-framework
-        ref: ${{ inputs.taostest-branch }}
-        clean: ''
-
     - name: Set up Python and dependencies
       shell: bash
       run: |
@@ -56,11 +41,12 @@ runs:
         apt install -y python3-pip
         pip3 install poetry
 
-    - name: Run reinstall script
+    - name: Install Taostest
       shell: bash
-      working-directory: ./taos-test-framework
       run: |
-        yes | bash reinstall.sh
+        git clone -b master https://github.com/taosdata/taos-test-framework ~/taos-test-framework
+        cd ~/taos-test-framework
+        echo "yes" | bash reinstall.sh
         mkdir -p ~/.taostest
         touch ~/.taostest/.env
 
@@ -68,14 +54,10 @@ runs:
       shell: bash
       run: pip3 install --upgrade numpy pandas
 
-    - name: Check out TestNG private repository
-      uses: actions/checkout@v4
-      with:
-        repository: taosdata/TestNG
-        token: ${{ env.GITHUB_APP_TOKEN }}
-        path: TestNG
-        ref: ${{ inputs.testng-branch }}
-        clean: ''
+    - name: Clone TestNG Repository
+      shell: bash
+      run: |
+        git clone -b master https://github.com/taosdata/TestNG ~/TestNG
 
 
 
