@@ -6,7 +6,7 @@ on:
       - test/fractal
 
 jobs:
-  deploy-mqtt-client:
+  deploy-taostest-testng:
     runs-on:
       group: fractal
       labels:
@@ -14,13 +14,14 @@ jobs:
         - Linux
         - X64
         - fractal
-        - mqtt_client1
+        - mqtt
+        - mqtt-client1
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
       - name: Install Taostest And TestNG
-        uses: taosdata/.github/.github/actions/install-taostest-testng@test/fractal
+        uses: taosdata/.github/.github/actions/deploy-taostest-testng@test/fractal
         with:
           res_app_id: ${{ vars.RES_APP_ID }}
           res_app_key: ${{ secrets.RES_APP_KEY }}
