@@ -14,7 +14,8 @@ jobs:
         - Linux
         - X64
         - fractal
-        - mqtt_client1
+        - mqtt
+        - mqtt-client1
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
