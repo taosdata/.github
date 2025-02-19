@@ -1,11 +1,11 @@
 name: Update Hosts
 
-on:
-  push:
-    branches:
-      - test/fractal
 # on:
-#   workflow_dispatch:
+#   push:
+#     branches:
+#       - test/fractal
+on:
+  workflow_dispatch:
 
 permissions:
   actions: read

@@ -1,25 +1,25 @@
 name: Deploy TDengine Cluster
 
-on:
-  push:
-    branches:
-      - test/fractal
-
 # on:
-#   workflow_dispatch:
-#     inputs:
-#       version:
-#         description: 'Enter the version of TDengine to install'
-#         required: true
-#         default: '3.3.5.1'
-#       group:
-#         description: 'Enter the group for the runner'
-#         required: true
-#         default: 'default'
-#       dnode_count:
-#         description: 'Number of nodes to deploy'
-#         required: true
-#         default: '2'
+#   push:
+#     branches:
+#       - test/fractal
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Enter the version of TDengine to install'
+        required: true
+        default: '3.3.5.1'
+      group:
+        description: 'Enter the group for the runner'
+        required: true
+        default: 'default'
+      dnode_count:
+        description: 'Number of nodes to deploy'
+        required: true
+        default: '2'
 
 permissions:
   actions: read
@@ -72,7 +72,7 @@ jobs:
                     ["self-hosted", "Linux", "X64"] + .
                   )
                 }
-            )[:$count]' "$response_file")
+            )[:$count]' "$response_file") # only select the first $count runners
 
           echo "✅ Selected runners with formatted labels:"
           echo "$filtered_runners"
