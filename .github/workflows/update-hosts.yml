@@ -4,22 +4,8 @@ on:
   push:
     branches:
       - test/fractal
-
 # on:
 #   workflow_dispatch:
-#     inputs:
-#       version:
-#         description: 'Enter the version of TDengine to install'
-#         required: true
-#         default: '3.3.5.1'
-#       group:
-#         description: 'Enter the group for the runner'
-#         required: true
-#         default: 'default'
-#       dnode_count:
-#         description: 'Number of nodes to deploy'
-#         required: true
-#         default: '2'
 
 permissions:
   actions: read
@@ -119,7 +105,7 @@ jobs:
             echo "td_runner_names=${td_runner_names}" >> $GITHUB_OUTPUT
           fi
 
-  update-hosts:
+  upload-hosts-info:
     needs: filter-runners
 
     strategy:
@@ -139,14 +125,14 @@ jobs:
         run: |
           echo "🔄 Getting IP and hostname for the runner..."
 
-          # 获取 IP 和主机名
-          ip=$(hostname -I | awk '{print $1}')  # 获取 IP 地址
-          hostname=$(hostname)  # 获取主机名
+          # Get IP and hostname
+          ip=$(hostname -I | awk '{print $1}')
+          hostname=$(hostname)
 
           echo "IP: $ip"
           echo "Hostname: $hostname"
 
-          # 将 IP 和主机名保存为输出
+          # Save IP and hostname to a file
           echo "$ip $hostname" > ip_hostname_${{ matrix.runner.name }}.txt
 
       - name: Upload IP and Hostname Info
@@ -157,7 +143,7 @@ jobs:
 
   combine-and-update-hosts:
     needs:
-      - update-hosts
+      - upload-hosts-info
       - filter-runners
     strategy:
       matrix:
@@ -198,10 +184,10 @@ jobs:
         run: |
           echo "🔄 Combining IP and hostname info..."
 
-          # 读取所有 runner 的 IP 和主机名信息
-          ip_hostname_info=$(cat ip_hostname/*.txt | sort | uniq)  # 去重
+          # Read all files in the ip_hostname directory and combine them
+          ip_hostname_info=$(cat ip_hostname/*.txt | sort | uniq)
 
-          # 将所有信息保存为环境变量，供后续步骤使用
+          # Save the combined IP and hostname info to an environment variable
           echo "ip_hostname_info<<EOF" >> $GITHUB_ENV
           echo -e "$ip_hostname_info" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
@@ -210,11 +196,10 @@ jobs:
         run: |
           echo "🔄 Updating /etc/hosts..."
 
-          # 遍历 ip_hostname_info 的每一行
           while IFS= read -r line; do
-            # 检查 /etc/hosts 中是否已经存在该行
+            # Check if the line already exists in /etc/hosts
             if ! grep -Fxq "$line" /etc/hosts; then
-              # 如果不存在，则追加到 /etc/hosts
+              # Append the line to /etc/hosts if it doesn't exist
               echo "$line" | sudo tee -a /etc/hosts
             else
               echo "✅ Skipping (already exists): $line"
@@ -224,24 +209,24 @@ jobs:
           echo "✅ Updated /etc/hosts with runner IPs and hostnames:"
           cat /etc/hosts
 
-  install-tdengine:
-    needs:
-      - combine-and-update-hosts
-      - filter-runners
-    strategy:
-      matrix:
-        runner: ${{ fromJson(needs.filter-runners.outputs.td_runners || '[]') }}
-    runs-on:
-      group: ${{ matrix.runner.group }}
-      labels: ${{ matrix.runner.labels }}
-    steps:
-      - name: Print Runner Info
-        run: |
-          echo "🔄 Running on group: ${{ matrix.runner.group }}"
+  # install-tdengine:
+  #   needs:
+  #     - combine-and-update-hosts
+  #     - filter-runners
+  #   strategy:
+  #     matrix:
+  #       runner: ${{ fromJson(needs.filter-runners.outputs.td_runners || '[]') }}
+  #   runs-on:
+  #     group: ${{ matrix.runner.group }}
+  #     labels: ${{ matrix.runner.labels }}
+  #   steps:
+  #     - name: Print Runner Info
+  #       run: |
+  #         echo "🔄 Running on group: ${{ matrix.runner.group }}"
 
-      - name: Install TDengine Enterprise
-        uses: taosdata/.github/.github/actions/install-tdengine-enterprise@fractal
-        with:
-          version: 3.3.5.0
-          nas_download_url: ${{ secrets.NAS_DOWNLOAD_URL }}
+  #     - name: Install TDengine Enterprise
+  #       uses: taosdata/.github/.github/actions/install-tdengine-enterprise@fractal
+  #       with:
+  #         version: 3.3.5.0
+  #         nas_download_url: ${{ secrets.NAS_DOWNLOAD_URL }}
 

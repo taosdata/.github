@@ -1,0 +1,82 @@
+name: Deploy taostest and TestNG
+description: Deploy taostest and TestNG
+
+inputs:
+  res_app_id:
+    description: 'GitHub App ID'
+    required: true
+  res_app_key:
+    description: 'GitHub App Key'
+    required: true
+  taostest-branch:
+    description: 'Branch of taostest'
+    required: true
+    default: 'master'
+  testng-branch:
+    description: 'Branch of TestNG'
+    required: true
+    default: 'master'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Install Rust
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+      with:
+        toolchain: ${{ inputs.rust-version }}
+
+    - name: Generate GitHub App Token
+      id: app-token
+      uses: tibdex/github-app-token@v1
+      with:
+        app_id: ${{ inputs.res_app_id }}
+        private_key: ${{ inputs.res_app_key }}
+
+    - name: Set GitHub App Token as secret
+      run: echo "GITHUB_APP_TOKEN=${{ steps.app-token.outputs.token }}" >> $GITHUB_ENV
+      shell: bash
+
+
+    - name: Check out taos-test-framework private repository
+      uses: actions/checkout@v4
+      with:
+        repository: taosdata/taos-test-framework
+        token: ${{ env.GITHUB_APP_TOKEN }}
+        path: taos-test-framework
+        ref: ${{ inputs.taostest-branch }}
+        clean: ''
+
+    - name: Set up Python and dependencies
+      shell: bash
+      run: |
+        apt-get update
+        apt install -y python3-pip
+        pip3 install poetry
+
+    - name: Run reinstall script
+      shell: bash
+      working-directory: ./taos-test-framework
+      run: |
+        yes | bash reinstall.sh
+        mkdir -p ~/.taostest
+        touch ~/.taostest/.env
+
+    - name: Install Python packages
+      shell: bash
+      run: pip3 install --upgrade numpy pandas
+
+    - name: Check out TestNG private repository
+      uses: actions/checkout@v4
+      with:
+        repository: taosdata/TestNG
+        token: ${{ env.GITHUB_APP_TOKEN }}
+        path: TestNG
+        ref: ${{ inputs.testng-branch }}
+        clean: ''
+
+
+
+
