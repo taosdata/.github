@@ -44,7 +44,7 @@ runs:
     - name: Install Taostest
       shell: bash
       run: |
-        git clone -b master https://github.com/taosdata/taos-test-framework ~/taos-test-framework
+        git clone -b master https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/taosdata/taos-test-framework.git ~/taos-test-framework
         cd ~/taos-test-framework
         echo "yes" | bash reinstall.sh
         mkdir -p ~/.taostest
@@ -57,7 +57,7 @@ runs:
     - name: Clone TestNG Repository
       shell: bash
       run: |
-        git clone -b master https://github.com/taosdata/TestNG ~/TestNG
+        git clone -b master https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/taosdata/TestNG.git ~/TestNG
 
 
 
