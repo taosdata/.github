@@ -34,6 +34,20 @@ runs:
       run: echo "GITHUB_APP_TOKEN=${{ steps.app-token.outputs.token }}" >> $GITHUB_ENV
       shell: bash
 
+    - name: Clone TestNG Repository
+      shell: bash
+      run: |
+        TARGET_DIR=~/TestNG
+        echo "TEST_ROOT=$TARGET_DIR" >> $GITHUB_ENV
+
+        # Check if the target directory exists and is not empty
+        if [ -d "$TARGET_DIR" ] && [ "$(ls -A $TARGET_DIR)" ]; then
+          echo "Target directory $TARGET_DIR exists and is not empty"
+        else
+          echo "Cloning TestNG repository"
+          git clone -b master https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/taosdata/TestNG.git "$TARGET_DIR"
+        fi
+
     - name: Set up Python and dependencies
       shell: bash
       run: |
@@ -55,25 +69,22 @@ runs:
         fi
         cd $TARGET_DIR
         echo "Y" | bash reinstall.sh
+        ENV_FILE=~/.taostest/.env
         mkdir -p ~/.taostest
-        touch ~/.taostest/.env
+        touch $ENV_FILE
+        echo "ENV_FILE=$ENV_FILE" >> $GITHUB_ENV
 
     - name: Install Python packages
       shell: bash
       run: pip3 install --upgrade numpy pandas
 
-    - name: Clone TestNG Repository
+    - name: Config Env
       shell: bash
       run: |
-        TARGET_DIR=~/TestNG
+        echo "TEST_ROOT=${{ env.TEST_ROOT }}" > ${{ env.ENV_FILE }}
+        echo "TAOSTEST_SQL_RECORDING_ENABLED=True" >> ${{ env.ENV_FILE }}
 
-        # Check if the target directory exists and is not empty
-        if [ -d "$TARGET_DIR" ] && [ "$(ls -A $TARGET_DIR)" ]; then
-          echo "Target directory $TARGET_DIR exists and is not empty"
-        else
-          echo "Cloning TestNG repository"
-          git clone -b master https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/taosdata/TestNG.git "$TARGET_DIR"
-        fi
+
 
 
 
