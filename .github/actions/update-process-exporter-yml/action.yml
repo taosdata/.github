@@ -27,19 +27,13 @@ runs:
         IFS=',' read -r -a NAMES_ARRAY <<< "$PROCESS_NAMES"
 
         # Create the YAML file and write the content
-        cat << EOF > "$yml_file_path"
-process_names:
-EOF
-
+        echo "process_names:" > "$yml_file_path"
         # Write each process name
         for NAME in "${NAMES_ARRAY[@]}"; do
-          cat << EOF >> "$yml_file_path"
-- cmdline:
-  - $NAME
-  name: '{{.Comm}}'
-EOF
+          echo "- cmdline:" >> "$yml_file_path"
+          echo "  - $NAME" >> "$yml_file_path"
+          echo "  name: '{{.Comm}}'" >> "$yml_file_path"
         done
-
         echo "YAML file updated: $yml_file_path"
 
     - name: Restart and Check process-exporter Status
