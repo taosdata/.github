@@ -26,7 +26,7 @@ runs:
     - name: Update Prometheus YAML
       shell: bash
       run: |
-        target_json = "/etc/prometheus/target.json"
+        target_json="/etc/prometheus/target.json"
         # Check inputs
         if [ -z "${{ inputs.node_exporter_hosts }}" ] && [ -z "${{ inputs.process_exporter_hosts }}" ]; then
           echo "No hosts provided"
