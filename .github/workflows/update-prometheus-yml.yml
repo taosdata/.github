@@ -1,0 +1,25 @@
+name: Update Prometheus YAML
+
+on:
+  push:
+    branches:
+      - test/fractal
+
+jobs:
+  install-prometheus:
+    runs-on:
+      group: fractal
+      labels:
+        - self-hosted
+        - Linux
+        - X64
+        - fractal
+        - taostest
+        - taosBenchmark
+    steps:
+      - name: Install Prometheus
+        uses: taosdata/.github/.github/actions/update-prometheus-yml@test/fractal
+        with:
+          yml_file_path: '/etc/prometheus/prometheus.yml'
+          node_exporter_hosts: 'host1,host2'
+          process_exporter_hosts: 'host1,host2'
