@@ -1,0 +1,21 @@
+name: Install Node-exporter
+
+on:
+  push:
+    branches:
+      - test/fractal
+
+jobs:
+  install-node-exporter:
+    runs-on:
+      group: fractal
+      labels:
+        - self-hosted
+        - Linux
+        - X64
+        - fractal
+        - taostest
+        - taosBenchmark
+    steps:
+      - name: Install node-exporter
+        uses: taosdata/.github/.github/actions/install-node-exporter@test/fractal
