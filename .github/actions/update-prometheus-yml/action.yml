@@ -14,13 +14,14 @@ runs:
   using: 'composite'
   steps:
     - name: Reset Prometheus.yml
-        run: |
-          echo "scrape_configs:" > ${{ inputs.yml_file_path }}
-          echo "  refresh_interval: 5m" >> ${{ inputs.yml_file_path }}
-          echo "  - job_name: 'fractal_monitor'" >> ${{ inputs.yml_file_path }}
-          echo "    file_sd_configs:" >> ${{ inputs.yml_file_path }}
-          echo "      - files:" >> ${{ inputs.yml_file_path }}
-          echo "        - 'targets.json'" >> ${{ inputs.yml_file_path }}
+      shell: bash
+      run: |
+        echo "scrape_configs:" > ${{ inputs.yml_file_path }}
+        echo "  refresh_interval: 5m" >> ${{ inputs.yml_file_path }}
+        echo "  - job_name: 'fractal_monitor'" >> ${{ inputs.yml_file_path }}
+        echo "    file_sd_configs:" >> ${{ inputs.yml_file_path }}
+        echo "      - files:" >> ${{ inputs.yml_file_path }}
+        echo "        - 'targets.json'" >> ${{ inputs.yml_file_path }}
 
     - name: Update Prometheus YAML
       shell: bash
