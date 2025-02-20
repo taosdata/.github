@@ -1,37 +1,36 @@
-
-name: Install process-exporter
-description: Install process-exporter and start the service
+name: Install Grafana
+description: Install Grafana and start the service
 
 runs:
   using: 'composite'
   steps:
-  - name: Check and Install process-exporter
+  - name: Check and Install Grafana
     shell: bash
     run: |
-      if dpkg -l | grep -q process_exporter; then
-        echo "process-exporter is already installed."
-        # Check if process-exporter is running
-        if systemctl is-active --quiet process_exporter; then
-          echo "process-exporter is already running."
+      if dpkg -l | grep -q grafana; then
+        echo "Grafana is already installed."
+        # Check if Grafana is running
+        if systemctl is-active --quiet grafana-server; then
+          echo "Grafana is already running."
         else
-          echo "process-exporter is not running. Starting the service."
-          systemctl start process_exporter
+          echo "Grafana is not running. Starting the service."
+          systemctl start grafana-server
         fi
       else
-        echo "process-exporter is not installed. Proceeding with installation."
-        # Install process-exporter with setup_env.sh
+        echo "Grafana is not installed. Proceeding with installation."
+        # Install Grafana with setup_env.sh
         wget https://raw.githubusercontent.com/taosdata/TDengine/main/packaging/setup_env.sh
         chmod +x setup_env.sh
-        ./setup_env.sh deploy_process_exporter
+        ./setup_env.sh deploy_grafana
       fi
 
-  - name: Check process-exporter Status
+  - name: Check Grafana Status
     shell: bash
     run: |
-      STATUS=$(systemctl is-active process_exporter)
+      STATUS=$(systemctl is-active grafana-server)
       if [ "$STATUS" != "active" ]; then
-        echo "::error ::ERROR: process-exporter is in $STATUS state."
+        echo "::error ::ERROR: Grafana is in $STATUS state."
         exit 1
       else
-        echo "process-exporter is running successfully."
+        echo "Grafana is running successfully."
       fi

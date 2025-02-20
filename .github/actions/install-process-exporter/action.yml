@@ -1,37 +1,36 @@
-
-name: Install Grafana
-description: Install Grafana and start the service
+name: Install process-exporter
+description: Install process-exporter and start the service
 
 runs:
   using: 'composite'
   steps:
-  - name: Check and Install Grafana
+  - name: Check and Install process-exporter
     shell: bash
     run: |
-      if dpkg -l | grep -q grafana; then
-        echo "Grafana is already installed."
-        # Check if Grafana is running
-        if systemctl is-active --quiet grafana-server; then
-          echo "Grafana is already running."
+      if [ -f /usr/local/bin/process_exporter ]; then
+        echo "process-exporter is already installed."
+        # Check if process-exporter is running
+        if systemctl is-active --quiet process_exporter; then
+          echo "process-exporter is already running."
         else
-          echo "Grafana is not running. Starting the service."
-          systemctl start grafana-server
+          echo "process-exporter is not running. Starting the service."
+          systemctl start process_exporter
         fi
       else
-        echo "Grafana is not installed. Proceeding with installation."
-        # Install Grafana with setup_env.sh
+        echo "process-exporter is not installed. Proceeding with installation."
+        # Install process-exporter with setup_env.sh
         wget https://raw.githubusercontent.com/taosdata/TDengine/main/packaging/setup_env.sh
         chmod +x setup_env.sh
-        ./setup_env.sh deploy_grafana
+        ./setup_env.sh deploy_process_exporter
       fi
 
-  - name: Check Grafana Status
+  - name: Check process-exporter Status
     shell: bash
     run: |
-      STATUS=$(systemctl is-active grafana-server)
+      STATUS=$(systemctl is-active process_exporter)
       if [ "$STATUS" != "active" ]; then
-        echo "::error ::ERROR: Grafana is in $STATUS state."
+        echo "::error ::ERROR: process-exporter is in $STATUS state."
         exit 1
       else
-        echo "Grafana is running successfully."
+        echo "process-exporter is running successfully."
       fi

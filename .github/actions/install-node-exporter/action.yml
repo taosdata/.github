@@ -1,0 +1,37 @@
+name: Install node_exporter
+description: Install node_exporter and start the service
+
+runs:
+  using: 'composite'
+  steps:
+  - name: Check and Install node_exporter
+    shell: bash
+    run: |
+      if [ -f /usr/local/bin/node_exporter ]; then
+        echo "node_exporter is already installed."
+        # Check if node_exporter is running
+        if systemctl is-active --quiet node_exporter; then
+          echo "node_exporter is already running."
+        else
+          echo "node_exporter is not running. Starting the service."
+          systemctl start node_exporter
+        fi
+      else
+        echo "node_exporter is not installed. Proceeding with installation."
+        # Install node_exporter with setup_env.sh
+        wget https://raw.githubusercontent.com/taosdata/TDengine/main/packaging/setup_env.sh
+        chmod +x setup_env.sh
+        ./setup_env.sh deploy_node_exporter
+      fi
+
+  - name: Check node_exporter Status
+    shell: bash
+    run: |
+      STATUS=$(systemctl is-active node_exporter)
+      if [ "$STATUS" != "active" ]; then
+        echo "::error ::ERROR: node_exporter is in $STATUS state."
+        exit 1
+      else
+        echo "node_exporter is running successfully."
+      fi
+
