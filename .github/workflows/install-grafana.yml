@@ -1,0 +1,21 @@
+name: Install Grafana
+
+on:
+  push:
+    branches:
+      - test/fractal
+
+jobs:
+  install-grafana:
+    runs-on:
+      group: fractal
+      labels:
+        - self-hosted
+        - Linux
+        - X64
+        - fractal
+        - taostest
+        - taosBenchmark
+    steps:
+      - name: Install Grafana
+        uses: taosdata/.github/.github/actions/install-grafana@test/fractal
