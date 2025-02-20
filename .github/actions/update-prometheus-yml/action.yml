@@ -1,0 +1,74 @@
+name: 'Update Prometheus YAML'
+description: 'Update YAML file from prometheus'
+inputs:
+  yml_file_path:
+    description: 'Path Of YAML file'
+    required: true
+  node_exporter_hosts:
+    description: 'Comma-separated list of node exporter hosts'
+    required: true
+  process_exporter_hosts:
+    description: 'Comma-separated list of process exporter hosts'
+    required: true
+runs:
+  using: 'composite'
+  steps:
+    - name: Reset Prometheus.yml
+        run: |
+          echo "scrape_configs:" > ${{ inputs.yml_file_path }}
+          echo "  refresh_interval: 5m" >> ${{ inputs.yml_file_path }}
+          echo "  - job_name: 'fractal_monitor'" >> ${{ inputs.yml_file_path }}
+          echo "    file_sd_configs:" >> ${{ inputs.yml_file_path }}
+          echo "      - files:" >> ${{ inputs.yml_file_path }}
+          echo "        - 'targets.json'" >> ${{ inputs.yml_file_path }}
+
+    - name: Update Prometheus YAML
+      shell: bash
+      run: |
+        target_json = "/etc/prometheus/target.json"
+        # Check inputs
+        if [ -z "${{ inputs.node_exporter_hosts }}" ] && [ -z "${{ inputs.process_exporter_hosts }}" ]; then
+          echo "No hosts provided"
+          exit 1
+        fi
+
+        # Initialize an array for targets
+        TARGETS=()
+
+        # Process node exporter hosts
+        IFS=',' read -r -a NODE_HOSTS <<< "${{ inputs.node_exporter_hosts }}"
+        for HOST in "${NODE_HOSTS[@]}"; do
+          TARGETS+=("{\"targets\": [\"$HOST:9090\"], \"labels\": {\"instance\": \"${HOST}-node\"}}")
+        done
+
+        # Process process exporter hosts
+        IFS=',' read -r -a PROCESS_HOSTS <<< "${{ inputs.process_exporter_hosts }}"
+        for HOST in "${PROCESS_HOSTS[@]}"; do
+          TARGETS+=("{\"targets\": [\"$HOST:9256\"], \"labels\": {\"instance\": \"${HOST}-process\"}}")
+        done
+
+        # Create target.json
+        echo "[" > $target_json
+        for TARGET in "${TARGETS[@]}"; do
+          echo "  $TARGET," >> $target_json
+        done
+        # Remove the last comma and close the JSON array
+        sed -i '$ s/,$//' $target_json
+        echo "]" >> $target_json
+
+        echo "target.json created at $target_json"
+
+    - name: Restart and Check prometheus Status
+      shell: bash
+      run: |
+        # Restart prometheus
+        systemctl restart prometheus
+        # Check prometheus status
+        STATUS=$(systemctl is-active process_exporter)
+        if [ "$STATUS" != "active" ]; then
+          echo "::error ::ERROR: prometheus is in $STATUS state."
+          exit 1
+        else
+          echo "Prometheus is running successfully."
+        fi
+
