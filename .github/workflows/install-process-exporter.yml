@@ -1,10 +1,11 @@
 name: Install Process-exporter
 
+# on:
+#   push:
+#     branches:
+#       - test/fractal
 on:
-  push:
-    branches:
-      - test/fractal
-
+  workflow_dispatch:
 jobs:
   install-process-exporter:
     runs-on:

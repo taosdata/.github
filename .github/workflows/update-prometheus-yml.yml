@@ -1,9 +1,12 @@
 name: Update Prometheus YAML
 
+# on:
+#   push:
+#     branches:
+#       - test/fractal
+
 on:
-  push:
-    branches:
-      - test/fractal
+  workflow_dispatch:
 
 jobs:
   install-prometheus:
@@ -17,7 +20,7 @@ jobs:
         - taostest
         - taosBenchmark
     steps:
-      - name: Install Prometheus
+      - name: Update Prometheus YML
         uses: taosdata/.github/.github/actions/update-prometheus-yml@test/fractal
         with:
           yml_file_path: '/etc/prometheus/prometheus.yml'

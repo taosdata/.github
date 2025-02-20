@@ -1,10 +1,11 @@
 name: Deploy Taostest and TestNG
 
+# on:
+#   push:
+#     branches:
+#       - test/fractal
 on:
-  push:
-    branches:
-      - test/fractal
-
+  workflow_dispatch:
 jobs:
   deploy-taostest-testng:
     runs-on:

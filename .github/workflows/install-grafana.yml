@@ -1,10 +1,11 @@
 name: Install Grafana
 
+# on:
+#   push:
+#     branches:
+#       - test/fractal
 on:
-  push:
-    branches:
-      - test/fractal
-
+  workflow_dispatch:
 jobs:
   install-grafana:
     runs-on:

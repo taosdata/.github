@@ -1,9 +1,12 @@
 name: Install Prometheus
 
+# on:
+#   push:
+#     branches:
+#       - test/fractal
+
 on:
-  push:
-    branches:
-      - test/fractal
+  workflow_dispatch:
 
 jobs:
   install-prometheus:
