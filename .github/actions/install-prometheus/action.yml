@@ -1,37 +1,36 @@
-
-name: Install Grafana
-description: Install Grafana and start the service
+name: Install Prometheus
+description: Install Prometheus and start the service
 
 runs:
   using: 'composite'
   steps:
-  - name: Check and Install Grafana
+  - name: Check and Install Prometheus
     shell: bash
     run: |
-      if dpkg -l | grep -q grafana; then
-        echo "Grafana is already installed."
-        # Check if Grafana is running
-        if systemctl is-active --quiet grafana-server; then
-          echo "Grafana is already running."
+      if dpkg -l | grep -q prometheus; then
+        echo "Prometheus is already installed."
+        # Check if Prometheus is running
+        if systemctl is-active --quiet prometheus; then
+          echo "Prometheus is already running."
         else
-          echo "Grafana is not running. Starting the service."
-          systemctl start grafana-server
+          echo "Prometheus is not running. Starting the service."
+          systemctl start prometheus
         fi
       else
-        echo "Grafana is not installed. Proceeding with installation."
-        # Install Grafana with setup_env.sh
+        echo "Prometheus is not installed. Proceeding with installation."
+        # Install Prometheus with setup_env.sh
         wget https://raw.githubusercontent.com/taosdata/TDengine/main/packaging/setup_env.sh
         chmod +x setup_env.sh
-        ./setup_env.sh deploy_grafana
+        ./setup_env.sh deploy_prometheus
       fi
 
-  - name: Check Grafana Status
+  - name: Check Prometheus Status
     shell: bash
     run: |
-      STATUS=$(systemctl is-active grafana-server)
+      STATUS=$(systemctl is-active prometheus)
       if [ "$STATUS" != "active" ]; then
-        echo "::error ::ERROR: Grafana is in $STATUS state."
+        echo "::error ::ERROR: Prometheus is in $STATUS state."
         exit 1
       else
-        echo "Grafana is running successfully."
+        echo "Prometheus is running successfully."
       fi

@@ -1,4 +1,4 @@
-name: Install Grometheus
+name: Install Prometheus
 
 on:
   push:
@@ -17,5 +17,5 @@ jobs:
         - taostest
         - taosBenchmark
     steps:
-      - name: Install Grometheus
+      - name: Install Prometheus
         uses: taosdata/.github/.github/actions/install-prometheus@test/fractal
