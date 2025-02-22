@@ -36,6 +36,7 @@ runs:
 
     - name: Clone TestNG Repository
       shell: bash
+      id: clone-testng
       run: |
         TARGET_DIR=~/TestNG
         echo "TEST_ROOT=$TARGET_DIR" >> $GITHUB_ENV
@@ -84,8 +85,7 @@ runs:
         echo "TEST_ROOT=${{ env.TEST_ROOT }}" > ${{ env.ENV_FILE }}
         echo "TAOSTEST_SQL_RECORDING_ENABLED=True" >> ${{ env.ENV_FILE }}
 
-
-
-
-
-
+outputs:
+  test_root:
+    description: 'Path to TEST_ROOT'
+    value: ${{ steps.clone-testng.outputs.TEST_ROOT }}
