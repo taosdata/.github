@@ -19,7 +19,12 @@ runs:
       else
         echo "Grafana is not installed. Proceeding with installation."
         # Install Grafana with setup_env.sh
-        wget https://raw.githubusercontent.com/taosdata/TDengine/main/packaging/setup_env.sh
+        if [ ! -f setup_env.sh ]; then
+          echo "setup_env.sh not found. Proceeding with download."
+          wget https://raw.githubusercontent.com/taosdata/TDengine/main/packaging/setup_env.sh
+        else
+          echo "setup_env.sh already exists. Skipping download."
+        fi
         chmod +x setup_env.sh
         ./setup_env.sh deploy_grafana
       fi
