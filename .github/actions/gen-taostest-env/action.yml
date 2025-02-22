@@ -104,6 +104,7 @@ runs:
         EOF
 
     - name: Display results
+      shell: bash
       run: |
         echo "Single Dnode Hosts: $single_dnode_hosts"
         echo "Taos Benchmark Hosts: $taosBenchmark_hosts"
