@@ -228,6 +228,7 @@ jobs:
 
       - name: Set up environment
         run: |
+          set -euo pipefail
           # Initialize lists
           single_dnode_hosts=()
           taosBenchmark_hosts=()
@@ -276,7 +277,6 @@ jobs:
           echo "Cluster Hosts: $cluster_hosts_string"
 
           # Create JSON files for edge nodes
-          # Create JSON files for edge nodes
           for edge in "${single_dnode_hosts[@]}"; do
             cat <<EOF > "${edge}.json"
             {
@@ -296,8 +296,7 @@ jobs:
                 "fqdn": ["${taosBenchmark_hosts[0]}"],
                 "spec": {}
               }
-            }
-            EOF
+            }EOF
           done
       - name: Display results
         run: |
