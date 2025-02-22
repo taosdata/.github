@@ -227,8 +227,9 @@ jobs:
           single_dnode_hosts=()
           taosBenchmark_hosts=()
           cluster_hosts=()
-          # hostname_info=$(cat ip_hostname/*.txt | awk '{print $2}' | sort | uniq | tr '\n' ',')
-
+          hostname_info=$(cat ip_hostname/*.txt | awk '{print $2}' | sort | uniq | tr '\n' ',')
+          echo "current path: $PWD"
+          echo "hostname_info: $(cat hostname_info)"
           # Iterate over files in the directory
           for file in ip_hostname/ip_hostname_*; do
             if [[ "$file" == *"edge"* ]]; then
