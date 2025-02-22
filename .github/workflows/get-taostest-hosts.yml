@@ -65,17 +65,15 @@ jobs:
             ' "$response_file"
           }
           # filter_and_format "$edge_dnode_count" "fractal" "mqtt"
-          filtered_mqtt_runners=$(filter_and_format "$edge_dnode_count" "fractal" "mqtt")
           filtered_edge_runners=$(filter_and_format "$edge_dnode_count" "fractal" "edge_td")
           filtered_center_runners=$(filter_and_format "$center_dnode_count" "fractal" "center_td")
 
           echo "✅ Selected runners with formatted labels:"
-          echo "$filtered_mqtt_runners"
           echo "$filtered_edge_runners"
           echo "$filtered_center_runners"
 
           # all runners
-          filtered_runners=$(jq -s '[.[][]]' <(echo "$filtered_mqtt_runners") <(echo "$filtered_edge_runners") <(echo "$filtered_center_runners"))
+          filtered_runners=$(jq -s '[.[][]]' <(echo "$filtered_edge_runners") <(echo "$filtered_center_runners"))
           echo "✅ Selected runners with formatted labels:"
           echo "$filtered_runners"
 
@@ -206,55 +204,55 @@ jobs:
 
           echo "✅ Updated /etc/hosts with runner IPs and hostnames:"
           cat /etc/hosts
-  # get-taostest-hosts:
-  #   needs:
-  #     - upload-hosts-info
-  #     - combine-and-update-hosts
-  #   runs-on:
-  #     group: fractal
-  #     labels:
-  #       - self-hosted
-  #       - Linux
-  #       - X64
-  #       - fractal
-  #       - edge_td
-  #       - fractal-edge-1
-  #   steps:
-  #     - name: Checkout code
-  #       uses: actions/checkout@v4
-  #       with:
-  #         persist-credentials: true
+  get-taostest-hosts:
+    needs:
+      - upload-hosts-info
+      - combine-and-update-hosts
+    runs-on:
+      group: fractal
+      labels:
+        - self-hosted
+        - Linux
+        - X64
+        - fractal
+        - edge_td
+        - fractal-edge-1
+    steps:
+      # - name: Checkout code
+      #   uses: actions/checkout@v4
+      #   with:
+      #     persist-credentials: true
 
 
-  #     - name: Set up environment
-  #       run: |
-  #         # Initialize lists
-  #         single_dnode_hosts=()
-  #         taosBenchmark_hosts=()
-  #         cluster_hosts=()
-  #         hostname_info=$(cat ip_hostname/*.txt | awk '{print $2}' | sort | uniq | tr '\n' ',')
-  #         echo "current path: $PWD"
-  #         echo "hostname_info: $(cat hostname_info)"
-  #         # Iterate over files in the directory
-  #         for file in ip_hostname/ip_hostname_*; do
-  #           if [[ "$file" == *"edge"* ]]; then
-  #             # Extract hostname from the second column and append to list
-  #             hostname=$(awk '{print $2}' "$file")
-  #             single_dnode_hosts+=("$hostname")
-  #           fi
+      - name: Set up environment
+        run: |
+          # Initialize lists
+          single_dnode_hosts=()
+          taosBenchmark_hosts=()
+          cluster_hosts=()
+          hostname_info=$(cat ip_hostname/*.txt | awk '{print $2}' | sort | uniq | tr '\n' ',')
+          echo "current path: $PWD"
+          echo "hostname_info: $(cat hostname_info)"
+          # Iterate over files in the directory
+          for file in ip_hostname/ip_hostname_*; do
+            if [[ "$file" == *"edge"* ]]; then
+              # Extract hostname from the second column and append to list
+              hostname=$(awk '{print $2}' "$file")
+              single_dnode_hosts+=("$hostname")
+            fi
 
-  #           if [[ "$file" == *"taostest"* ]]; then
-  #             # Extract hostname from the second column and append to list
-  #             hostname=$(awk '{print $2}' "$file")
-  #             taosBenchmark_hosts+=("$hostname")
-  #           fi
+            if [[ "$file" == *"taostest"* ]]; then
+              # Extract hostname from the second column and append to list
+              hostname=$(awk '{print $2}' "$file")
+              taosBenchmark_hosts+=("$hostname")
+            fi
 
-  #           if [[ "$file" == *"center"* ]]; then
-  #             # Extract hostname from the second column and append to list
-  #             hostname=$(awk '{print $2}' "$file")
-  #             cluster_hosts+=("$hostname")
-  #           fi
-  #         done
+            if [[ "$file" == *"center"* ]]; then
+              # Extract hostname from the second column and append to list
+              hostname=$(awk '{print $2}' "$file")
+              cluster_hosts+=("$hostname")
+            fi
+          done
 
   #         # Convert arrays to strings
   #         single_dnode_hosts_string=$(printf '["%s"]' "${single_dnode_hosts[@]}")
