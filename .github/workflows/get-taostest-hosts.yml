@@ -255,15 +255,25 @@ jobs:
             fi
           done
 
-          # Convert arrays to strings
-          single_dnode_hosts_string=$(printf '["%s"]' "${single_dnode_hosts[@]}")
-          taosBenchmark_hosts_string=$(printf '["%s"]' "${taosBenchmark_hosts[@]}")
-          cluster_hosts_string=$(printf '["%s"]' "${cluster_hosts[@]}")
+          # Convert arrays to strings in the desired format
+          single_dnode_hosts_string=$(printf ',"%s"' "${single_dnode_hosts[@]}")
+          single_dnode_hosts_string="[${single_dnode_hosts_string:1}]"  # Remove leading comma
 
-          # Output the results
-          echo "single_dnode_hosts=${single_dnode_hosts_string}" >> $GITHUB_ENV
-          echo "taosBenchmark_hosts=${taosBenchmark_hosts_string}" >> $GITHUB_ENV
-          echo "cluster_hosts=${cluster_hosts_string}" >> $GITHUB_ENV
+          taosBenchmark_hosts_string=$(printf ',"%s"' "${taosBenchmark_hosts[@]}")
+          taosBenchmark_hosts_string="[${taosBenchmark_hosts_string:1}]"  # Remove leading comma
+
+          cluster_hosts_string=$(printf ',"%s"' "${cluster_hosts[@]}")
+          cluster_hosts_string="[${cluster_hosts_string:1}]"  # Remove leading comma
+
+          # Output the results in the desired format
+          echo "Single Dnode Hosts: $single_dnode_hosts_string"
+          echo "Taos Benchmark Hosts: $taosBenchmark_hosts_string"
+          echo "Cluster Hosts: $cluster_hosts_string"
+
+          # Output the results in the desired format
+          echo "Single Dnode Hosts: $single_dnode_hosts_string"
+          echo "Taos Benchmark Hosts: $taosBenchmark_hosts_string"
+          echo "Cluster Hosts: $cluster_hosts_string"
 
       - name: Display results
         run: |
