@@ -221,7 +221,7 @@ jobs:
         - taosBenchmark
     steps:
       - name: Get Taostest Hosts
-        uses: taosdata/.github/.github/actions/install-prometheus@test/fractal
+        uses: taosdata/.github/.github/actions/get-taostest-env@test/fractal
       # - name: Checkout code
       #   uses: actions/checkout@v4
       #   with:
