@@ -275,6 +275,54 @@ jobs:
           echo "Taos Benchmark Hosts: $taosBenchmark_hosts_string"
           echo "Cluster Hosts: $cluster_hosts_string"
 
+          # Create JSON files for edge nodes
+          for edge in "${single_dnode_hosts[@]}"; do
+            cat <<EOF > "${edge}.json"
+{
+  "taosd": {
+    "fqdn": ["${edge}"],
+    "spec": {"firstEP": "${edge}:6030"}
+  },
+  "taosadapter": {
+    "fqdn": ["${edge}"],
+    "spec": {}
+  },
+  "taosBenchmark": {
+    "fqdn": ["${taosBenchmark_hosts[0]}"],
+    "spec": {}
+  },
+  "taospy": {
+    "fqdn": ["${taosBenchmark_hosts[0]}"],
+    "spec": {}
+  }
+}
+EOF
+          done
+
+          # Create JSON file for cluster node
+          cluster_fqdn=$(printf ',"%s"' "${cluster_hosts[@]}")
+          cluster_fqdn="[${cluster_fqdn:1}]"
+
+          cat <<EOF > "fractal-center.json"
+{
+  "taosd": {
+    "fqdn": ${cluster_fqdn},
+    "spec": {"firstEP": "fractal-center-1:6030"}
+  },
+  "taosadapter": {
+    "fqdn": ${cluster_fqdn},
+    "spec": {}
+  },
+  "taosBenchmark": {
+    "fqdn": ["${taosBenchmark_hosts[0]}"],
+    "spec": {}
+  },
+  "taospy": {
+    "fqdn": ["${taosBenchmark_hosts[0]}"],
+    "spec": {}
+  }
+}
+EOF
       - name: Display results
         run: |
           echo "Single Dnode Hosts: $single_dnode_hosts"
