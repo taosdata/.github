@@ -297,9 +297,35 @@ jobs:
                 "fqdn": ["${taosBenchmark_hosts[0]}"],
                 "spec": {}
               }
-            }
+          }
           EOF
           done
+
+          # Create JSON file for cluster node
+          cluster_fqdn=$(printf ',"%s"' "${cluster_hosts[@]}")
+          cluster_fqdn="[${cluster_fqdn:1}]"
+
+          cat <<EOF > "fractal-center.json"
+          {
+              "taosd": {
+                "fqdn": ${cluster_fqdn},
+                "spec": {"firstEP": "fractal-center-1:6030"}
+              },
+              "taosadapter": {
+                "fqdn": ${cluster_fqdn},
+                "spec": {}
+              },
+              "taosBenchmark": {
+                "fqdn": ["${taosBenchmark_hosts[0]}"],
+                "spec": {}
+              },
+              "taospy": {
+                "fqdn": ["${taosBenchmark_hosts[0]}"],
+                "spec": {}
+              }
+          }
+          EOF
+
       - name: Display results
         run: |
           echo "Single Dnode Hosts: $single_dnode_hosts"
