@@ -1,0 +1,68 @@
+name: Update Hosts
+
+on:
+  push:
+    branches:
+      - test/fractal
+# on:
+#   workflow_dispatch:
+
+jobs:
+  filter-runners:
+    runs-on:
+      group: fractal
+      labels:
+        - self-hosted
+        - Linux
+        - X64
+        - fractal
+        - edge
+        - fractal-edge-1
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up environment
+        run: |
+          # Initialize lists
+          single_dnode_hosts=()
+          taosBenchmark_hosts=()
+          cluster_hosts=()
+          # hostname_info=$(cat ip_hostname/*.txt | awk '{print $2}' | sort | uniq | tr '\n' ',')
+
+          # Iterate over files in the directory
+          for file in ip_hostname/ip_hostname_*; do
+            if [[ "$file" == *"edge"* ]]; then
+              # Extract hostname from the second column and append to list
+              hostname=$(awk '{print $2}' "$file")
+              single_dnode_hosts+=("$hostname")
+            fi
+
+            if [[ "$file" == *"taostest"* ]]; then
+              # Extract hostname from the second column and append to list
+              hostname=$(awk '{print $2}' "$file")
+              taosBenchmark_hosts+=("$hostname")
+            fi
+
+            if [[ "$file" == *"center"* ]]; then
+              # Extract hostname from the second column and append to list
+              hostname=$(awk '{print $2}' "$file")
+              cluster_hosts+=("$hostname")
+            fi
+          done
+
+          # Convert arrays to strings
+          single_dnode_hosts_string=$(printf '["%s"]' "${single_dnode_hosts[@]}")
+          taosBenchmark_hosts_string=$(printf '["%s"]' "${taosBenchmark_hosts[@]}")
+          cluster_hosts_string=$(printf '["%s"]' "${cluster_hosts[@]}")
+
+          # Output the results
+          echo "single_dnode_hosts=${single_dnode_hosts_string}" >> $GITHUB_ENV
+          echo "taosBenchmark_hosts=${taosBenchmark_hosts_string}" >> $GITHUB_ENV
+          echo "cluster_hosts=${cluster_hosts_string}" >> $GITHUB_ENV
+
+      - name: Display results
+        run: |
+          echo "Single Dnode Hosts: $single_dnode_hosts"
+          echo "Taos Benchmark Hosts: $taosBenchmark_hosts"
+          echo "Cluster Hosts: $cluster_hosts"
