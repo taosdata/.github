@@ -227,6 +227,7 @@ jobs:
 
 
       - name: Set up environment
+        shell: bash
         run: |
           set -euo pipefail
           # Initialize lists
@@ -296,7 +297,8 @@ jobs:
                 "fqdn": ["${taosBenchmark_hosts[0]}"],
                 "spec": {}
               }
-            }EOF
+            }
+          EOF
           done
       - name: Display results
         run: |
