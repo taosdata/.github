@@ -220,8 +220,8 @@ jobs:
         - taostest
         - taosBenchmark
     steps:
-      - name: Get Taostest Hosts
-        uses: taosdata/.github/.github/actions/get-taostest-env@test/fractal
+      - name: Gen Taostest Hosts
+        uses: taosdata/.github/.github/actions/gen-taostest-env@test/fractal
       # - name: Checkout code
       #   uses: actions/checkout@v4
       #   with:
