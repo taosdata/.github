@@ -3,18 +3,21 @@ name: Generate JSON Files
 on: push
 
 jobs:
-  setup:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Create JSON file
+      - name: Create multiple JSON files
         run: |
-          cat <<EOF > config.json
-          {
-            "name": "example",
-            "version": "1.0.0",
-            "description": "This is a JSON example using EOF in YAML."
-          }
-          EOF
+          declare -a projects=("project1" "project2" "project3")
+          for project in "${projects[@]}"; do
+            cat <<EOF > "${project}.json"
+            {
+              "name": "$project",
+              "version": "1.0.0",
+              "description": "This is a JSON file for $project."
+            }
+            EOF
+          done
