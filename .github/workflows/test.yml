@@ -19,5 +19,5 @@ jobs:
               "version": "1.0.0",
               "description": "This is a JSON file for $project."
             }
-            EOF
+          EOF
           done
