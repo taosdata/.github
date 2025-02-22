@@ -1,0 +1,20 @@
+name: Generate JSON Files
+
+on: push
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Create JSON file
+        run: |
+          cat <<EOF > config.json
+          {
+            "name": "example",
+            "version": "1.0.0",
+            "description": "This is a JSON example using EOF in YAML."
+          }
+          EOF
