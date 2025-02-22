@@ -207,6 +207,7 @@ jobs:
   get-taostest-hosts:
     needs:
       - upload-hosts-info
+      - combine-and-update-hosts
     runs-on:
       group: fractal
       labels:
