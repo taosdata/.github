@@ -217,117 +217,119 @@ jobs:
         - Linux
         - X64
         - fractal
-        - edge_td
-        - fractal-edge-1
+        - taostest
+        - taosBenchmark
     steps:
+      - name: Get Taostest Hosts
+        uses: taosdata/.github/.github/actions/install-prometheus@test/fractal
       # - name: Checkout code
       #   uses: actions/checkout@v4
       #   with:
       #     persist-credentials: true
 
 
-      - name: Set up environment
-        shell: bash
-        run: |
-          set -euo pipefail
-          # Initialize lists
-          single_dnode_hosts=()
-          taosBenchmark_hosts=()
-          cluster_hosts=()
-          hostname_info=$(cat ip_hostname/*.txt | awk '{print $2}' | sort | uniq | tr '\n' ',')
-          echo "hostname_info: $hostname_info"
-          # Iterate over files in the directory
-          for file in ip_hostname/ip_hostname_*; do
-            if [[ "$file" == *"edge"* ]]; then
-              # Extract hostname from the second column and append to list
-              hostname=$(awk '{print $2}' "$file")
-              single_dnode_hosts+=("$hostname")
-            fi
+      # - name: Set up environment
+      #   shell: bash
+      #   run: |
+      #     set -euo pipefail
+      #     # Initialize lists
+      #     single_dnode_hosts=()
+      #     taosBenchmark_hosts=()
+      #     cluster_hosts=()
+      #     hostname_info=$(cat ip_hostname/*.txt | awk '{print $2}' | sort | uniq | tr '\n' ',')
+      #     echo "hostname_info: $hostname_info"
+      #     # Iterate over files in the directory
+      #     for file in ip_hostname/ip_hostname_*; do
+      #       if [[ "$file" == *"edge"* ]]; then
+      #         # Extract hostname from the second column and append to list
+      #         hostname=$(awk '{print $2}' "$file")
+      #         single_dnode_hosts+=("$hostname")
+      #       fi
 
-            if [[ "$file" == *"taostest"* ]]; then
-              # Extract hostname from the second column and append to list
-              hostname=$(awk '{print $2}' "$file")
-              taosBenchmark_hosts+=("$hostname")
-            fi
+      #       if [[ "$file" == *"taostest"* ]]; then
+      #         # Extract hostname from the second column and append to list
+      #         hostname=$(awk '{print $2}' "$file")
+      #         taosBenchmark_hosts+=("$hostname")
+      #       fi
 
-            if [[ "$file" == *"center"* ]]; then
-              # Extract hostname from the second column and append to list
-              hostname=$(awk '{print $2}' "$file")
-              cluster_hosts+=("$hostname")
-            fi
-          done
+      #       if [[ "$file" == *"center"* ]]; then
+      #         # Extract hostname from the second column and append to list
+      #         hostname=$(awk '{print $2}' "$file")
+      #         cluster_hosts+=("$hostname")
+      #       fi
+      #     done
 
-          # Convert arrays to strings in the desired format
-          single_dnode_hosts_string=$(printf ',"%s"' "${single_dnode_hosts[@]}")
-          single_dnode_hosts_string="[${single_dnode_hosts_string:1}]"  # Remove leading comma
+      #     # Convert arrays to strings in the desired format
+      #     single_dnode_hosts_string=$(printf ',"%s"' "${single_dnode_hosts[@]}")
+      #     single_dnode_hosts_string="[${single_dnode_hosts_string:1}]"  # Remove leading comma
 
-          taosBenchmark_hosts_string=$(printf ',"%s"' "${taosBenchmark_hosts[@]}")
-          taosBenchmark_hosts_string="[${taosBenchmark_hosts_string:1}]"  # Remove leading comma
+      #     taosBenchmark_hosts_string=$(printf ',"%s"' "${taosBenchmark_hosts[@]}")
+      #     taosBenchmark_hosts_string="[${taosBenchmark_hosts_string:1}]"  # Remove leading comma
 
-          cluster_hosts_string=$(printf ',"%s"' "${cluster_hosts[@]}")
-          cluster_hosts_string="[${cluster_hosts_string:1}]"  # Remove leading comma
+      #     cluster_hosts_string=$(printf ',"%s"' "${cluster_hosts[@]}")
+      #     cluster_hosts_string="[${cluster_hosts_string:1}]"  # Remove leading comma
 
-          # Output the results in the desired format
-          echo "Single Dnode Hosts: $single_dnode_hosts_string"
-          echo "Taos Benchmark Hosts: $taosBenchmark_hosts_string"
-          echo "Cluster Hosts: $cluster_hosts_string"
+      #     # Output the results in the desired format
+      #     echo "Single Dnode Hosts: $single_dnode_hosts_string"
+      #     echo "Taos Benchmark Hosts: $taosBenchmark_hosts_string"
+      #     echo "Cluster Hosts: $cluster_hosts_string"
 
-          # Output the results in the desired format
-          echo "Single Dnode Hosts: $single_dnode_hosts_string"
-          echo "Taos Benchmark Hosts: $taosBenchmark_hosts_string"
-          echo "Cluster Hosts: $cluster_hosts_string"
+      #     # Output the results in the desired format
+      #     echo "Single Dnode Hosts: $single_dnode_hosts_string"
+      #     echo "Taos Benchmark Hosts: $taosBenchmark_hosts_string"
+      #     echo "Cluster Hosts: $cluster_hosts_string"
 
-          # Create JSON files for edge nodes
-          for edge in "${single_dnode_hosts[@]}"; do
-            cat <<EOF > "${edge}.json"
-            {
-              "taosd": {
-                "fqdn": ["$edge"],
-                "spec": {"firstEP": "$edge:6030"}
-              },
-              "taosadapter": {
-                "fqdn": ["$edge"],
-                "spec": {}
-              },
-              "taosBenchmark": {
-                "fqdn": ["${taosBenchmark_hosts[0]}"],
-                "spec": {}
-              },
-              "taospy": {
-                "fqdn": ["${taosBenchmark_hosts[0]}"],
-                "spec": {}
-              }
-          }
-          EOF
-          done
+      #     # Create JSON files for edge nodes
+      #     for edge in "${single_dnode_hosts[@]}"; do
+      #       cat <<EOF > "${edge}.json"
+      #       {
+      #         "taosd": {
+      #           "fqdn": ["$edge"],
+      #           "spec": {"firstEP": "$edge:6030"}
+      #         },
+      #         "taosadapter": {
+      #           "fqdn": ["$edge"],
+      #           "spec": {}
+      #         },
+      #         "taosBenchmark": {
+      #           "fqdn": ["${taosBenchmark_hosts[0]}"],
+      #           "spec": {}
+      #         },
+      #         "taospy": {
+      #           "fqdn": ["${taosBenchmark_hosts[0]}"],
+      #           "spec": {}
+      #         }
+      #     }
+      #     EOF
+      #     done
 
-          # Create JSON file for cluster node
-          cluster_fqdn=$(printf ',"%s"' "${cluster_hosts[@]}")
-          cluster_fqdn="[${cluster_fqdn:1}]"
+      #     # Create JSON file for cluster node
+      #     cluster_fqdn=$(printf ',"%s"' "${cluster_hosts[@]}")
+      #     cluster_fqdn="[${cluster_fqdn:1}]"
 
-          cat <<EOF > "fractal-center.json"
-          {
-              "taosd": {
-                "fqdn": ${cluster_fqdn},
-                "spec": {"firstEP": "fractal-center-1:6030"}
-              },
-              "taosadapter": {
-                "fqdn": ${cluster_fqdn},
-                "spec": {}
-              },
-              "taosBenchmark": {
-                "fqdn": ["${taosBenchmark_hosts[0]}"],
-                "spec": {}
-              },
-              "taospy": {
-                "fqdn": ["${taosBenchmark_hosts[0]}"],
-                "spec": {}
-              }
-          }
-          EOF
+      #     cat <<EOF > "fractal-center.json"
+      #     {
+      #         "taosd": {
+      #           "fqdn": ${cluster_fqdn},
+      #           "spec": {"firstEP": "fractal-center-1:6030"}
+      #         },
+      #         "taosadapter": {
+      #           "fqdn": ${cluster_fqdn},
+      #           "spec": {}
+      #         },
+      #         "taosBenchmark": {
+      #           "fqdn": ["${taosBenchmark_hosts[0]}"],
+      #           "spec": {}
+      #         },
+      #         "taospy": {
+      #           "fqdn": ["${taosBenchmark_hosts[0]}"],
+      #           "spec": {}
+      #         }
+      #     }
+      #     EOF
 
-      - name: Display results
-        run: |
-          echo "Single Dnode Hosts: $single_dnode_hosts"
-          echo "Taos Benchmark Hosts: $taosBenchmark_hosts"
-          echo "Cluster Hosts: $cluster_hosts"
+      # - name: Display results
+      #   run: |
+      #     echo "Single Dnode Hosts: $single_dnode_hosts"
+      #     echo "Taos Benchmark Hosts: $taosBenchmark_hosts"
+      #     echo "Cluster Hosts: $cluster_hosts"
