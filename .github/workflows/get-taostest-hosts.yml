@@ -16,7 +16,7 @@ jobs:
         - Linux
         - X64
         - fractal
-        - edge
+        - edge_td
         - fractal-edge-1
     steps:
       - name: Checkout code
