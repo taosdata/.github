@@ -65,15 +65,17 @@ jobs:
             ' "$response_file"
           }
           # filter_and_format "$edge_dnode_count" "fractal" "mqtt"
+          filtered_taostest_runners=$(filter_and_format "1" "fractal" "taostest")
           filtered_edge_runners=$(filter_and_format "$edge_dnode_count" "fractal" "edge_td")
           filtered_center_runners=$(filter_and_format "$center_dnode_count" "fractal" "center_td")
 
           echo "✅ Selected runners with formatted labels:"
+          echo "$filtered_taostest_runners"
           echo "$filtered_edge_runners"
           echo "$filtered_center_runners"
 
           # all runners
-          filtered_runners=$(jq -s '[.[][]]' <(echo "$filtered_edge_runners") <(echo "$filtered_center_runners"))
+          filtered_runners=$(jq -s '[.[][]]' <(echo "$filtered_taostest_runners") <(echo "$filtered_edge_runners") <(echo "$filtered_center_runners"))
           echo "✅ Selected runners with formatted labels:"
           echo "$filtered_runners"
 
@@ -231,7 +233,6 @@ jobs:
           taosBenchmark_hosts=()
           cluster_hosts=()
           hostname_info=$(cat ip_hostname/*.txt | awk '{print $2}' | sort | uniq | tr '\n' ',')
-          echo "current path: $PWD"
           echo "hostname_info: $hostname_info"
           # Iterate over files in the directory
           for file in ip_hostname/ip_hostname_*; do
@@ -254,18 +255,18 @@ jobs:
             fi
           done
 
-  #         # Convert arrays to strings
-  #         single_dnode_hosts_string=$(printf '["%s"]' "${single_dnode_hosts[@]}")
-  #         taosBenchmark_hosts_string=$(printf '["%s"]' "${taosBenchmark_hosts[@]}")
-  #         cluster_hosts_string=$(printf '["%s"]' "${cluster_hosts[@]}")
+          # Convert arrays to strings
+          single_dnode_hosts_string=$(printf '["%s"]' "${single_dnode_hosts[@]}")
+          taosBenchmark_hosts_string=$(printf '["%s"]' "${taosBenchmark_hosts[@]}")
+          cluster_hosts_string=$(printf '["%s"]' "${cluster_hosts[@]}")
 
-  #         # Output the results
-  #         echo "single_dnode_hosts=${single_dnode_hosts_string}" >> $GITHUB_ENV
-  #         echo "taosBenchmark_hosts=${taosBenchmark_hosts_string}" >> $GITHUB_ENV
-  #         echo "cluster_hosts=${cluster_hosts_string}" >> $GITHUB_ENV
+          # Output the results
+          echo "single_dnode_hosts=${single_dnode_hosts_string}" >> $GITHUB_ENV
+          echo "taosBenchmark_hosts=${taosBenchmark_hosts_string}" >> $GITHUB_ENV
+          echo "cluster_hosts=${cluster_hosts_string}" >> $GITHUB_ENV
 
-  #     - name: Display results
-  #       run: |
-  #         echo "Single Dnode Hosts: $single_dnode_hosts"
-  #         echo "Taos Benchmark Hosts: $taosBenchmark_hosts"
-  #         echo "Cluster Hosts: $cluster_hosts"
+      - name: Display results
+        run: |
+          echo "Single Dnode Hosts: $single_dnode_hosts"
+          echo "Taos Benchmark Hosts: $taosBenchmark_hosts"
+          echo "Cluster Hosts: $cluster_hosts"
