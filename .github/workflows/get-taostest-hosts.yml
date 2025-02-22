@@ -150,6 +150,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true
 
       - name: Install GitHub CLI
         shell: bash
@@ -220,6 +222,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+
 
       - name: Set up environment
         run: |
