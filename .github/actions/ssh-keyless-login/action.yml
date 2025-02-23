@@ -21,14 +21,10 @@ runs:
     - name: Generate SSH Key (ed25519)
       shell: bash
       run: |
-        mkdir -p ~/.ssh
-        chmod 700 ~/.ssh
         ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519 -N "" || echo "SSH key already exists"
-        chmod 600 ~/.ssh/id_ed25519
-        chmod 644 ~/.ssh/id_ed25519.pub
 
     - name: Copy SSH Key to Target Hosts
-      shell: bash
+      shell: sh
       run: |
         IFS=',' read -r -a hosts <<< "${{ inputs.target_hosts }}"
         for host in "${hosts[@]}"; do
