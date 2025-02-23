@@ -44,6 +44,19 @@ runs:
         # Check if the target directory exists and is not empty
         if [ -d "$TARGET_DIR" ] && [ "$(ls -A $TARGET_DIR)" ]; then
           echo "Target directory $TARGET_DIR exists and is not empty"
+          cd "$TARGET_DIR"
+
+          # Check if the current branch matches the specified branch
+          CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          if [ "$CURRENT_BRANCH" != "${{ inputs.testng-branch }}" ]; then
+            git fetch
+            echo "Checking out branch ${{ inputs.testng-branch }}"
+            git checkout ${{ inputs.testng-branch }}
+          fi
+
+          # Pull the latest changes
+          echo "Pulling latest changes for branch ${{ inputs.testng-branch }}"
+          git pull origin ${{ inputs.testng-branch }}
         else
           echo "Cloning TestNG repository"
           git clone -b ${{ inputs.testng-branch }} https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/taosdata/TestNG.git "$TARGET_DIR"
@@ -64,6 +77,19 @@ runs:
         # Check if the target directory exists and is not empty
         if [ -d "$TARGET_DIR" ] && [ "$(ls -A $TARGET_DIR)" ]; then
           echo "Target directory $TARGET_DIR exists and is not empty"
+          cd "$TARGET_DIR"
+
+          # Check if the current branch matches the specified branch
+          CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          if [ "$CURRENT_BRANCH" != "${{ inputs.taostest-branch }}" ]; then
+            git fetch
+            echo "Checking out branch ${{ inputs.taostest-branch }}"
+            git checkout ${{ inputs.taostest-branch }}
+          fi
+
+          # Pull the latest changes
+          echo "Pulling latest changes for branch ${{ inputs.taostest-branch }}"
+          git pull origin ${{ inputs.taostest-branch }}
         else
           echo "Cloning taos-test-framework repository"
           git clone -b ${{ inputs.taostest-branch }} https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/taosdata/taos-test-framework.git "$TARGET_DIR"
