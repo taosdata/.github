@@ -1,0 +1,27 @@
+name: SSH Copy ID
+description: Configure SSH keyless login to target hosts
+
+inputs:
+  target_hosts:
+    description: 'Comma-separated list of target hosts'
+    required: true
+  password:
+    description: 'SSH login password'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install sshpass
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y sshpass
+
+    - name: Copy SSH Key to Target Hosts
+      shell: bash
+      run: |
+        IFS=',' read -r -a hosts <<< "${{ inputs.target_hosts }}"
+        for host in "${hosts[@]}"; do
+          echo "Copying SSH key to $host"
+          sshpass -p "${{ inputs.password }}" ssh-copy-id -o StrictHostKeyChecking=no root@$host
+        done
