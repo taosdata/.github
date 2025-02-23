@@ -19,7 +19,7 @@ runs:
       else
         echo "process-exporter is not installed. Proceeding with installation."
         # Install process-exporter with setup_env.sh
-        wget https://raw.githubusercontent.com/taosdata/TDengine/main/packaging/setup_env.sh
+        wget -O setup_env.sh https://raw.githubusercontent.com/taosdata/TDengine/main/packaging/setup_env.sh
         chmod +x setup_env.sh
         ./setup_env.sh deploy_process_exporter
       fi
