@@ -46,7 +46,7 @@ runs:
           echo "Target directory $TARGET_DIR exists and is not empty"
         else
           echo "Cloning TestNG repository"
-          git clone -b master https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/taosdata/TestNG.git "$TARGET_DIR"
+          git clone -b ${{ inputs.testng-branch }} https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/taosdata/TestNG.git "$TARGET_DIR"
         fi
 
     - name: Set up Python and dependencies
@@ -66,7 +66,7 @@ runs:
           echo "Target directory $TARGET_DIR exists and is not empty"
         else
           echo "Cloning taos-test-framework repository"
-          git clone -b master https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/taosdata/taos-test-framework.git "$TARGET_DIR"
+          git clone -b ${{ inputs.taostest-branch }} https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/taosdata/taos-test-framework.git "$TARGET_DIR"
         fi
         cd $TARGET_DIR
         echo "Y" | bash reinstall.sh
