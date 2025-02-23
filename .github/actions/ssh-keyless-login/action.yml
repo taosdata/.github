@@ -29,6 +29,5 @@ runs:
         IFS=',' read -r -a hosts <<< "${{ inputs.target_hosts }}"
         for host in "${hosts[@]}"; do
           echo "Copying SSH key to $host"
-          # sshpass -p "${{ inputs.password }}" ssh-copy-id -o StrictHostKeyChecking=no root@$host
-          sshpass -p tbase125! ssh-copy-id -o StrictHostKeyChecking=no root@fractal-center-1
+          sshpass -p "${{ inputs.password }}" ssh-copy-id -i ~/.ssh/id_ed25519.pub -o StrictHostKeyChecking=no root@$host
         done
