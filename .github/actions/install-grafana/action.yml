@@ -29,6 +29,13 @@ runs:
         ./setup_env.sh deploy_grafana
       fi
 
+  - name: Config anymous access
+    shell: bash
+    run: |
+      # Enable anonymous access
+      sed -i 's/;enabled = false/enabled = true/' /etc/grafana/grafana.ini
+      systemctl restart grafana-server
+
   - name: Check Grafana Status
     shell: bash
     run: |
