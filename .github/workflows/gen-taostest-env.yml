@@ -67,15 +67,17 @@ jobs:
           # filter_and_format "$edge_dnode_count" "fractal" "mqtt"
           filtered_taostest_runners=$(filter_and_format "1" "fractal" "taostest")
           filtered_edge_runners=$(filter_and_format "$edge_dnode_count" "fractal" "edge_td")
+          filtered_mqtt_runners=$(filter_and_format "$edge_dnode_count" "fractal" "mqtt")
           filtered_center_runners=$(filter_and_format "$center_dnode_count" "fractal" "center_td")
 
           echo "✅ Selected runners with formatted labels:"
           echo "$filtered_taostest_runners"
           echo "$filtered_edge_runners"
+          echo "$filtered_mqtt_runners"
           echo "$filtered_center_runners"
 
           # all runners
-          filtered_runners=$(jq -s '[.[][]]' <(echo "$filtered_taostest_runners") <(echo "$filtered_edge_runners") <(echo "$filtered_center_runners"))
+          filtered_runners=$(jq -s '[.[][]]' <(echo "$filtered_taostest_runners") <(echo "$filtered_edge_runners") <(echo "$filtered_mqtt_runners") <(echo "$filtered_center_runners"))
           echo "✅ Selected runners with formatted labels:"
           echo "$filtered_runners"
 
