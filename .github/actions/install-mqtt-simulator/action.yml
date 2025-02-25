@@ -56,10 +56,11 @@ runs:
     - name: Download Mqtt simulator
       shell: bash
       run: |
-        if ! wget "$URL"; then
+        if ! wget -o "$URL"; then
           echo "::error ::Failed to download Mqtt simulator from $URL"
           exit 1
         fi
+        cp mqtt_pub /usr/bin/
 
 
 
