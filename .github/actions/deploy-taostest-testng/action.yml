@@ -57,6 +57,7 @@ runs:
           # Pull the latest changes
           # ! permission denied now with the token
           echo "Pulling latest changes for branch ${{ inputs.testng-branch }}"
+          git remote set-url origin https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/taosdata/TestNG.git
           git pull origin ${{ inputs.testng-branch }}
         else
           echo "Cloning TestNG repository"
@@ -91,6 +92,7 @@ runs:
           # Pull the latest changes
           # ! permission denied now with the token
           echo "Pulling latest changes for branch ${{ inputs.taostest-branch }}"
+          git remote set-url origin https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/taosdata/taos-test-framework.git
           git pull origin ${{ inputs.taostest-branch }}
         else
           echo "Cloning taos-test-framework repository"
