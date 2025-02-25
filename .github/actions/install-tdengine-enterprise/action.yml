@@ -24,7 +24,7 @@ runs:
         MAJOR_VERSION=$(echo $VERSION | cut -d '.' -f 1-2)
 
         # Get download URL
-        URL="${BASE_URL}/${MAJOR_VERSION}/v${VERSION}/enterprise/TDengine-enterprise-${VERSION}-Linux-x64.tar.gz"
+        URL="${BASE_URL}/TDengine/${MAJOR_VERSION}/v${VERSION}/enterprise/TDengine-enterprise-${VERSION}-Linux-x64.tar.gz"
         echo "Download URL: $URL"
         echo "VERSION=$VERSION" >> $GITHUB_ENV
         echo "URL=$URL" >> $GITHUB_ENV
