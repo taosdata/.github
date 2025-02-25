@@ -61,7 +61,7 @@ runs:
         echo "Cluster Hosts: $cluster_hosts_string"
 
         # Get the length of the first array (assuming both arrays are of the same length)
-        len=${#single_dnode_hosts[@]}
+        length=${#single_dnode_hosts[@]}
 
         # Iterate over indices
         for ((i=0; i<length; i++)); do
