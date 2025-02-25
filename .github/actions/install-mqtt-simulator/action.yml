@@ -60,7 +60,6 @@ runs:
           echo "::error ::Failed to download Mqtt simulator from $URL"
           exit 1
         fi
-        cp mqtt_pub /usr/bin/
 
 
 
