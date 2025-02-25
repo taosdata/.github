@@ -60,6 +60,12 @@ runs:
         echo "Taos Benchmark Hosts: $taosBenchmark_hosts_string"
         echo "Cluster Hosts: $cluster_hosts_string"
 
+        # Export results to environment variables
+        echo "MQTT_HOSTS=$mqtt_hosts_string" >> $GITHUB_ENV
+        echo "SINGLE_DNODE_HOSTS=$single_dnode_hosts_string" >> $GITHUB_ENV
+        echo "TAOS_BENCHMARK_HOSTS=$taosBenchmark_hosts_string" >> $GITHUB_ENV
+        echo "CLUSTER_HOSTS=$cluster_hosts_string" >> $GITHUB_ENV
+
         # Get the length of the first array (assuming both arrays are of the same length)
         length=${#single_dnode_hosts[@]}
 
@@ -142,11 +148,3 @@ runs:
             }
         }
         EOF
-
-    - name: Display results
-      shell: bash
-      run: |
-        echo "Single Dnode Hosts: $single_dnode_hosts"
-        echo "Taos Benchmark Hosts: $taosBenchmark_hosts"
-        echo "Cluster Hosts: $cluster_hosts"
-
