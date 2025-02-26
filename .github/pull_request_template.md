@@ -2,7 +2,7 @@
 
 Please briefly describe the code changes in this pull request.
 
-Jira: [Jira Link]
+Jira: https://jira.taosdata.com:18080/browse/TD-
 
 # Checklist
 
