@@ -1,0 +1,22 @@
+name: 'Config Process Exporter YAML'
+description: 'Config YAML File From Process Names'
+inputs:
+  yml_file_path:
+    description: 'Path Of YAML file'
+    required: true
+  process_names:
+    description: 'Comma-separated list of process names to monitor'
+    required: true
+runs:
+  using: 'composite'
+  steps:
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Config YAML File From Process Names
+      shell: bash
+      run: |
+        script_path=$(find $GITHUB_WORKSPACE/../../ -name config_process_exporter_yml.sh 2>/dev/null | head -n 1)
+        chmod +x $script_path
+        $script_path "${{ inputs.yml_file_path }}" "${{ inputs.process_names }}"
