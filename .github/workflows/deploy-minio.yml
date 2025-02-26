@@ -8,7 +8,7 @@ on:
       - test/fractal
 
 jobs:
-  call-install:
+  deploy-minio:
     runs-on:
       group: fractal
       labels: [self-hosted, Linux, X64, fractal, edge_td, fractal-edge-1]
