@@ -1,11 +1,11 @@
 name: Deploy MinIO
 
-# on:
-#   workflow_dispatch:
 on:
-  push:
-    branches:
-      - test/fractal
+  workflow_dispatch:
+# on:
+#   push:
+#     branches:
+#       - test/fractal
 
 jobs:
   deploy-minio:
