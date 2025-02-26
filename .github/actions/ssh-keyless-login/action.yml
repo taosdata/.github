@@ -12,23 +12,9 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Install sshpass
+    - name: Install TDengine Enterprise
       shell: bash
       run: |
-        apt-get update
-        apt-get install -y sshpass
-
-    - name: Generate SSH Key (ed25519)
-      shell: bash
-      run: |
-        ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519 -N "" || echo "SSH key already exists"
-
-    - name: Copy SSH Key to Target Hosts
-      shell: bash
-      run: |
-        IFS=',' read -r -a hosts <<< "${{ inputs.target_hosts }}"
-        for host in "${hosts[@]}"; do
-          echo "Copying SSH key to $host"
-          # sshpass -p "${{ inputs.password }}" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$host "mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys" < ~/.ssh/id_ed25519.pub
-          sshpass -p "${{ inputs.password }}" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null root@$host "grep -qxF \"$(cat ~/.ssh/id_ed25519.pub)\" ~/.ssh/authorized_keys || echo \"$(cat ~/.ssh/id_ed25519.pub)\" >> ~/.ssh/authorized_keys"
-        done
+        script_path=$(find $GITHUB_WORKSPACE/../../ -name config_ssh_keyless_login.sh 2>/dev/null | head -n 1)
+        chmod +x $script_path
+        $script_path "${{ inputs.target_hosts }}" "${{ inputs.password }}"
