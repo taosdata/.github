@@ -18,6 +18,5 @@ runs:
         # Enable Anonymous Access
         echo "GITHUB_WORKSPACE: $GITHUB_WORKSPACE"
         script_path=$(find $GITHUB_WORKSPACE/../../ -name config_grafana_anonymous_access.sh 2>/dev/null | head -n 1)
-        $GITHUB_WORKSPACE
         chmod +x $script_path
         $script_path /etc/grafana/grafana.ini

@@ -11,5 +11,6 @@ runs:
     - name: Install FlashMQ
       shell: bash
       run: |
-        chmod +x .github/scripts/install_flashmq.sh
-        .github/scripts/install_flashmq.sh
+        script_path=$(find $GITHUB_WORKSPACE/../../ -name install_flashmq.sh 2>/dev/null | head -n 1)
+        chmod +x $script_path
+        $script_path
