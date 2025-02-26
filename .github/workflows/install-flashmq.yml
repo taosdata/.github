@@ -1,11 +1,11 @@
 name: Install FlashMQ
 
-# on:
-#   workflow_dispatch:
 on:
-  push:
-    branches:
-      - test/fractal
+  workflow_dispatch:
+# on:
+#   push:
+#     branches:
+#       - test/fractal
 
 jobs:
   install-flashmq:
