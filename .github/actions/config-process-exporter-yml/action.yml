@@ -7,9 +7,6 @@ inputs:
   process_names:
     description: 'Comma-separated list of process names to monitor'
     required: true
-runs:
-  using: 'composite'
-  steps:
 
 runs:
   using: 'composite'
