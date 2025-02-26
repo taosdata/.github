@@ -5,7 +5,6 @@ description: Install FlashMQ and start the service
 runs:
   using: 'composite'
   steps:
-  steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
