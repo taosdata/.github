@@ -5,9 +5,6 @@ description: Install FlashMQ and start the service
 runs:
   using: 'composite'
   steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
     - name: Install FlashMQ
       shell: bash
       run: |

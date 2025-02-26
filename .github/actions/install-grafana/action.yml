@@ -4,9 +4,6 @@ description: Install Grafana And Start Service
 runs:
   using: 'composite'
   steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
     - name: Install Grafana And Enable Anonymous Access
       shell: bash
       run: |
@@ -16,7 +13,6 @@ runs:
         chmod +x setup_env.sh
         ./setup_env.sh deploy_grafana
         # Enable Anonymous Access
-        echo "GITHUB_WORKSPACE: $GITHUB_WORKSPACE"
         script_path=$(find $GITHUB_WORKSPACE/../../ -name config_grafana_anonymous_access.sh 2>/dev/null | head -n 1)
         chmod +x $script_path
         $script_path /etc/grafana/grafana.ini

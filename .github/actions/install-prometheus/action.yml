@@ -4,10 +4,10 @@ description: Install Prometheus and Start Service
 runs:
   using: 'composite'
   steps:
-  - name: Install Prometheus and Start Service
-    shell: bash
-    run: |
-      # Install Prometheus with setup_env.sh
-      wget -O setup_env.sh https://raw.githubusercontent.com/taosdata/TDengine/main/packaging/setup_env.sh
-      chmod +x setup_env.sh
-      ./setup_env.sh deploy_prometheus
+    - name: Install Prometheus and Start Service
+      shell: bash
+      run: |
+        # Install Prometheus with setup_env.sh
+        wget -O setup_env.sh https://raw.githubusercontent.com/taosdata/TDengine/main/packaging/setup_env.sh
+        chmod +x setup_env.sh
+        ./setup_env.sh deploy_prometheus
