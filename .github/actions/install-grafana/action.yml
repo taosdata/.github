@@ -6,10 +6,6 @@ runs:
   steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      with:
-        repository: taosdata/.github
-        path: .github
-        ref: test/fractal
 
     - name: Install Grafana And Enable Anonymous Access
       shell: bash
@@ -20,4 +16,7 @@ runs:
         chmod +x setup_env.sh
         ./setup_env.sh deploy_grafana
         # Enable Anonymous Access
-        .github/scripts/config_grafana_anonymous_access.sh /etc/grafana/grafana.ini
+        script_path=$(find $GITHUB_WORKSPACE -name config_grafana_anonymous_access.sh 2>/dev/null | head -n 1)
+        $GITHUB_WORKSPACE
+        chmod +x $script_path
+        $script_path /etc/grafana/grafana.ini
