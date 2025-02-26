@@ -11,6 +11,7 @@ runs:
       shell: bash
       run: |
         # Install And Start Grafana with setup_env.sh
+        echo "current path: $PWD"
         wget -O setup_env.sh https://raw.githubusercontent.com/taosdata/TDengine/main/packaging/setup_env.sh
         chmod +x setup_env.sh
         ./setup_env.sh deploy_grafana
