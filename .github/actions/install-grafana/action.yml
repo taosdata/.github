@@ -4,45 +4,15 @@ description: Install Grafana and start the service
 runs:
   using: 'composite'
   steps:
-  - name: Check and Install Grafana
-    shell: bash
-    run: |
-      if dpkg -l | grep -q grafana; then
-        echo "Grafana is already installed."
-        # Check if Grafana is running
-        if systemctl is-active --quiet grafana-server; then
-          echo "Grafana is already running."
-        else
-          echo "Grafana is not running. Starting the service."
-          systemctl start grafana-server
-        fi
-      else
-        echo "Grafana is not installed. Proceeding with installation."
-        # Install Grafana with setup_env.sh
-        if [ ! -f setup_env.sh ]; then
-          echo "setup_env.sh not found. Proceeding with download."
-          wget -O setup_env.sh https://raw.githubusercontent.com/taosdata/TDengine/main/packaging/setup_env.sh
-        else
-          echo "setup_env.sh already exists. Skipping download."
-        fi
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Check and Install Grafana
+      shell: bash
+      run: |
+        # Install And Start Grafana with setup_env.sh
+        wget -O setup_env.sh https://raw.githubusercontent.com/taosdata/TDengine/main/packaging/setup_env.sh
         chmod +x setup_env.sh
         ./setup_env.sh deploy_grafana
-      fi
-
-  - name: Config anymous access
-    shell: bash
-    run: |
-      # Enable anonymous access
-      sed -i 's/;enabled = false/enabled = true/' /etc/grafana/grafana.ini
-      systemctl restart grafana-server
-
-  - name: Check Grafana Status
-    shell: bash
-    run: |
-      STATUS=$(systemctl is-active grafana-server)
-      if [ "$STATUS" != "active" ]; then
-        echo "::error ::ERROR: Grafana is in $STATUS state."
-        exit 1
-      else
-        echo "Grafana is running successfully."
-      fi
+        # Enable Anonymous Access
+        .github/scripts/config_grafana_anonymous_access.sh /etc/grafana/grafana.ini
