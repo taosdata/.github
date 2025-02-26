@@ -21,80 +21,8 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Install MinIO Server
-      shell: bash
+    name: Deploy MinIO
+    shell: bash
       run: |
-        if [ ! -f /usr/local/bin/minio ]; then
-          wget https://dl.min.io/server/minio/release/linux-amd64/minio
-          chmod +x minio
-          mv minio /usr/local/bin/
-        fi
-
-    - name: Install MinIO Client
-      shell: bash
-      run: |
-        if [ ! -f /usr/local/bin/mc ]; then
-          wget https://dl.min.io/client/mc/release/linux-amd64/mc
-          chmod +x mc
-          mv mc /usr/local/bin/
-        fi
-
-    - name: Create Data Directory
-      shell: bash
-      run: mkdir -p /mnt/data
-
-    - name: Set Environment Variables
-      shell: bash
-      run: |
-        echo "MINIO_ROOT_USER=${{ inputs.MINIO_ROOT_USER }}" >> $GITHUB_ENV
-        echo "MINIO_ROOT_PASSWORD=${{ inputs.MINIO_ROOT_PASSWORD }}" >> $GITHUB_ENV
-
-    - name: Check if MinIO is running
-      shell: bash
-      id: check_minio
-      run: |
-        if curl -s http://localhost:9000/minio/health/live; then
-          echo "MinIO is already running."
-          echo "running=true" >> $GITHUB_ENV
-        else
-          echo "MinIO is not running."
-          echo "running=false" >> $GITHUB_ENV
-        fi
-
-    - name: Start MinIO Server with screen
-      shell: bash
-      if: env.running == 'false'
-      run: |
-        if ! command -v screen &> /dev/null; then
-            echo "screen could not be found, installing..."
-            apt-get update && apt-get install -y screen
-        fi
-        export MINIO_ROOT_USER=${{ inputs.MINIO_ROOT_USER }}
-        export MINIO_ROOT_PASSWORD=${{ inputs.MINIO_ROOT_PASSWORD }}
-        screen -d -m  minio server /mnt/data --console-address ":9001" > $HOME/minio.log
-
-    - name: Check MinIO Server is up
-      shell: bash
-      run: |
-        until curl -s http://localhost:9000/minio/health/live; do
-          echo 'Waiting for MinIO to start...'
-          sleep 5
-        done
-        echo "MinIO is running."
-
-    - name: Create Bucket and Access Key
-      shell: bash
-      run: |
-        mc alias set myminio http://127.0.0.1:9000 ${{ inputs.MINIO_ROOT_USER }} ${{ inputs.MINIO_ROOT_PASSWORD }}
-        if mc ls myminio | grep -q 'td-bucket'; then
-          echo "Bucket 'td-bucket' already exists."
-        else
-          mc mb myminio/td-bucket
-          echo "Bucket 'td-bucket' created."
-        fi
-        if mc admin accesskey ls myminio admin | grep ${{ inputs.MINIO_ACCESS_KEY }}; then
-          echo "Access key ${{ inputs.MINIO_ACCESS_KEY }} already exists."
-        else
-          mc admin accesskey create  myminio/ admin --access-key ${{ inputs.MINIO_ACCESS_KEY }} --secret-key ${{ inputs.MINIO_SECRET_KEY }}
-          echo "Access key created."
-        fi
+        chmod +x .github/scripts/deploy_minio.sh
+        .github/scripts/deploy_minio.sh "${{ inputs.MINIO_ROOT_USER }}" "${{ inputs.MINIO_ROOT_PASSWORD }}" "${{ inputs.MINIO_ACCESS_KEY }}" "${{ inputs.MINIO_SECRET_KEY }}"

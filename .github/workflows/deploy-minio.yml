@@ -1,7 +1,11 @@
 name: Deploy MinIO
 
+# on:
+#   workflow_dispatch:
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - test/fractal
 
 jobs:
   call-install:
