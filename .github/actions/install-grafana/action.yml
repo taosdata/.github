@@ -1,5 +1,5 @@
 name: Install Grafana
-description: Install Grafana and start the service
+description: Install Grafana And Start Service
 
 runs:
   using: 'composite'
@@ -7,7 +7,7 @@ runs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Check and Install Grafana
+    - name: Install Grafana And Enable Anonymous Access
       shell: bash
       run: |
         # Install And Start Grafana with setup_env.sh

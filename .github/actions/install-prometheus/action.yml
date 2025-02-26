@@ -1,36 +1,13 @@
 name: Install Prometheus
-description: Install Prometheus and start the service
+description: Install Prometheus and Start Service
 
 runs:
   using: 'composite'
   steps:
-  - name: Check and Install Prometheus
+  - name: Install Prometheus and Start Service
     shell: bash
     run: |
-      if dpkg -l | grep -q prometheus; then
-        echo "Prometheus is already installed."
-        # Check if Prometheus is running
-        if systemctl is-active --quiet prometheus; then
-          echo "Prometheus is already running."
-        else
-          echo "Prometheus is not running. Starting the service."
-          systemctl start prometheus
-        fi
-      else
-        echo "Prometheus is not installed. Proceeding with installation."
-        # Install Prometheus with setup_env.sh
-        wget -O setup_env.sh https://raw.githubusercontent.com/taosdata/TDengine/main/packaging/setup_env.sh
-        chmod +x setup_env.sh
-        ./setup_env.sh deploy_prometheus
-      fi
-
-  - name: Check Prometheus Status
-    shell: bash
-    run: |
-      STATUS=$(systemctl is-active prometheus)
-      if [ "$STATUS" != "active" ]; then
-        echo "::error ::ERROR: Prometheus is in $STATUS state."
-        exit 1
-      else
-        echo "Prometheus is running successfully."
-      fi
+      # Install Prometheus with setup_env.sh
+      wget -O setup_env.sh https://raw.githubusercontent.com/taosdata/TDengine/main/packaging/setup_env.sh
+      chmod +x setup_env.sh
+      ./setup_env.sh deploy_prometheus
