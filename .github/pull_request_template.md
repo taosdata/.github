@@ -2,6 +2,8 @@
 
 Please briefly describe the code changes in this pull request.
 
+Jira: https://jira.taosdata.com:18080/browse/<Jira-ID>
+
 # Checklist
 
 Please check the items in the checklist if applicable.
