@@ -1,0 +1,13 @@
+name: Install Process-exporter
+description: Install Process-exporter And Start Service
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install Process-exporter And Start Service
+      shell: bash
+      run: |
+        # Install process_exporter with setup_env.sh
+        wget -O setup_env.sh https://raw.githubusercontent.com/taosdata/TDengine/main/packaging/setup_env.sh
+        chmod +x setup_env.sh
+        ./setup_env.sh deploy_process_exporter

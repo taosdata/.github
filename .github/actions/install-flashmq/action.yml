@@ -5,44 +5,9 @@ description: Install FlashMQ and start the service
 runs:
   using: 'composite'
   steps:
-  - name: Check and Install FlashMQ
-    shell: bash
-    run: |
-      if dpkg -l | grep -q flashmq; then
-        echo "FlashMQ is already installed."
-        # Check if FlashMQ is running
-        if systemctl is-active --quiet flashmq; then
-          echo "FlashMQ is already running."
-        else
-          echo "FlashMQ is not running. Starting the service."
-          systemctl start flashmq
-        fi
-      else
-        echo "FlashMQ is not installed. Proceeding with installation."
-        # Add FlashMQ GPG Key
-        curl https://www.flashmq.org/wp-content/uploads/2021/10/flashmq-repo.gpg > /usr/share/keyrings/flashmq-repo.gpg
-
-        # Add FlashMQ APT Repository
-        echo "deb [signed-by=/usr/share/keyrings/flashmq-repo.gpg] http://repo.flashmq.org/apt $(lsb_release -cs) main" > /etc/apt/sources.list.d/flashmq.list
-
-        # Update Package List and Install FlashMQ
-        apt update -y && apt install -y flashmq
-
-        # Start FlashMQ and Enable on Startup
-        systemctl start flashmq
-        systemctl enable flashmq
-      fi
-      # Append allow_anonymous true to FlashMQ configuration file
-        echo "allow_anonymous true" >> /etc/flashmq/flashmq.conf
-        systemctl restart flashmq
-
-  - name: Check FlashMQ Status
-    shell: bash
-    run: |
-      STATUS=$(systemctl is-active flashmq)
-      if [ "$STATUS" != "active" ]; then
-        echo "::error ::ERROR: FlashMQ is in $STATUS state."
-        exit 1
-      else
-        echo "FlashMQ is running successfully."
-      fi
+    - name: Install FlashMQ
+      shell: bash
+      run: |
+        script_path=$(find $GITHUB_WORKSPACE/../../ -name install_flashmq.sh 2>/dev/null | head -n 1)
+        chmod +x $script_path
+        $script_path
