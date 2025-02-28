@@ -22,7 +22,7 @@ runs:
       uses: actions-rust-lang/setup-rust-toolchain@v1
       with:
         toolchain: ${{ inputs.rust-version }}
-
+      
     - name: Generate GitHub App Token
       id: app-token
       uses: tibdex/github-app-token@v1
@@ -33,7 +33,7 @@ runs:
     - name: Set GitHub App Token as secret
       run: echo "GITHUB_APP_TOKEN=${{ steps.app-token.outputs.token }}" >> $GITHUB_ENV
       shell: bash
-
+    
 
     - name: Check out another private repository
       uses: actions/checkout@v4
@@ -42,9 +42,14 @@ runs:
         token: ${{ env.GITHUB_APP_TOKEN }}  # 使用 GitHub App 生成的访问令牌
         path: taosx
         ref: '3.0'
-
+    
     - name: Build MQTT CLI
       run: |
         apt install -y llvm gcc make cmake libssl-dev pkg-config perl g++
         cd taosx && cargo build --release -p taosx-tools --bin mqtt_pub
       shell: bash
+
+
+
+
+      
