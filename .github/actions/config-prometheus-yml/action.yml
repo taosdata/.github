@@ -1,0 +1,22 @@
+name: 'Config Prometheus YAML'
+description: 'Config YAML file for Prometheus'
+inputs:
+  yml_file_path:
+    description: 'Path Of YAML file'
+    required: true
+  node_exporter_hosts:
+    description: 'Comma-separated list of node exporter hosts'
+    required: true
+  process_exporter_hosts:
+    description: 'Comma-separated list of process exporter hosts'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Config Prometheus YAML File From Hosts
+      shell: bash
+      run: |
+        script_path=$(find $GITHUB_WORKSPACE/../../ -name config_prometheus_yml.sh 2>/dev/null | head -n 1)
+        chmod +x $script_path
+        $script_path "${{ inputs.yml_file_path }}" "${{ inputs.node_exporter_hosts }}" "${{ inputs.process_exporter_hosts }}"

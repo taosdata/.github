@@ -1,0 +1,13 @@
+name: Install Node_exporter
+description: Install Node_exporter And Start Service
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install Node_exporter And Start Service
+      shell: bash
+      run: |
+        # Install node_exporter with setup_env.sh
+        wget -O setup_env.sh https://raw.githubusercontent.com/taosdata/TDengine/main/packaging/setup_env.sh
+        chmod +x setup_env.sh
+        ./setup_env.sh deploy_node_exporter
