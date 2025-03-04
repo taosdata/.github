@@ -2,14 +2,12 @@
 set -eo pipefail
 
 
-###############################################
-# Import Common Utilities
-###############################################
+# ###############################################
+# # Import Common Utilities
+# ###############################################
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/libs/common.sh"
-
-
+# SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# source "${SCRIPT_DIR}/libs/common.sh"
 
 # Global Defaults
 DEFAULT_SCOPE="org"
@@ -114,7 +112,7 @@ output_json=$(echo "$selected_runners" | jq -R -s -c 'split("\n") | map(select(.
 
 echo "RUNNER_JSON=${output_json}"
 echo "RUNNER_JSON=${output_json}" >> $GITHUB_OUTPUT
-echo $GITHUB_OUTPUT
+echo "GITHUB_OUTPUT in action=$GITHUB_OUTPUT"
 
 # # Initialize environment
 # init_environment

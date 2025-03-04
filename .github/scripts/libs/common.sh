@@ -1,5 +1,3 @@
-# .github/scripts/libs/common.sh
-
 #!/bin/bash
 
 ###############################################
