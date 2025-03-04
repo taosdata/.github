@@ -27,7 +27,7 @@ inputs:
 outputs:
   runners:
     description: 'Selected runners in JSON format'
-    value: ${{ steps.selection.outputs.RUNNER_JSON }}
+    value: ${{ steps.selection.outputs.SELECTED_RUNNERS }}
 
 runs:
   using: "composite"
