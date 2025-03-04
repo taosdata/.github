@@ -6,8 +6,8 @@ set -eo pipefail
 # # Import Common Utilities
 # ###############################################
 
-# SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# source "${SCRIPT_DIR}/libs/common.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/libs/common.sh"
 
 # Global Defaults
 DEFAULT_SCOPE="org"
