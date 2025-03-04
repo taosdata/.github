@@ -38,10 +38,6 @@ runs:
       env:
         GH_TOKEN: ${{ inputs.gh_token }}
       run: |
-        echo "$(ls /home/runner/work/_actions/taosdata/.github/test/fractal/.github)"
-        echo "$(ls ${GITHUB_ACTION_PATH}/../..)"
-        echo "GITHUB_ACTION_PATH======${GITHUB_ACTION_PATH}"
-
         ${GITHUB_ACTION_PATH}/../../scripts/get_runners.sh \
           "${{ inputs.include_labels }}" \
           "${{ inputs.required_count }}" \
@@ -49,6 +45,5 @@ runs:
           "${{ inputs.match_mode }}" \
           "${{ inputs.scope }}" \
           "${{ inputs.target }}"
-        echo "GITHUB_OUTPUT----- $(cat $GITHUB_OUTPUT)"
-        echo "RUNNER_JSON=$(cat $GITHUB_OUTPUT | grep RUNNER_JSON | cut -d'=' -f2-)"
-        echo "RUNNER_JSON=$(cat $GITHUB_OUTPUT | grep RUNNER_JSON | cut -d'=' -f2-)" >> $GITHUB_OUTPUT
+        echo "SELECTED_RUNNERS=$(cat $GITHUB_OUTPUT | grep RUNNER_JSON | cut -d'=' -f2-)"
+        echo "SELECTED_RUNNERS=$(cat $GITHUB_OUTPUT | grep RUNNER_JSON | cut -d'=' -f2-)" >> $GITHUB_OUTPUT
