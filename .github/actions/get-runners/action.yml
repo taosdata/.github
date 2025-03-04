@@ -50,4 +50,5 @@ runs:
           "${{ inputs.scope }}" \
           "${{ inputs.target }}"
         echo "GITHUB_OUTPUT----- $(cat $GITHUB_OUTPUT)"
+        echo "RUNNER_JSON=$(cat $GITHUB_OUTPUT | grep RUNNER_JSON | cut -d'=' -f2-)"
         echo "RUNNER_JSON=$(cat $GITHUB_OUTPUT | grep RUNNER_JSON | cut -d'=' -f2-)" >> $GITHUB_OUTPUT
