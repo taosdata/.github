@@ -38,10 +38,11 @@ runs:
       env:
         GH_TOKEN: ${{ inputs.gh_token }}
       run: |
-        echo "$(tree -h /home/runner/work/_actions/taosdata/.github/test/fractal/.github)"
-        echo "$(ls ../../ -l)"
+        echo "$(ls /home/runner/work/_actions/taosdata/.github/test/fractal/.github)"
+        echo "$(ls ${GITHUB_ACTION_PATH}/../..)"
         echo "GITHUB_ACTION_PATH======${GITHUB_ACTION_PATH}"
-        ${GITHUB_ACTION_PATH}/scripts/get_runners.sh \
+
+        ${GITHUB_ACTION_PATH}/../../scripts/get_runners.sh \
           "${{ inputs.include_labels }}" \
           "${{ inputs.required_count }}" \
           "${{ inputs.exclude_labels }}" \
