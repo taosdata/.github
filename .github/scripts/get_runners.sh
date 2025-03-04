@@ -110,10 +110,8 @@ fi
 # Format output
 output_json=$(echo "$selected_runners" | jq -R -s -c 'split("\n") | map(select(. != ""))')
 ##
-echo "NSELECTED_RUNNERS=${output_json}"
-echo "NSELECTED_RUNNERS=${output_json}" >> $GITHUB_ENV
-echo "$(cat $GITHUB_ENV)"
-# echo "GITHUB_OUTPUT in action=$GITHUB_OUTPUT"
+echo "SELECTED_RUNNERS=${output_json}"
+echo "SELECTED_RUNNERS=${output_json}" >> $GITHUB_OUTPUT
 
 # # Initialize environment
 # init_environment
