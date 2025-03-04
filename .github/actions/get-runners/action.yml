@@ -38,7 +38,7 @@ runs:
       env:
         GH_TOKEN: ${{ inputs.gh_token }}
       run: |
-        echo "$(ls -l)"
+        echo "$(ls ../../ -l)"
         echo "GITHUB_ACTION_PATH======${GITHUB_ACTION_PATH}"
         ${GITHUB_ACTION_PATH}/scripts/get_runners.sh \
           "${{ inputs.include_labels }}" \
