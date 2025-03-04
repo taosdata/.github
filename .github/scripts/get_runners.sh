@@ -89,12 +89,12 @@ jq_filter=$(cat <<FILTER
     (if "$match_mode" == "all" then
       .labels | map(.name) | contains($include_json)
     else
-      .labels | map(.name) | any(IN($include_json[]))
+      .labels | map(.name) | any(IN(${include_json}[]))
     end)
     and
-    (.labels | map(.name) | any(IN($exclude_json[])) | not)
+    (.labels | map(.name) | any(IN(${exclude_json}[])) | not)
   )
-| .name
+| .labels | map(.name) | join(",")
 FILTER
 )
 
