@@ -1,0 +1,48 @@
+name: 'Smart Runner Selector'
+description: 'Advanced runner selection with dual-scope support'
+
+inputs:
+  include_labels:
+    description: 'Comma-separated required labels'
+    required: true
+  required_count:
+    description: 'Minimum number of runners required'
+    required: true
+  exclude_labels:
+    description: 'Comma-separated excluded labels'
+    default: ''
+  match_mode:
+    description: 'Match logic (any/all)'
+    default: 'all'
+  scope:
+    description: 'Runner scope (org/repo)'
+    default: 'org'
+  target:
+    description: 'Organization name or repo slug'
+    default: 'taosdata'
+  gh_token:
+    description: 'GitHub access token'
+    default: ${{ secrets.GITHUB_TOKEN }}
+
+outputs:
+  runners:
+    description: 'Selected runners in JSON format'
+    value: ${{ steps.selection.outputs.RUNNER_JSON }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Select Runners
+      id: selection
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.gh_token }}
+      run: |
+        .github/scripts/get_runners.sh \
+          "${{ inputs.include_labels }}" \
+          "${{ inputs.required_count }}" \
+          "${{ inputs.exclude_labels }}" \
+          "${{ inputs.match_mode }}" \
+          "${{ inputs.scope }}" \
+          "${{ inputs.target }}"
+        echo "RUNNER_JSON=$(cat $GITHUB_OUTPUT | grep RUNNER_JSON | cut -d'=' -f2-)" >> $GITHUB_OUTPUT
