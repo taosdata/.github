@@ -113,6 +113,7 @@ echo "$output_json"
 ##
 echo "SELECTED_RUNNERS=${output_json}"
 echo "SELECTED_RUNNERS=${output_json}" >> $GITHUB_ENV
+echo "cat $GITHUB_ENV"
 # echo "GITHUB_OUTPUT in action=$GITHUB_OUTPUT"
 
 # # Initialize environment
