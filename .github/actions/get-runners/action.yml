@@ -38,7 +38,7 @@ runs:
       env:
         GH_TOKEN: ${{ inputs.gh_token }}
       run: |
-        .github/scripts/get_runners.sh \
+        ${GITHUB_ACTION_PATH}/scripts/get_runners.sh \
           "${{ inputs.include_labels }}" \
           "${{ inputs.required_count }}" \
           "${{ inputs.exclude_labels }}" \
