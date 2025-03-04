@@ -45,5 +45,8 @@ runs:
           "${{ inputs.match_mode }}" \
           "${{ inputs.scope }}" \
           "${{ inputs.target }}"
+        echo "OUTPUT: $(cat $GITHUB_OUTPUT)"
+        echo "ENV: $(cat $GITHUB_ENV)"
         echo "SELECTED_RUNNERS=$(cat $GITHUB_OUTPUT | grep RUNNER_JSON | cut -d'=' -f2-)"
         echo "SELECTED_RUNNERS=$(cat $GITHUB_OUTPUT | grep RUNNER_JSON | cut -d'=' -f2-)" >> $GITHUB_ENV
+        echo
