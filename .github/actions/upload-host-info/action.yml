@@ -15,7 +15,7 @@ runs:
         ip=$(hostname -I | awk '{print $1}')
         hostname=$(hostname)
         echo "IP Hostname: $ip $hostname"
-        echo "hostname=$hostname" >> $GITHUB_ENV
+        # echo "hostname=$hostname" >> $GITHUB_ENV
         echo "hostname=$hostname" >> $GITHUB_OUTPUT
         echo "$ip $hostname" > "ip_hostname_${hostname}.txt"
         echo "Generated file: ip_hostname_${hostname}.txt"
