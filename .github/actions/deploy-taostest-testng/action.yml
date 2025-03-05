@@ -1,6 +1,36 @@
 name: Deploy taostest and TestNG
 description: Deploy taostest and TestNG
 
+# .github/actions/sync-repo/action.yml
+name: 'Sync Repository'
+description: 'Clone or update Git repository with token auth'
+inputs:
+  parent-dir:
+    description: 'Parent directory for the repository'
+    required: true
+  repo-url:
+    description: 'Git repository URL (e.g., https://github.com/taosdata/TestNG.git)'
+    required: true
+  branch:
+    description: 'Target branch name'
+    required: true
+  github-token:
+    description: 'GitHub token for authentication'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Sync Repository
+      shell: bash
+      run: |
+        "$GITHUB_ACTION_PATH"/scripts/clone_or_update.sh \
+          "${{ inputs.parent-dir }}" \
+          "${{ inputs.repo-url }}" \
+          "${{ inputs.branch }}" \
+          "${{ inputs.github-token }}"
+
+
 inputs:
   res_app_id:
     description: 'GitHub App ID'
