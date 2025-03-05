@@ -1,0 +1,23 @@
+name: 'Download Artifacts'
+description: 'Download all artifacts from current workflow run with GH CLI'
+inputs:
+  gh_token:
+    description: 'GitHub access token'
+    required: true
+    default: 'A secret'
+  download-dir:
+    description: 'Directory to save artifacts'
+    required: false
+    default: 'artifacts'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Authenticate And Download Artifacts
+      shell: bash
+      run: |
+        echo "🔄 Authenticating GitHub CLI..."
+        echo "${{ inputs.gh_token }}" | gh auth login --with-token
+        echo "🔄 Downloading artifacts to: ${{ inputs.download-dir }}"
+        rm -rf "${{ inputs.download-dir }}"
+        gh run download ${{ inputs.run-id }} --dir "${{ inputs.download-dir }}"
