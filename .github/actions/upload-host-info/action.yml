@@ -11,6 +11,7 @@ runs:
       id: get-ip-hostname
       shell: bash
       run: |
+        echo "RUNNER_WORKSPACE: $RUNNER_WORKSPACE"
         echo "🔄 Getting IP and hostname for the runner..."
         ip=$(hostname -I | awk '{print $1}')
         hostname=$(hostname)
