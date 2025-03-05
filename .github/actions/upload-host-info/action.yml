@@ -1,7 +1,7 @@
 name: 'Upload Host Info'
 description: 'Collect and upload host IP/hostname info'
 outputs:
-  runners:
+  hostname:
     description: 'Generated file with IP and hostname'
     value: ${{ steps.get-ip-hostname.outputs.hostname }}
 runs:
@@ -17,7 +17,7 @@ runs:
         echo "IP: $ip"
         echo "Hostname: $hostname"
         echo "hostname=$hostname" >> $GITHUB_OUTPUT
-        # echo "hostname=$hostname" >> $GITHUB_ENV
+        echo "hostname=$hostname" >> $GITHUB_ENV
         echo "$ip $hostname" > "ip_hostname_${hostname}.txt"
 
     - name: Generate Output File
