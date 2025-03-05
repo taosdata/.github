@@ -10,8 +10,9 @@ fi
 ENTRIES="$1"
 
 # Backup /etc/hosts
-BACKUP_FILE="/etc/hosts-$(date +%s)"
-cp "/etc/hosts" "$BACKUP_FILE"
+HOSTS_FILE="/etc/hosts"
+BACKUP_FILE="$HOSTS_FILE-$(date +%s)"
+cp "$HOSTS_FILE" "$BACKUP_FILE"
 echo "📦 Create Backup File: $BACKUP_FILE"
 
 DECODED_ECTRIES=$(echo "$ENTRIES" | base64 -d)
@@ -27,5 +28,5 @@ while IFS= read -r line; do
   fi
 done <<< "$DECODED_ECTRIES"
 
-echo "✅ Finished update /etc/hosts:"
-cat /etc/hosts
+echo "✅ Finished update $HOSTS_FILE:"
+cat $HOSTS_FILE
