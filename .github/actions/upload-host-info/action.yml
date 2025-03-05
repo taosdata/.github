@@ -1,5 +1,12 @@
 name: 'Upload Host Info'
 description: 'Collect and upload host IP/hostname info'
+
+inputs:
+  host_file_prefix:
+    description: 'Comma-separated list of target hosts'
+    required: true
+    default: 'ip-hostname-'
+
 outputs:
   hostname:
     description: 'Generated file with IP and hostname'
@@ -18,5 +25,5 @@ runs:
         echo "IP Hostname: $ip $hostname"
         # echo "hostname=$hostname" >> $GITHUB_ENV
         echo "hostname=$hostname" >> $GITHUB_OUTPUT
-        echo "$ip $hostname" > "ip_hostname_${hostname}.txt"
-        echo "Generated file: ip_hostname_${hostname}.txt"
+        echo "$ip $hostname" > "${{ inputs.host_file_prefix }}${hostname}.txt"
+        echo "Generated file: ${{ inputs.host_file_prefix }}${hostname}.txt"
