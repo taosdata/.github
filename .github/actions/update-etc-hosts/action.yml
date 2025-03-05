@@ -1,0 +1,16 @@
+name: 'Update /etc/hosts'
+description: 'Append new IP-hostname entries to hosts file'
+
+inputs:
+  entries:
+    description: 'Multiline string of IP-hostname entries'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Update Hosts File
+      shell: bash
+      run: |
+        echo "🔄 Updating /etc/hosts..."
+        ${GITHUB_ACTION_PATH}/../../scripts/update_etc_hosts.sh "${{ inputs.entries }}"
