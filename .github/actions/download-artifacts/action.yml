@@ -9,10 +9,6 @@ inputs:
     description: 'Directory to save artifacts'
     required: true
     default: 'artifacts'
-  # runner_id:
-  #   description: 'Runner ID'
-  #   required: true
-  #   default: 'A secret'
 
 runs:
   using: "composite"
