@@ -14,13 +14,7 @@ runs:
         echo "🔄 Getting IP and hostname for the runner..."
         ip=$(hostname -I | awk '{print $1}')
         hostname=$(hostname)
-        echo "IP: $ip"
-        echo "Hostname: $hostname"
-        # echo "hostname=$hostname" >> $GITHUB_OUTPUT
+        echo "IP Hostname: $ip $hostname"
         echo "hostname=$hostname" >> $GITHUB_ENV
         echo "$ip $hostname" > "ip_hostname_${hostname}.txt"
-
-    - name: Generate Output File
-      shell: bash
-      run: |
-        echo "Generated file: ip_hostname_${{ steps.get-ip-hostname.outputs.hostname }}.txt"
+        echo "Generated file: ip_hostname_${hostname}.txt"
