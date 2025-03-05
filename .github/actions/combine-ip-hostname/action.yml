@@ -1,0 +1,24 @@
+name: 'Combine IP and Hostname Info'
+description: 'Merge IP-hostname files into a single output variable'
+
+inputs:
+  input-dir:
+    description: 'Directory containing IP-hostname files'
+    required: true
+    default: 'ip_hostname'
+
+outputs:
+  combined_info:
+    description: 'Combined and deduplicated IP-hostname entries'
+    value: ${{ steps.merge-files.outputs.combined_info }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Merge Files
+      shell: bash
+      id: merge-files
+      run: |
+        echo "🔄 Merging files from: ${{ inputs.input-dir }}"
+        combined_info=$(find "${{ inputs.input-dir }}" -name "*.txt" -exec cat {} + | sort | uniq)
+        echo "combined_info=$combined_info" >> $GITHUB_OUTPUT
