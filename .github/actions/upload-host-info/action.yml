@@ -16,7 +16,7 @@ runs:
         hostname=$(hostname)
         echo "IP: $ip"
         echo "Hostname: $hostname"
-        echo "hostname=$hostname" >> $GITHUB_OUTPUT
+        # echo "hostname=$hostname" >> $GITHUB_OUTPUT
         echo "hostname=$hostname" >> $GITHUB_ENV
         echo "$ip $hostname" > "ip_hostname_${hostname}.txt"
 
