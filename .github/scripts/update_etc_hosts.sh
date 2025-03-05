@@ -14,6 +14,8 @@ BACKUP_FILE="/etc/hosts-$(date +%s)"
 cp "/etc/hosts" "$BACKUP_FILE"
 echo "📦 Create Backup File: $BACKUP_FILE"
 
+DECODED_ECTRIES=$(echo "$ENTRIES" | base64 -d)
+
 while IFS= read -r line; do
   [ -z "$line" ] || [[ "$line" =~ ^# ]] && continue
 
@@ -23,7 +25,7 @@ while IFS= read -r line; do
   else
     echo "⏩ Skip: $line"
   fi
-done <<< "$ENTRIES"
+done <<< "$DECODED_ECTRIES"
 
 echo "✅ Finished update /etc/hosts:"
 cat /etc/hosts
