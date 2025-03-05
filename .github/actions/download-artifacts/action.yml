@@ -5,10 +5,14 @@ inputs:
     description: 'GitHub access token'
     required: true
     default: 'A secret'
-  download-dir:
+  download_dir:
     description: 'Directory to save artifacts'
-    required: false
+    required: true
     default: 'artifacts'
+  # runner_id:
+  #   description: 'Runner ID'
+  #   required: true
+  #   default: 'A secret'
 
 runs:
   using: "composite"
@@ -18,6 +22,6 @@ runs:
       run: |
         echo "🔄 Authenticating GitHub CLI..."
         echo "${{ inputs.gh_token }}" | gh auth login --with-token
-        echo "🔄 Downloading artifacts to: ${{ inputs.download-dir }}"
-        rm -rf "${{ inputs.download-dir }}"
-        gh run download ${{ inputs.run-id }} --dir "${{ inputs.download-dir }}"
+        echo "🔄 Downloading artifacts to: ${{ inputs.download_dir }}"
+        rm -rf "${{ inputs.download_dir }}"
+        gh run download $GITHUB_RUN_ID --dir "${{ inputs.download_dir }}"
