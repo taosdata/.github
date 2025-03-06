@@ -1,153 +1,45 @@
 name: Deploy taostest and TestNG
 description: Deploy taostest and TestNG
 
-# .github/actions/sync-repo/action.yml
-name: 'Sync Repository'
-description: 'Clone or update Git repository with token auth'
 inputs:
-  parent-dir:
-    description: 'Parent directory for the repository'
+  taostest-dir:
+    description: 'Parent directory for taos-test-framework repository'
     required: true
-  repo-url:
-    description: 'Git repository URL (e.g., https://github.com/taosdata/TestNG.git)'
+    default: '$RUNNER_WORKSPACE/../taos-test-framework'
+  testng-dir:
+    description: 'Parent directory for the TestNG repository'
     required: true
-  branch:
-    description: 'Target branch name'
-    required: true
-  github-token:
-    description: 'GitHub token for authentication'
-    required: true
-
-runs:
-  using: "composite"
-  steps:
-    - name: Sync Repository
-      shell: bash
-      run: |
-        "$GITHUB_ACTION_PATH"/scripts/clone_or_update.sh \
-          "${{ inputs.parent-dir }}" \
-          "${{ inputs.repo-url }}" \
-          "${{ inputs.branch }}" \
-          "${{ inputs.github-token }}"
-
-
-inputs:
-  res_app_id:
-    description: 'GitHub App ID'
-    required: true
-  res_app_key:
-    description: 'GitHub App Key'
-    required: true
-  taostest-branch:
-    description: 'Branch of taostest'
-    required: true
-    default: 'master'
-  testng-branch:
-    description: 'Branch of TestNG'
-    required: true
-    default: 'master'
+    default: '$RUNNER_WORKSPACE/../TestNG'
 
 runs:
   using: 'composite'
   steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+    # - name: Set up Python and dependencies
+    #   shell: bash
+    #   run: |
+    #     apt-get update
+    #     apt install -y python3-pip
+    #     pip3 install poetry
 
-    - name: Generate GitHub App Token
-      id: app-token
-      uses: tibdex/github-app-token@v1
-      with:
-        app_id: ${{ inputs.res_app_id }}
-        private_key: ${{ inputs.res_app_key }}
-
-    - name: Set GitHub App Token as secret
-      run: echo "GITHUB_APP_TOKEN=${{ steps.app-token.outputs.token }}" >> $GITHUB_ENV
+    - name: Deploy taostest and TestNG
       shell: bash
-
-    - name: Clone TestNG Repository
-      shell: bash
-      id: clone-testng
+      id: deploy-taostest-testng
       run: |
-        TARGET_DIR=~/TestNG
-        echo "TEST_ROOT=$TARGET_DIR" >> $GITHUB_ENV
-
-        # Check if the target directory exists and is not empty
-        if [ -d "$TARGET_DIR" ] && [ "$(ls -A $TARGET_DIR)" ]; then
-          echo "Target directory $TARGET_DIR exists and is not empty"
-          cd "$TARGET_DIR"
-
-          # Check if the current branch matches the specified branch
-          CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-          if [ "$CURRENT_BRANCH" != "${{ inputs.testng-branch }}" ]; then
-            git fetch
-            echo "Checking out branch ${{ inputs.testng-branch }}"
-            git checkout ${{ inputs.testng-branch }}
-          fi
-
-          # Pull the latest changes
-          # ! permission denied now with the token
-          echo "Pulling latest changes for branch ${{ inputs.testng-branch }}"
-          git remote set-url origin https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/taosdata/TestNG.git
-          git reset --hard FETCH_HEAD
-          git pull origin ${{ inputs.testng-branch }}
-        else
-          echo "Cloning TestNG repository"
-          git clone -b ${{ inputs.testng-branch }} https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/taosdata/TestNG.git "$TARGET_DIR"
-        fi
-
-    - name: Set up Python and dependencies
-      shell: bash
-      run: |
-        apt-get update
-        apt install -y python3-pip
-        pip3 install poetry
-
-    - name: Install Taostest
-      shell: bash
-      run: |
-        TARGET_DIR=~/taos-test-framework
-
-        # Check if the target directory exists and is not empty
-        if [ -d "$TARGET_DIR" ] && [ "$(ls -A $TARGET_DIR)" ]; then
-          echo "Target directory $TARGET_DIR exists and is not empty"
-          cd "$TARGET_DIR"
-
-          # Check if the current branch matches the specified branch
-          CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-          if [ "$CURRENT_BRANCH" != "${{ inputs.taostest-branch }}" ]; then
-            git fetch
-            echo "Checking out branch ${{ inputs.taostest-branch }}"
-            git checkout ${{ inputs.taostest-branch }}
-          fi
-
-          # Pull the latest changes
-          # ! permission denied now with the token
-          echo "Pulling latest changes for branch ${{ inputs.taostest-branch }}"
-          git remote set-url origin https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/taosdata/taos-test-framework.git
-          git reset --hard FETCH_HEAD
-          git pull origin ${{ inputs.taostest-branch }}
-        else
-          echo "Cloning taos-test-framework repository"
-          git clone -b ${{ inputs.taostest-branch }} https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/taosdata/taos-test-framework.git "$TARGET_DIR"
-        fi
-        cd $TARGET_DIR
+        TEST_ROOT=${{ inputs.testng-dir }}
+        # echo "TEST_ROOT=$TEST_ROOT" >> $GITHUB_ENV
+        cd ${{ inputs.taostest-dir }}
         echo "Y" | bash reinstall.sh
         ENV_FILE=~/.taostest/.env
         mkdir -p ~/.taostest
         touch $ENV_FILE
-        echo "ENV_FILE=$ENV_FILE" >> $GITHUB_ENV
+        echo "TEST_ROOT==$TEST_ROOT" > $ENV_FILE
+        echo "TAOSTEST_SQL_RECORDING_ENABLED=True" >> $ENV_FILE
 
-    - name: Install Python packages
-      shell: bash
-      run: pip3 install --upgrade numpy pandas
+    # - name: Install Python packages
+    #   shell: bash
+    #   run: pip3 install --upgrade numpy pandas
 
-    - name: Config Env
-      shell: bash
-      run: |
-        echo "TEST_ROOT=${{ env.TEST_ROOT }}" > ${{ env.ENV_FILE }}
-        echo "TAOSTEST_SQL_RECORDING_ENABLED=True" >> ${{ env.ENV_FILE }}
-
-outputs:
-  test_root:
-    description: 'Path to TEST_ROOT'
-    value: ${{ steps.clone-testng.outputs.TEST_ROOT }}
+# outputs:
+#   test_root:
+#     description: 'Path to TEST_ROOT'
+#     value: ${{ steps.deploy-taostest-testng.TEST_ROOT }}
