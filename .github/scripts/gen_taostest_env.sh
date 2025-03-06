@@ -47,12 +47,21 @@ client_shell_array=("${shell_array[@]}")
 echo "$client_json_array"
 echo "${client_shell_array[0]}"
 
+hostname_info=(
+    "${mqtt_shell_array[@]}"
+    "${single_dnode_shell_array[@]}"
+    "${client_shell_array[@]}"
+    "${cluster_dnode_shell_array[@]}"
+)
+hostname_info_str=$(IFS=,; echo "${hostname_info[*]}")
+
 # Export results to environment variables
 {
     echo "MQTT_HOSTS=$mqtt_json_array"
     echo "SINGLE_DNODE_HOSTS=$single_dnode_json_array"
     echo "TAOS_BENCHMARK_HOSTS=$client_json_array"
     echo "CLUSTER_HOSTS=$cluster_dnode_json_array"
+    echo "HOSTNAME_INFO=$hostname_info_str"
 } >> "$GITHUB_OUTPUT"
 
 # # Get the length of the first array (assuming both arrays are of the same length)
