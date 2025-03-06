@@ -13,6 +13,9 @@ runs:
     - name: Set up environment
       shell: bash
       run: |
+        echo ${{ inputs.json_file }}
+        echo ${{ inputs.test_root }}
+        echo "-----------------"
         ${GITHUB_ACTION_PATH}/../../scripts/gen_taostest_env.sh \
           "${{ inputs.json_file }}" \
           "${{ inputs.test_root }}"
