@@ -33,7 +33,7 @@ TARGET_DIR="$TARGET_PARENT_DIR/$REPO_NAME"
 # echo "TEST_ROOT=$TARGET_DIR" >> $GITHUB_ENV
 
 # Create the target directory
-mkdir -p "$TARGET_PARENT_DIR"
+# mkdir -p "$TARGET_PARENT_DIR"
 
 # Clone or update the repository
 if [ -d "$TARGET_DIR" ] && [ "$(ls -A "$TARGET_DIR")" ]; then
