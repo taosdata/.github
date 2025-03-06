@@ -39,7 +39,7 @@ runs:
     #   shell: bash
     #   run: pip3 install --upgrade numpy pandas
 
-# outputs:
-#   test_root:
-#     description: 'Path to TEST_ROOT'
-#     value: ${{ steps.deploy-taostest-testng.TEST_ROOT }}
+outputs:
+  test_root:
+    description: 'Path to TEST_ROOT'
+    value: ${{ steps.deploy-taostest-testng.TEST_ROOT }}
