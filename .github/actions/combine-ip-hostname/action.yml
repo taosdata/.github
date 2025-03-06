@@ -26,4 +26,4 @@ runs:
           reduce inputs as $item ({};
             .[$item.role] += [$item | del(.role)]
           )
-        ' *.json > "${{ inputs.input-dir }}/role_info.json"
+        ' ${{ inputs.input-dir }}/*.json > "${{ inputs.input-dir }}/role_info.json"
