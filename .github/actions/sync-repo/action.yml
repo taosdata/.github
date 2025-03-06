@@ -1,0 +1,42 @@
+# .github/actions/sync-repo/action.yml
+name: 'Sync Repository'
+description: 'Clone or update Git repository with token auth'
+inputs:
+  parent-dir:
+    description: 'Parent directory for the repository'
+    required: true
+  repo-url:
+    description: 'Git repository URL (e.g., https://github.com/taosdata/TestNG.git)'
+    required: true
+  branch:
+    description: 'Target branch name'
+    required: true
+  res_app_id:
+    description: 'GitHub App ID'
+    required: true
+  res_app_key:
+    description: 'GitHub App Key'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Generate GitHub App Token
+      id: app-token
+      uses: tibdex/github-app-token@v1
+      with:
+        app_id: ${{ inputs.res_app_id }}
+        private_key: ${{ inputs.res_app_key }}
+
+    # - name: Set GitHub App Token as secret
+    #   run: echo "GITHUB_APP_TOKEN=${{ steps.app-token.outputs.token }}" >> $GITHUB_ENV
+    #   shell: bash
+
+    - name: Sync Repository
+      shell: bash
+      run: |
+         ${GITHUB_ACTION_PATH}/../../scripts/clone_or_update.sh \
+          "${{ inputs.parent-dir }}" \
+          "${{ inputs.repo-url }}" \
+          "${{ inputs.branch }}" \
+          "${{ steps.app-token.outputs.token }}"
