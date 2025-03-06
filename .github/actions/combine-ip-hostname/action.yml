@@ -22,3 +22,8 @@ runs:
         echo "🔄 Merging files from: ${{ inputs.input-dir }}"
         combined_info=$(find "${{ inputs.input-dir }}" -name "*.txt" -exec cat {} + | sort | uniq | base64 -w 0)
         echo "combined_info=$combined_info" >> $GITHUB_OUTPUT
+        jq -n '
+          reduce inputs as $item ({};
+            .[$item.role] += [$item | del(.role)]
+          )
+        ' *.json > "${{ inputs.input-dir }}/role_info.json"
