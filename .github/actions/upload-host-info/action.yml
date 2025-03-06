@@ -2,10 +2,10 @@ name: 'Upload Host Info'
 description: 'Collect and upload host IP/hostname info'
 
 inputs:
-  host_file_prefix:
+  hosts_dirname:
     description: 'Comma-separated list of target hosts'
     required: true
-    default: 'ip-hostname-'
+    default: 'ip-hostname'
   role:
     description: 'Role of the host'
     required: true
@@ -29,6 +29,6 @@ runs:
         echo "IP Hostname: $ip $hostname"
         # echo "hostname=$hostname" >> $GITHUB_ENV
         echo "hostname=$hostname" >> $GITHUB_OUTPUT
-        echo "$ip $hostname" > "${{ inputs.host_file_prefix }}${hostname}.txt"
-        jq -n --arg role "${{ inputs.role }}" --arg hostname "$hostname" --arg ip "$ip" '{role: $role, hostname: $hostname, ip: $ip}' > "${{ inputs.host_file_prefix }}${hostname}.json"
-        echo "Generated file: ${{ inputs.host_file_prefix }}${hostname}.txt"
+        echo "$ip $hostname" > "${{ inputs.hosts_dirname }}-${hostname}.txt"
+        jq -n --arg role "${{ inputs.role }}" --arg hostname "$hostname" --arg ip "$ip" '{role: $role, hostname: $hostname, ip: $ip}' > "${{ inputs.hosts_dirname }}-${hostname}.json"
+        echo "Generated file: ${{ inputs.hosts_dirname }}-${hostname}.txt"
