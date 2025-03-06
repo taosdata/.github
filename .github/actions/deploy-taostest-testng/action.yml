@@ -26,7 +26,7 @@ runs:
       id: deploy-taostest-testng
       run: |
         TEST_ROOT=${{ inputs.testng-dir }}
-        # echo "TEST_ROOT=$TEST_ROOT" >> $GITHUB_ENV
+        echo "TEST_ROOT=$TEST_ROOT" >> $GITHUB_ENV
         cd ${{ inputs.taostest-dir }}
         echo "Y" | bash reinstall.sh
         ENV_FILE=~/.taostest/.env
