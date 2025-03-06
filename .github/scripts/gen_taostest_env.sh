@@ -1,5 +1,5 @@
 #!/bin/bash
-if [ $# -ne 1 ]; then
+if [ $# -ne 2 ]; then
     echo "::error::Missing required parameters"
     echo "Usage: $0 <json_file> <test_root>"
     exit 1
