@@ -35,6 +35,6 @@ runs:
         echo "TEST_ROOT==$TEST_ROOT" > $ENV_FILE
         echo "TAOSTEST_SQL_RECORDING_ENABLED=True" >> $ENV_FILE
 
-    # - name: Install Python packages
-    #   shell: bash
-    #   run: pip3 install --upgrade numpy pandas
+    - name: Install Python packages
+      shell: bash
+      run: pip3 install --upgrade numpy pandas
