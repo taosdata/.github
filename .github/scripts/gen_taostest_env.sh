@@ -105,7 +105,7 @@ cat <<EOF > "$TEST_ROOT/env/fractal-center.json"
 {
     "taosd": {
         "fqdn": ${cluster_fqdn},
-        "spec": {"firstEP": "fractal-center-1:6030"}
+        "spec": {"firstEP": "${cluster_dnode_shell_array[0]}:6030"}
     },
     "taosadapter": {
         "fqdn": ${cluster_fqdn},
@@ -114,6 +114,27 @@ cat <<EOF > "$TEST_ROOT/env/fractal-center.json"
     "taosBenchmark": {
         "fqdn": ["${client_shell_array[0]}"],
         "spec": {}
+    },
+    "taospy": {
+        "fqdn": ["${client_shell_array[0]}"],
+        "spec": {}
+    }
+}
+EOF
+
+cat <<EOF > "$TEST_ROOT/env/fractal-query.json"
+{
+    "taosd": {
+        "fqdn": ["${cluster_dnode_json_array[0]}"],
+        "spec": {"firstEP": "${cluster_dnode_shell_array[0]}:6030"}
+    },
+    "taosadapter": {
+        "fqdn": ["${cluster_dnode_json_array[0]}"],
+        "spec": {}
+    },
+    "taosBenchmark": {
+        "fqdn": ["${client_shell_array[0]}"],
+        "spec": {"firstEP": "${cluster_dnode_shell_array[0]}:6030}
     },
     "taospy": {
         "fqdn": ["${client_shell_array[0]}"],
