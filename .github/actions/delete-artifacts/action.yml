@@ -1,0 +1,55 @@
+name: 'Download Artifacts'
+description: 'Download all artifacts from current workflow run with GH CLI'
+inputs:
+  gh_token:
+    description: 'GitHub access token'
+    required: true
+    default: 'A secret'
+  download_dir:
+    description: 'Directory to save artifacts'
+    required: true
+    default: 'artifacts'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Authenticate And Download Artifacts
+      shell: bash
+      run: |
+        echo "🔄 Authenticating GitHub CLI..."
+        echo "${{ inputs.gh_token }}" | gh auth login --with-token
+        echo "🔄 Downloading artifacts to: ${{ inputs.download_dir }}"
+        rm -rf "${{ inputs.download_dir }}"
+        mkdir -p "${{ inputs.download_dir }}"
+        gh run download $GITHUB_RUN_ID --dir "${{ inputs.download_dir }}"
+
+name: 'Delete Artifacts'
+description: 'Delete all artifacts from a specific workflow run using GH CLI'
+inputs:
+  gh_token:
+    description: 'GitHub token with actions:write permission'
+    required: true
+    default: 'A secret'
+
+runs:
+  using: "composite"
+  steps:
+    - name: Authenticate And Delete Artifacts
+      shell: bash
+      run: |
+        echo "🔄 Authenticating GitHub CLI..."
+        echo "${{ inputs.gh_token }}" | gh auth login --with-token
+        echo "🗑️ Deleting artifacts from Run ID: $GITHUB_RUN_ID"
+
+        artifact_ids=$(gh api "/repos/${{ github.repository }}/actions/runs/$GITHUB_RUN_ID/artifacts" \
+          --jq '.artifacts[].id')
+
+        if [ -z "$artifact_ids" ]; then
+          echo "ℹ️ No artifacts found for Run ID ${{ inputs.run_id }}"
+        else
+          echo "🔎 Found artifacts: $artifact_ids"
+          for id in $artifact_ids; do
+            gh api -X DELETE "/repos/${{ github.repository }}/actions/artifacts/$id"
+            echo "✅ Deleted artifact $id"
+          done
+        fi
