@@ -32,7 +32,7 @@ runs:
         ENV_FILE=~/.taostest/.env
         mkdir -p ~/.taostest
         touch $ENV_FILE
-        echo "TEST_ROOT==$TEST_ROOT" > $ENV_FILE
+        echo "TEST_ROOT=$TEST_ROOT" > $ENV_FILE
         echo "TAOSTEST_SQL_RECORDING_ENABLED=True" >> $ENV_FILE
 
     - name: Install Python packages
