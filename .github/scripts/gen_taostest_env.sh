@@ -71,7 +71,7 @@ length=${#single_dnode_shell_array[@]}
 for ((i=0; i<length; i++)); do
     edge=${single_dnode_shell_array[$i]}
     mqtt=${mqtt_shell_array[$i]}
-    cat <<EOF > "$TEST_ROOT/env/${edge}.json"
+    cat <<EOF > "$TEST_ROOT/env/fractal-edge-$((i+1)).json"
 {
     "taosd": {
         "fqdn": ["$edge"],
