@@ -20,4 +20,5 @@ runs:
         echo "${{ inputs.gh_token }}" | gh auth login --with-token
         echo "🔄 Downloading artifacts to: ${{ inputs.download_dir }}"
         rm -rf "${{ inputs.download_dir }}"
+        mkdir -p "${{ inputs.download_dir }}"
         gh run download $GITHUB_RUN_ID --dir "${{ inputs.download_dir }}"
