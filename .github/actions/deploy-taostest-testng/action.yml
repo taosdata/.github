@@ -14,6 +14,7 @@ inputs:
 runs:
   using: 'composite'
   steps:
+    # TODO refactor: add a single action to install all dependencies
     # - name: Set up Python and dependencies
     #   shell: bash
     #   run: |
