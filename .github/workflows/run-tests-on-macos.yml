@@ -33,10 +33,10 @@ jobs:
       WKDIR: '/var/lib/jenkins/workspace'
       WK: '/var/lib/jenkins/workspace/TDinternal'
       WKC: '/var/lib/jenkins/workspace/TDinternal/community'
-      IS_TDINTERNAL: ${{ github.event.inputs.tdinternal }}
-      SOURCE_BRANCH: ${{ github.event.inputs.source_branch }}
-      TARGET_BRANCH: ${{ github.event.inputs.target_branch }}
-      PR_NUMBER: ${{ github.event.inputs.pr_number }}
+      IS_TDINTERNAL: ${{ inputs.tdinternal }}
+      SOURCE_BRANCH: ${{ inputs.source_branch }}
+      TARGET_BRANCH: ${{ inputs.target_branch }}
+      PR_NUMBER: ${{ inputs.pr_number }}
 
     steps:
       - name: Output the environment information
