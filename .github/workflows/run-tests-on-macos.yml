@@ -7,10 +7,6 @@ on:
         description: 'Is the PR from TDinternal?'
         required: true
         type: boolean
-      run_function_test:
-        description: 'Run function test cases?'
-        required: true
-        type: boolean
       source_branch:
         description: 'Source branch'
         required: true
