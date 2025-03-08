@@ -1,0 +1,34 @@
+name: 'Upload Host Info'
+description: 'Collect and upload host IP/hostname info'
+
+inputs:
+  hosts_dirname:
+    description: 'Comma-separated list of target hosts'
+    required: true
+    default: 'ip-hostname'
+  role:
+    description: 'Role of the host'
+    required: true
+    default: 'runner'
+
+outputs:
+  hostname:
+    description: 'Generated file with IP and hostname'
+    value: ${{ steps.get-ip-hostname.outputs.hostname }}
+runs:
+  using: "composite"
+  steps:
+    - name: Get IP and Hostname
+      id: get-ip-hostname
+      shell: bash
+      run: |
+        echo "RUNNER_WORKSPACE: $RUNNER_WORKSPACE"
+        echo "🔄 Getting IP and hostname for the runner..."
+        ip=$(hostname -I | awk '{print $1}')
+        hostname=$(hostname)
+        echo "IP Hostname: $ip $hostname"
+        # echo "hostname=$hostname" >> $GITHUB_ENV
+        echo "hostname=$hostname" >> $GITHUB_OUTPUT
+        echo "$ip $hostname" > "${{ inputs.hosts_dirname }}-${hostname}.txt"
+        jq -n --arg role "${{ inputs.role }}" --arg hostname "$hostname" --arg ip "$ip" '{role: $role, hostname: $hostname, ip: $ip}' > "${{ inputs.hosts_dirname }}-${hostname}.json"
+        echo "Generated file: ${{ inputs.hosts_dirname }}-${hostname}.txt"
