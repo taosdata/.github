@@ -7,18 +7,6 @@ on:
         description: 'Is the PR from TDinternal?'
         required: true
         type: boolean
-      source_branch:
-        description: 'Source branch'
-        required: true
-        type: string
-      target_branch:
-        description: 'Target branch'
-        required: true
-        type: string
-      pr_number:
-        description: 'PR number'
-        required: true
-        type: number
 
 jobs:
   run-tests-on-mac:
@@ -34,9 +22,9 @@ jobs:
       WK: '/var/lib/jenkins/workspace/TDinternal'
       WKC: '/var/lib/jenkins/workspace/TDinternal/community'
       IS_TDINTERNAL: ${{ inputs.tdinternal }}
-      SOURCE_BRANCH: ${{ inputs.source_branch }}
-      TARGET_BRANCH: ${{ inputs.target_branch }}
-      PR_NUMBER: ${{ inputs.pr_number }}
+      SOURCE_BRANCH: ${{ github.event.pull_request.head.ref }}
+      TARGET_BRANCH: ${{ github.event.pull_request.base.ref }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
 
     steps:
       - name: Output the environment information
