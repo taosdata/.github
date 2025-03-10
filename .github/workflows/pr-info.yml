@@ -1,0 +1,22 @@
+name: Reusable PR Info
+
+on:
+  workflow_call:
+    inputs:
+      some_input:
+        required: false
+        type: string
+
+jobs:
+  print_pr_info:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print PR Information
+        run: |
+          echo "PR Number: ${{ github.event.pull_request.number }}"
+          echo "PR Title: ${{ github.event.pull_request.title }}"
+          echo "PR Head Branch: ${{ github.event.pull_request.head.ref }}"
+          echo "PR Base Branch: ${{ github.event.pull_request.base.ref }}"
+          echo "PR Body: ${{ github.event.pull_request.body }}"
+          echo "PR URL: ${{ github.event.pull_request.html_url }}"
+          echo "Some Input: ${{ inputs.some_input }}"
