@@ -1,4 +1,4 @@
-name: 'Auto Add Runner Label'
+name: 'Manage Runner Labels'
 inputs:
   gh_token:
     description: 'GitHub access token'
@@ -13,7 +13,7 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Auto Add Runner Label
+    - name: Manage Runner Labels
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
