@@ -34,6 +34,8 @@ runs:
         # FINAL_NAME=${REAL_RUNNER_NAME:-$RUNNER_NAME}
         # echo "get final runner name: $FINAL_NAME"
 
+        echo "runner id: ${{ runner.id }}"
+
         # Add labels to runner
         curl -X POST -sS \
           -H "Authorization: token ${{ inputs.gh_token }}" \
