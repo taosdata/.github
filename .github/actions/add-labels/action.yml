@@ -8,7 +8,7 @@ inputs:
     description: 'Comma-separated labels'
     required: true
   runner_name:
-    description: 'Runner NAME'
+    description: 'Runner name'
     required: true
 runs:
   using: "composite"
