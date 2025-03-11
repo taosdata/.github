@@ -7,8 +7,8 @@ inputs:
   labels:
     description: 'Comma-separated labels'
     required: true
-  runner_id:
-    description: 'Runner ID'
+  runner_name:
+    description: 'Runner NAME'
     required: true
 runs:
   using: "composite"
@@ -18,30 +18,15 @@ runs:
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
       run: |
-        # # get runner name
-        # RUNNER_NAME=${RUNNER_NAME:-$HOSTNAME}
-        # echo "runner_name: $RUNNER_NAME"
+        response=$(curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" \
+          "https://api.github.com/orgs/taosdata/actions/runners")
 
-        # # get runner name with API
-        # REAL_RUNNER_NAME=$(curl -sS -H "Authorization: token $GITHUB_TOKEN" \
-        #   "https://api.github.com/orgs/taosdata/actions/runners" \
-        #   | jq -r ".runners[] | select(.id == ${{ runner.id }}) | .name")
-        # echo "runner_name_api: $REAL_RUNNER_NAME"
-
-        # echo "::group::debug info"
-        # echo "runner_name in env: ${{ runner.name }}"
-        # echo "runner_name with API: $REAL_RUNNER_NAME"
-        # echo "::endgroup::"
-
-        # # get final runner name
-        # FINAL_NAME=${REAL_RUNNER_NAME:-$RUNNER_NAME}
-        # echo "get final runner name: $FINAL_NAME"
-
-        echo "runner id: ${{ inputs.runner_id }}"
+        RUNNER_ID=$(echo "$response" | jq -r ".runners[] | select(.name == \"${{ inputs.runner_name }}\") | .id")
+        echo "runner id: $RUNNER_ID"
 
         # Add labels to runner
         curl -X POST -sS \
           -H "Authorization: token ${{ inputs.gh_token }}" \
           -H "Accept: application/vnd.github.v3+json" \
-          "https://api.github.com/orgs/taosdata/actions/runners/${{ inputs.runner_id }}/labels" \
+          "https://api.github.com/orgs/taosdata/actions/runners/$RUNNER_ID/labels" \
           -d "{\"labels\": [$(echo ${{ inputs.labels }} | sed "s/,/\",\"/g")]}"
