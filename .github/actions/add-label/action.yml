@@ -1,0 +1,42 @@
+name: 'Auto Add Runner Label'
+inputs:
+  gh_token:
+    description: 'GitHub access token'
+    required: true
+    default: 'A secret'
+  labels:
+    description: 'Comma-separated labels'
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Auto Add Runner Label
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: |
+        # get runner name
+        RUNNER_NAME=${RUNNER_NAME:-$HOSTNAME}
+        echo "runner_name: $RUNNER_NAME"
+
+        # get runner name with API
+        REAL_RUNNER_NAME=$(curl -sS -H "Authorization: token $GITHUB_TOKEN" \
+          "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runners" \
+          | jq -r ".runners[] | select(.id == ${{ runner.id }}) | .name")
+        echo "runner_name_api: $REAL_RUNNER_NAME"
+
+        echo "::group::debug info"
+        echo "runner_name in env: ${{ runner.name }}"
+        echo "runner_name with API: $REAL_RUNNER_NAME"
+        echo "::endgroup::"
+
+        # get final runner name
+        FINAL_NAME=${REAL_RUNNER_NAME:-$RUNNER_NAME}
+        echo "get final runner name: $FINAL_NAME"
+
+        # Add labels to runner
+        curl -X POST -sS \
+          -H "Authorization: token $GITHUB_TOKEN" \
+          -H "Accept: application/vnd.github.v3+json" \
+          "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runners/${{ runner.id }}/labels" \
+          -d "{\"labels\": [$(echo ${{ inputs.labels }} | sed "s/,/\",\"/g")]}"
