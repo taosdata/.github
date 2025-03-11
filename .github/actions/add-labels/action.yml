@@ -21,7 +21,7 @@ runs:
 
         # get runner name with API
         REAL_RUNNER_NAME=$(curl -sS -H "Authorization: token $GITHUB_TOKEN" \
-          "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runners" \
+          "https://api.github.com/repos/taosdata/actions/runners" \
           | jq -r ".runners[] | select(.id == ${{ runner.id }}) | .name")
         echo "runner_name_api: $REAL_RUNNER_NAME"
 
@@ -38,5 +38,5 @@ runs:
         curl -X POST -sS \
           -H "Authorization: token $GITHUB_TOKEN" \
           -H "Accept: application/vnd.github.v3+json" \
-          "https://api.github.com/repos/$GITHUB_REPOSITORY/actions/runners/${{ runner.id }}/labels" \
+          "https://api.github.com/repos/taosdata/actions/runners/${{ runner.id }}/labels" \
           -d "{\"labels\": [$(echo ${{ inputs.labels }} | sed "s/,/\",\"/g")]}"
