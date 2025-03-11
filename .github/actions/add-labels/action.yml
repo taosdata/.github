@@ -7,6 +7,9 @@ inputs:
   labels:
     description: 'Comma-separated labels'
     required: true
+  runner_id:
+    description: 'Runner ID'
+    required: true
 runs:
   using: "composite"
   steps:
@@ -40,5 +43,5 @@ runs:
         curl -X POST -sS \
           -H "Authorization: token ${{ inputs.gh_token }}" \
           -H "Accept: application/vnd.github.v3+json" \
-          "https://api.github.com/orgs/taosdata/actions/runners/${{ runner.id }}/labels" \
+          "https://api.github.com/orgs/taosdata/actions/runners/${{ inputs.runner_id }}/labels" \
           -d "{\"labels\": [$(echo ${{ inputs.labels }} | sed "s/,/\",\"/g")]}"
