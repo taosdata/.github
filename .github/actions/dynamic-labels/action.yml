@@ -4,6 +4,10 @@ inputs:
     description: 'GitHub access token'
     required: true
     default: 'A secret'
+  operation_type:
+    description: 'add/delete'
+    required: true
+    default: 'add'
   labels:
     description: 'Comma-separated labels'
     required: true
