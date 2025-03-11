@@ -24,9 +24,10 @@ runs:
         RUNNER_ID=$(echo "$response" | jq -r ".runners[] | select(.name == \"${{ inputs.runner_name }}\") | .id")
         echo "runner id: $RUNNER_ID"
 
+        JSON_DATA=$(echo "${{ inputs.labels }}" | jq -R 'split(",")' | jq -c '{labels: .}')
         # Add labels to runner
         curl -X POST -sS \
           -H "Authorization: token ${{ inputs.gh_token }}" \
           -H "Accept: application/vnd.github.v3+json" \
           "https://api.github.com/orgs/taosdata/actions/runners/$RUNNER_ID/labels" \
-          -d "{\"labels\": [$(echo ${{ inputs.labels }} | sed "s/,/\",\"/g")]}"
+          -d "$JSON_DATA"
