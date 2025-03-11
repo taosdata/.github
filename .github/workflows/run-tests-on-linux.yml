@@ -15,18 +15,6 @@ on:
         description: 'Run tdgpt test cases?'
         required: true
         type: boolean
-      source_branch:
-        description: 'Source branch'
-        required: true
-        type: string
-      target_branch:
-        description: 'Target branch'
-        required: true
-        type: string
-      pr_number:
-        description: 'PR number'
-        required: true
-        type: number
 
 jobs:
   run-tests-on-linux:
@@ -44,9 +32,9 @@ jobs:
       IS_TDINTERNAL: ${{ inputs.tdinternal }}
       RUN_FUNCTION_TEST: ${{ inputs.run_function_test }}
       RUN_TDGPT_TEST: ${{ inputs.run_tdgpt_test }}
-      SOURCE_BRANCH: ${{ inputs.source_branch }}
-      TARGET_BRANCH: ${{ inputs.target_branch }}
-      PR_NUMBER: ${{ inputs.pr_number }}
+      SOURCE_BRANCH: ${{ github.event.pull_request.head.ref }}
+      TARGET_BRANCH: ${{ github.event.pull_request.base.ref }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
 
     steps:
       - name: Output the environment information
