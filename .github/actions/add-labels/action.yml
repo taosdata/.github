@@ -18,7 +18,7 @@ runs:
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
       run: |
-        response=$(curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" \
+        response=$(curl -sS -H "Authorization: Bearer ${{ inputs.gh_token }}" \
           "https://api.github.com/orgs/taosdata/actions/runners")
 
         RUNNER_ID=$(echo "$response" | jq -r ".runners[] | select(.name == \"${{ inputs.runner_name }}\") | .id")
