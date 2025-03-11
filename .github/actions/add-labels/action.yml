@@ -36,7 +36,7 @@ runs:
 
         # Add labels to runner
         curl -X POST -sS \
-          -H "Authorization: token $GITHUB_TOKEN" \
+          -H "Authorization: token ${{ inputs.gh_token }}" \
           -H "Accept: application/vnd.github.v3+json" \
           "https://api.github.com/orgs/taosdata/actions/runners/${{ runner.id }}/labels" \
           -d "{\"labels\": [$(echo ${{ inputs.labels }} | sed "s/,/\",\"/g")]}"
