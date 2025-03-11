@@ -1,0 +1,51 @@
+name: 'Auto Add Runner Label'
+inputs:
+  gh_token:
+    description: 'GitHub access token'
+    required: true
+    default: 'A secret'
+  labels:
+    description: 'Comma-separated labels'
+    required: true
+  runner_name:
+    description: 'Runner name'
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Auto Add Runner Label
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: |
+        response=$(curl -sS -H "Authorization: Bearer ${{ inputs.gh_token }}" \
+          "https://api.github.com/orgs/taosdata/actions/runners")
+
+        RUNNER_ID=$(echo "$response" | jq -r ".runners[] | select(.name == \"${{ inputs.runner_name }}\") | .id")
+        echo "runner id: $RUNNER_ID"
+
+        case "${{ inputs.operation_type }}" in
+          add)
+            JSON_DATA=$(echo "${{ inputs.labels }}" | jq -R 'split(",")' | jq -c '{labels: .}')
+            # Add labels to runner
+            curl -X POST -sS \
+              -H "Authorization: token ${{ inputs.gh_token }}" \
+              -H "Accept: application/vnd.github.v3+json" \
+              "https://api.github.com/orgs/taosdata/actions/runners/$RUNNER_ID/labels" \
+              -d "$JSON_DATA"
+
+            echo "Added labels: ${{ inputs.labels }}"
+            ;;
+
+          delete)
+            IFS=',' read -ra LABELS <<< "${{ inputs.labels }}"
+            for label in "${LABELS[@]}"; do
+              curl -X DELETE -sS \
+                -H "Authorization: token ${{ inputs.gh_token }}" \
+                "https://api.github.com/orgs/taosdata/actions/runners/$RUNNER_ID/labels/${label// /%20}" \
+                -o /dev/null
+
+              echo "Deleted label: $label"
+            done
+            ;;
+        esac
