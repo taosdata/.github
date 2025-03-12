@@ -7,7 +7,21 @@ on:
         description: 'Is the PR from TDinternal?'
         required: true
         type: boolean
-
+      specified_source_branch:
+          description: 'Enter the source branch name of TDengine'
+          required: false
+          default: 'unavailable'
+          type: string
+      specified_target_branch:
+        description: 'Enter the target branch name of TDengine'
+        required: false
+        default: 'unavailable'
+        type: string
+      specified_pr_number:
+        description: 'Enter the PR number of TDengine'
+        required: false
+        default: 'unavailable'
+        type: string
 jobs:
   run-tests-on-windows:
     runs-on:
@@ -23,11 +37,26 @@ jobs:
       WIN_VS_PATH: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat"
       WIN_CPU_TYPE: "x64"
       IS_TDINTERNAL: ${{ inputs.tdinternal }}
-      SOURCE_BRANCH: ${{ github.event.pull_request.head.ref }}
-      TARGET_BRANCH: ${{ github.event.pull_request.base.ref }}
-      PR_NUMBER: ${{ github.event.pull_request.number }}
+      # SOURCE_BRANCH: ${{ github.event.pull_request.head.ref }}
+      # TARGET_BRANCH: ${{ github.event.pull_request.base.ref }}
+      # PR_NUMBER: ${{ github.event.pull_request.number }}
 
     steps:
+      - name: Set envrionment variables based on condition
+        run: |
+          if [ ${{ github.event.inputs.specified_source_branch == 'unavailable' || github.event.inputs.specified_target_branch == 'unavailable' || github.event.inputs.specified_pr_number == 'unavailable' }} ]; then
+            echo SOURCE_BRANCH="${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
+            echo TARGET_BRANCH="${{ github.event.pull_request.base.ref }}" >> $GITHUB_ENV
+            echo PR_NUMBER="${{ github.event.pull_request.number }}" >> $GITHUB_ENV
+          else
+            echo SOURCE_BRANCH="${{ github.event.inputs.specified_source_branch }}" >> $GITHUB_ENV
+            echo TARGET_BRANCH="${{ github.event.inputs.specified_target_branch }}" >> $GITHUB_ENV
+            echo PR_NUMBER="${{ github.event.inputs.specified_pr_number }}" >> $GITHUB_ENV
+          fi
+
+          echo "source branch: ${SOURCE_BRANCH}"
+          echo "target branch: ${TARGET_BRANCH}"
+          echo "pr number: ${PR_NUMBER}"
       - name: Output the environment information
         run: |
           hostname
