@@ -173,4 +173,9 @@ jobs:
       - name: Clearup the running cases
         if: always()
         run: |
-          ps -ef | grep run_case.sh  | grep -v 'grep' | awk '{print $2}'| xargs kill -9
+          pid=$(ps -ef | grep 'run_case.sh' | grep -v 'grep' | awk '{print $2}')
+          if [ -n "$pid" ]; then
+            ps -ef | grep 'run_case.sh'  | grep -v 'grep' | awk '{print $2}'| xargs kill -9
+          else
+              echo "No run_case.sh process is running."
+          fi
