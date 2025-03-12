@@ -44,7 +44,7 @@ jobs:
     steps:
       - name: Set envrionment variables based on condition
         run: |
-          if [ ${{ github.event.inputs.specified_source_branch == 'unavailable' || github.event.inputs.specified_target_branch == 'unavailable' || github.event.inputs.specified_pr_number == 'unavailable' }} ]; then
+          if ${{ github.event.inputs.specified_source_branch == 'unavailable' && github.event.inputs.specified_target_branch == 'unavailable' && github.event.inputs.specified_pr_number == 'unavailable' }}; then
             echo SOURCE_BRANCH="${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
             echo SOURCE_BRANCH="${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
             echo SOURCE_BRANCH="${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
@@ -53,11 +53,11 @@ jobs:
             echo TARGET_BRANCH="${{ github.event.inputs.specified_target_branch }}" >> $GITHUB_ENV
             echo PR_NUMBER="${{ github.event.inputs.specified_pr_number }}" >> $GITHUB_ENV
           fi
-
-          source $GITHUB_ENV
-          echo "source branch: ${SOURCE_BRANCH}"
-          echo "target branch: ${TARGET_BRANCH}"
-          echo "pr number: ${PR_NUMBER}"
+          
+          echo "Current step debug:"
+          echo "source branch: ${{ env.SOURCE_BRANCH }}"
+          echo "target branch: ${{ env.TARGET_BRANCH }}"
+          echo "pr number: ${{ env.PR_NUMBER }}"
       - name: Output the environment information
         run: |
           echo "::group::Environment Info"
