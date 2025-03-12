@@ -63,7 +63,8 @@ jobs:
             echo TARGET_BRANCH="${{ github.event.inputs.specified_target_branch }}" >> $GITHUB_ENV
             echo PR_NUMBER="${{ github.event.inputs.specified_pr_number }}" >> $GITHUB_ENV
           fi
-
+          
+          source $GITHUB_ENV
           echo "source branch: ${SOURCE_BRANCH}"
           echo "target branch: ${TARGET_BRANCH}"
           echo "pr number: ${PR_NUMBER}"
