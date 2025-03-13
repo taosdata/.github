@@ -47,9 +47,6 @@ jobs:
       IS_TDINTERNAL: ${{ inputs.tdinternal }}
       RUN_FUNCTION_TEST: ${{ inputs.run_function_test }}
       RUN_TDGPT_TEST: ${{ inputs.run_tdgpt_test }}
-      # SOURCE_BRANCH: ${{ github.event.pull_request.head.ref }}
-      # TARGET_BRANCH: ${{ github.event.pull_request.base.ref }}
-      # PR_NUMBER: ${{ github.event.pull_request.number }}
 
     steps:
       - name: Set envrionment variables based on condition
@@ -69,18 +66,8 @@ jobs:
             echo "PR_NUMBER=${{ inputs.specified_pr_number }}" >> $GITHUB_ENV
           fi
 
-          echo "Current step debug:"
-          echo "source branch: $SOURCE_BRANCH"
-          echo "target branch: $TARGET_BRANCH"
-          echo "pr number: $PR_NUMBER"
-
           echo "Current step debug (GITHUB_ENV content):"
           cat $GITHUB_ENV
-      - name: Verify variables
-        run: |
-          echo "source branch: ${{ env.SOURCE_BRANCH }}"
-          echo "target branch: ${{ env.TARGET_BRANCH }}"
-          echo "pr number: ${{ env.PR_NUMBER }}"
       - name: Output the environment information
         run: |
           echo "::group::Environment Info"
@@ -106,8 +93,8 @@ jobs:
             git checkout "$2"
           }
           if 
-          prepare_environment "${{ env.WK }}" "$TARGET_BRANCH"
-          prepare_environment "${{ env.WKC }}" "$TARGET_BRANCH"
+          prepare_environment "${{ env.WK }}" "${{ env.TARGET_BRANCH }}"
+          prepare_environment "${{ env.WKC }}" "${{ env.TARGET_BRANCH }}"
 
       - name: Get latest codes and logs for TDinternal PR
         if: ${{ env.IS_TDINTERNAL == 'true' }}
@@ -116,7 +103,7 @@ jobs:
           git pull >/dev/null
           git log -5
           echo "`date "+%Y%m%d-%H%M%S"` TDinternalTest/$PR_NUMBER:${{ github.run_number }}:$TARGET_BRANCH" >>${{ env.WKDIR }}/jenkins.log
-          echo "CHANGE_BRANCH:$SOURCE_BRANCH" >>${{ env.WKDIR }}/jenkins.log
+          echo "CHANGE_BRANCH:${{ env.SOURCE_BRANCH }}" >>${{ env.WKDIR }}/jenkins.log
           echo "TDinternal log: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
           git fetch origin +refs/pull/$PR_NUMBER/merge
           git checkout -qf FETCH_HEAD
