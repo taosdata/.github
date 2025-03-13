@@ -47,26 +47,6 @@ jobs:
     steps:
       - name: Set envrionment variables based on condition
         run: |
-          # if ($env:SPECIFIED_SOURCE_BRANCH -eq "unavailable") {
-          #     if ($env:SPECIFIED_TARGET_BRANCH -eq "unavailable") {
-          #         if ($env:SPECIFIED_PR_NUMBER -eq "unavailable") {
-          #             # Use pull request information if workflow is triggered by pull_request event
-          #             $SOURCE_BRANCH = $env:PR_HEAD_REF.Trim()
-          #             $TARGET_BRANCH = $env:PR_BASE_REF.Trim()
-          #             $PR_NUMBER = $env:PR_NUMBER.Trim()
-          #         }
-          #     }
-          # } else {
-          #     # Use specified inputs if workflow is triggered by workflow_dispatch event
-          #     $SOURCE_BRANCH = $env:SPECIFIED_SOURCE_BRANCH.Trim()
-          #     $TARGET_BRANCH = $env:SPECIFIED_TARGET_BRANCH.Trim()
-          #     $PR_NUMBER = $env:SPECIFIED_PR_NUMBER.Trim()
-          # }
-          
-          # # Debug output to check GITHUB_ENV content
-          # "Current step debug (GITHUB_ENV content):"
-          # Get-Content $env:GITHUB_ENV
-
           if "%SPECIFIED_SOURCE_BRANCH%"=="unavailable" (
             if "%SPECIFIED_TARGET_BRANCH%"=="unavailable" (
               if "%SPECIFIED_PR_NUMBER%"=="unavailable" (
