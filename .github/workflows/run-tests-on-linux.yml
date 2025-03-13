@@ -91,8 +91,13 @@ jobs:
             git fetch
             git checkout "$2"
           }
-          
-          prepare_environment "${{ env.WK }}" "$TARGET_BRANCH"
+          if [[ "${{ inputs.specified_source_branch }}" == 'unavailable' ]] && \
+            [[ "${{ inputs.specified_target_branch}}" == 'unavailable' ]] && \
+            [[ "${{ inputs.specified_pr_number}}" == 'unavailable' ]]; then
+             prepare_environment "${{ env.WK }}" "$TARGET_BRANCH"
+          else
+            prepare_environment "${{ env.WK }}" "$SOURCE_BRANCH"
+          fi
           prepare_environment "${{ env.WKC }}" "$TARGET_BRANCH"
 
       - name: Get latest codes and logs for TDinternal PR
@@ -129,7 +134,7 @@ jobs:
           echo "community log merged: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
           cd ${{ env.WK }}
           git pull >/dev/null
-          git log -5
+          git log -
           echo "TDinternal log: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
       - name: Update submodule
         run: |
