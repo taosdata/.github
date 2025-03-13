@@ -37,27 +37,26 @@ jobs:
       WK: '/var/lib/jenkins/workspace/TDinternal'
       WKC: '/var/lib/jenkins/workspace/TDinternal/community'
       IS_TDINTERNAL: ${{ inputs.tdinternal }}
-      # SOURCE_BRANCH: ${{ github.event.pull_request.head.ref }}
-      # TARGET_BRANCH: ${{ github.event.pull_request.base.ref }}
-      # PR_NUMBER: ${{ github.event.pull_request.number }}
 
     steps:
       - name: Set envrionment variables based on condition
         run: |
-          if ${{ github.event.inputs.specified_source_branch == 'unavailable' && github.event.inputs.specified_target_branch == 'unavailable' && github.event.inputs.specified_pr_number == 'unavailable' }}; then
+          if [[ "${{ inputs.specified_source_branch }}" == 'unavailable' ]] && \
+            [[ "${{ inputs.specified_target_branch}}" == 'unavailable' ]] && \
+            [[ "${{ inputs.specified_pr_number}}" == 'unavailable' ]]; then
+            echo "set from github event"
             echo SOURCE_BRANCH="${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
-            echo SOURCE_BRANCH="${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
-            echo SOURCE_BRANCH="${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
+            echo TARGET_BRANCH="${{ github.event.pull_request.base.ref }}" >> $GITHUB_ENV
+            echo PR_NUMBER="${{ github.event.pull_request.number }}" >> $GITHUB_ENV
           else
-            echo SOURCE_BRANCH="${{ github.event.inputs.specified_source_branch }}" >> $GITHUB_ENV
-            echo TARGET_BRANCH="${{ github.event.inputs.specified_target_branch }}" >> $GITHUB_ENV
-            echo PR_NUMBER="${{ github.event.inputs.specified_pr_number }}" >> $GITHUB_ENV
+            echo "set from input"
+            echo "SOURCE_BRANCH=${{ inputs.specified_source_branch }}" >> $GITHUB_ENV
+            echo "TARGET_BRANCH=${{ inputs.specified_target_branch }}" >> $GITHUB_ENV
+            echo "PR_NUMBER=${{ inputs.specified_pr_number }}" >> $GITHUB_ENV
           fi
-          
-          echo "Current step debug:"
-          echo "source branch: ${{ env.SOURCE_BRANCH }}"
-          echo "target branch: ${{ env.TARGET_BRANCH }}"
-          echo "pr number: ${{ env.PR_NUMBER }}"
+
+          echo "Current step debug (GITHUB_ENV content):"
+          cat $GITHUB_ENV
       - name: Output the environment information
         run: |
           echo "::group::Environment Info"
@@ -68,7 +67,7 @@ jobs:
           echo "Trigger Source from TDinternal: ${{ env.IS_TDINTERNAL }}"
           echo "Workspace: ${{ env.WKDIR }}"
           git --version
-          echo "${{ env.WKDIR }}/restore.sh -p ${{ env.PR_NUMBER }} -n ${{ github.run_number }} -c ${{ env.CONTAINER_NAME }}"
+          echo "${{ env.WKDIR }}/restore.sh -p $env.PR_NUMBER -n ${{ github.run_number }} -c ${{ env.CONTAINER_NAME }}"
           echo "::endgroup::"
       - name: Prepare repositories
         run: |
@@ -81,18 +80,18 @@ jobs:
             git fetch
             git checkout "$2"
           }
-          prepare_environment "${{ env.WK }}" "${{ env.TARGET_BRANCH }}"
-          prepare_environment "${{ env.WKC }}" "${{ env.TARGET_BRANCH }}"
+          prepare_environment "${{ env.WK }}" "$TARGET_BRANCH"
+          prepare_environment "${{ env.WKC }}" "$TARGET_BRANCH"
       - name: Get latest codes and logs for TDinternal PR
         if: ${{ env.IS_TDINTERNAL == 'true' }}
         run: |
           cd ${{ env.WK }}
           git pull >/dev/null
           git log -5
-          echo "`date "+%Y%m%d-%H%M%S"` TDinternalTest/${{ env.PR_NUMBER }}:${{ github.run_number }}:${{ env.TARGET_BRANCH }}" >>${{ env.WKDIR }}/jenkins.log
-          echo "CHANGE_BRANCH:${{ env.SOURCE_BRANCH }}" >>${{ env.WKDIR }}/jenkins.log
+          echo "`date "+%Y%m%d-%H%M%S"` TDinternalTest/$PR_NUMBER:${{ github.run_number }}:$TARGET_BRANCH" >>${{ env.WKDIR }}/jenkins.log
+          echo "CHANGE_BRANCH:$SOURCE_BRANCH" >>${{ env.WKDIR }}/jenkins.log
           echo "TDinternal log: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
-          git fetch origin +refs/pull/${{ env.PR_NUMBER }}/merge
+          git fetch origin +refs/pull/$PR_NUMBER/merge
           git checkout -qf FETCH_HEAD
           git log -5
           echo "TDinternal log merged: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
@@ -108,10 +107,10 @@ jobs:
           git remote prune origin
           git pull >/dev/null
           git log -5
-          echo "`date "+%Y%m%d-%H%M%S"` TDengineTest/${{ env.PR_NUMBER }}:${{ github.run_number }}:${{ env.TARGET_BRANCH }}" >>${{ env.WKDIR }}/jenkins.log
-          echo "CHANGE_BRANCH:${{ env.SOURCE_BRANCH }}" >>${{ env.WKDIR }}/jenkins.log
+          echo "`date "+%Y%m%d-%H%M%S"` TDengineTest/$PR_NUMBER:${{ github.run_number }}:$TARGET_BRANCH" >>${{ env.WKDIR }}/jenkins.log
+          echo "CHANGE_BRANCH:$SOURCE_BRANCH" >>${{ env.WKDIR }}/jenkins.log
           echo "community log: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
-          git fetch origin +refs/pull/${{ env.PR_NUMBER }}/merge
+          git fetch origin +refs/pull/$PR_NUMBER/merge
           git checkout -qf FETCH_HEAD
           git log -5
           echo "community log merged: `git log -5`" >>${{ env.WKDIR }}/jenkins.log

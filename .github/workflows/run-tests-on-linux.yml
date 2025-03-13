@@ -50,7 +50,6 @@ jobs:
 
     steps:
       - name: Set envrionment variables based on condition
-        id: set-vars
         run: |
           if [[ "${{ inputs.specified_source_branch }}" == 'unavailable' ]] && \
             [[ "${{ inputs.specified_target_branch}}" == 'unavailable' ]] && \
