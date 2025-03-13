@@ -83,7 +83,7 @@ jobs:
           date /t
           time /t
           rd /s /Q "%WIN_INTERNAL_ROOT%\debug" || exit 0
-        shell: pwsh
+        shell: cmd
       - name: Prepare repositories
         run: |
           :: Prepare internal repository
