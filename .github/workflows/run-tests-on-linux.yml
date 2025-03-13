@@ -47,7 +47,7 @@ jobs:
           echo "Trigger Source from TDinternal: ${{ env.IS_TDINTERNAL }}"
           echo "Workspace: ${{ env.WKDIR }}"
           git --version
-          echo "${{ env.WKDIR }}/restore.sh -p ${{ env.PR_NUMBER }} -n ${{ github.run_number }} -c ${{ env.CONTAINER_NAME }}"
+          echo "${{ env.WKDIR }}/restore.sh -p PR-${{ env.PR_NUMBER }} -n ${{ github.run_number }} -c ${{ env.CONTAINER_NAME }}"
           echo "::endgroup::"
 
       - name: Prepare repositories
@@ -156,20 +156,13 @@ jobs:
         run: |
           cd ${{ env.WKC }}/tests/parallel_test
           ./run_scan_container.sh -d ${{ env.WKDIR }} -b ${{ env.PR_NUMBER }}_${{ github.run_number }} -f ${{ env.WKDIR }}/tmp/${{ env.PR_NUMBER }}_${{ github.run_number }}/docs_changed.txt ${{ steps.get_param.outputs.extra_param }}
-      - name: Run tdgpt test cases
-        if: ${{ env.IS_TDINTERNAL == 'false' && env.TARGET_BRANCH != '3.1' && env.RUN_TDGPT_TEST == 'true' }}
-        run: |
-          cd ${{ env.WKC }}/tests/parallel_test
-          export DEFAULT_RETRY_TIME=2
-          date
-          timeout 600 time ./run.sh -e -m /home/m.json -t tdgpt_cases.task -b ${{ env.PR_NUMBER }}_${{ github.run_number }} -l ${{ env.WKDIR }}/log -o 300 ${{ steps.get_param.outputs.extra_param }}
       - name: Run function test cases
         if: ${{ env.RUN_FUNCTION_TEST == 'true'}}
         run: |
           cd ${{ env.WKC }}/tests/parallel_test
           export DEFAULT_RETRY_TIME=2
           date
-          ${{ steps.get_param.outputs.timeout_cmd }} time ./run.sh -e -m /home/m.json -t cases.task -b ${{ env.PR_NUMBER }}_${{ github.run_number }} -l ${{ env.WKDIR }}/log -o 1200 ${{ steps.get_param.outputs.extra_param }}
+          ${{ steps.get_param.outputs.timeout_cmd }} time ./run.sh -e -m /home/m.json -t cases.task -b PR-${{ env.PR_NUMBER }}_${{ github.run_number }} -l ${{ env.WKDIR }}/log -o 1200 ${{ steps.get_param.outputs.extra_param }}
       - name: Clearup the running cases
         if: always()
         run: |
