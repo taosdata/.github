@@ -53,12 +53,18 @@ jobs:
           if "%SPECIFIED_SOURCE_BRANCH%"=="unavailable" (
             if "%SPECIFIED_TARGET_BRANCH%"=="unavailable" (
               if "%SPECIFIED_PR_NUMBER%"=="unavailable" (
+                for /f "tokens=*" %%i in ("%PR_HEAD_REF%") do set SOURCE_BRANCH=%%i
+                for /f "tokens=*" %%i in ("%PR_BASE_REF%") do set TARGET_BRANCH=%%i
+                for /f "tokens=*" %%i in ("%PR_NUMBER%") do set PR_NUMBER=%%i
                 echo SOURCE_BRANCH=%PR_HEAD_REF% >> "%GITHUB_ENV%"
                 echo TARGET_BRANCH=%PR_BASE_REF% >> "%GITHUB_ENV%"
                 echo PR_NUMBER=%PR_NUMBER% >> "%GITHUB_ENV%"
               )
             )
           ) else (
+            for /f "tokens=*" %%i in ("%SPECIFIED_SOURCE_BRANCH%") do set SOURCE_BRANCH=%%i
+            for /f "tokens=*" %%i in ("%SPECIFIED_TARGET_BRANCH%") do set TARGET_BRANCH=%%i
+            for /f "tokens=*" %%i in ("%SPECIFIED_PR_NUMBER%") do set PR_NUMBER=%%i
             echo SOURCE_BRANCH=%SPECIFIED_SOURCE_BRANCH% >> "%GITHUB_ENV%"
             echo TARGET_BRANCH=%SPECIFIED_TARGET_BRANCH% >> "%GITHUB_ENV%"
             echo PR_NUMBER=%SPECIFIED_PR_NUMBER% >> "%GITHUB_ENV%"
