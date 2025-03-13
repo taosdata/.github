@@ -106,8 +106,8 @@ jobs:
           cd ${{ env.WK }}
           git pull >/dev/null
           git log -5
-          echo "`date "+%Y%m%d-%H%M%S"` TDinternalTest/$PR_NUMBER:${{ github.run_number }}:$TARGET_BRANCH" >>${{ env.WKDIR }}/jenkins.log
-          echo "CHANGE_BRANCH:$SOURCE_BRANCH" >>${{ env.WKDIR }}/jenkins.log
+          echo "`date "+%Y%m%d-%H%M%S"` TDinternalTest/${{ env.PR_NUMBER }}:${{ github.run_number }}:${{ env.TARGET_BRANCH }}" >>${{ env.WKDIR }}/jenkins.log
+          echo "CHANGE_BRANCH:${{ env.SOURCE_BRANCH }}" >>${{ env.WKDIR }}/jenkins.log
           echo "TDinternal log: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
           git fetch origin +refs/pull/$PR_NUMBER/merge
           git checkout -qf FETCH_HEAD
@@ -125,8 +125,8 @@ jobs:
           git remote prune origin
           git pull >/dev/null
           git log -5
-          echo "`date "+%Y%m%d-%H%M%S"` TDengineTest/$PR_NUMBER:${{ github.run_number }}:$TARGET_BRANCH" >>${{ env.WKDIR }}/jenkins.log
-          echo "CHANGE_BRANCH:$SOURCE_BRANCH" >>${{ env.WKDIR }}/jenkins.log
+          echo "`date "+%Y%m%d-%H%M%S"` TDengineTest/$PR_NUMBER:${{ github.run_number }}:${{ env.TARGET_BRANCH }}" >>${{ env.WKDIR }}/jenkins.log
+          echo "CHANGE_BRANCH:${{ env.SOURCE_BRANCH }}" >>${{ env.WKDIR }}/jenkins.log
           echo "community log: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
           git fetch origin "+refs/pull/$PR_NUMBER/merge"
           git checkout -qf FETCH_HEAD
@@ -143,10 +143,10 @@ jobs:
       - name: Output the 'file_no_doc_changed' information to the file
         if: ${{ env.IS_TDINTERNAL == 'false' && env.TARGET_BRANCH != '3.1' }}
         run: |
-          mkdir -p ${{ env.WKDIR }}/tmp/$PR_NUMBER_${{ github.run_number }}
+          mkdir -p ${{ env.WKDIR }}/tmp/${{ env.PR_NUMBER }}_${{ github.run_number }}
           cd ${{ env.WKC }}
-          changed_files_non_doc=$(git --no-pager diff --name-only FETCH_HEAD `git merge-base FETCH_HEAD $TARGET_BRANCH`|grep -v "^docs/en/"|grep -v "^docs/zh/"|grep -v ".md$" | tr '\n' ' ' || :)
-          echo $changed_files_non_doc > ${{ env.WKDIR }}/tmp/$PR_NUMBER_${{ github.run_number }}/docs_changed.txt
+          changed_files_non_doc=$(git --no-pager diff --name-only FETCH_HEAD `git merge-base FETCH_HEAD ${{ env.TARGET_BRANCH }}`|grep -v "^docs/en/"|grep -v "^docs/zh/"|grep -v ".md$" | tr '\n' ' ' || :)
+          echo $changed_files_non_doc > ${{ env.WKDIR }}/tmp/${{ env.PR_NUMBER }}_${{ github.run_number }}/docs_changed.txt
       - name: Check assert testing
         if: ${{ env.IS_TDINTERNAL == 'false' && env.TARGET_BRANCH != '3.1' }}
         run: |
