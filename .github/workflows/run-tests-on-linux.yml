@@ -60,24 +60,27 @@ jobs:
             [[ "${{ inputs.specified_pr_number}}" == 'unavailable' ]]; then
             echo "set from github event"
             echo SOURCE_BRANCH="${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
-            echo TARGET_BRANCH="${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
-            echo PR_NUMBER="${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
+            echo TARGET_BRANCH="${{ github.event.pull_request.base.ref }}" >> $GITHUB_ENV
+            echo PR_NUMBER="${{ github.event.pull_request.number }}" >> $GITHUB_ENV
           else
             echo "set from input"
-            echo SOURCE_BRANCH="${{ inputs.specified_source_branch }}" >> $GITHUB_ENV
-            echo TARGET_BRANCH="${{ inputs.specified_target_branch }}" >> $GITHUB_ENV
-            echo PR_NUMBER="${{ inputs.specified_pr_number }}" >> $GITHUB_ENV
+            echo "SOURCE_BRANCH=${{ inputs.specified_source_branch }}" >> $GITHUB_ENV
+            echo "TARGET_BRANCH=${{ inputs.specified_target_branch }}" >> $GITHUB_ENV
+            echo "PR_NUMBER=${{ inputs.specified_pr_number }}" >> $GITHUB_ENV
           fi
 
           echo "Current step debug:"
           echo "source branch: $SOURCE_BRANCH"
           echo "target branch: $TARGET_BRANCH"
           echo "pr number: $PR_NUMBER"
+
+          echo "Current step debug (GITHUB_ENV content):"
+          cat $GITHUB_ENV
       - name: Verify variables
         run: |
-          echo "source branch: ${{ github.env.SOURCE_BRANCH }}"
-          echo "target branch: ${{ github.env.TARGET_BRANCH }}"
-          echo "pr number: ${{ github.env.PR_NUMBER }}"
+          echo "source branch: ${{ env.SOURCE_BRANCH }}"
+          echo "target branch: ${{ env.TARGET_BRANCH }}"
+          echo "pr number: ${{ env.PR_NUMBER }}"
       - name: Output the environment information
         run: |
           echo "::group::Environment Info"
