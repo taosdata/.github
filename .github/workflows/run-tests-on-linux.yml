@@ -134,7 +134,7 @@ jobs:
           echo "community log merged: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
           cd ${{ env.WK }}
           git pull >/dev/null
-          git log -
+          git log -5
           echo "TDinternal log: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
       - name: Update submodule
         run: |
