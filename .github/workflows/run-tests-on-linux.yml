@@ -77,7 +77,7 @@ jobs:
           echo "Trigger Source from TDinternal: ${{ env.IS_TDINTERNAL }}"
           echo "Workspace: ${{ env.WKDIR }}"
           git --version
-          echo "${{ env.WKDIR }}/restore.sh -p $PR_NUMBER -n ${{ github.run_number }} -c ${{ env.CONTAINER_NAME }}"
+          echo "${{ env.WKDIR }}/restore.sh -p ${{ github.env.PR_NUMBER }} -n ${{ github.run_number }} -c ${{ env.CONTAINER_NAME }}"
           echo "::endgroup::"
 
       - name: Prepare repositories
@@ -106,10 +106,10 @@ jobs:
           cd ${{ env.WK }}
           git pull >/dev/null
           git log -5
-          echo "`date "+%Y%m%d-%H%M%S"` TDinternalTest/$PR_NUMBER:${{ github.run_number }}:$TARGET_BRANCH" >>${{ env.WKDIR }}/jenkins.log
-          echo "CHANGE_BRANCH:$SOURCE_BRANCH" >>${{ env.WKDIR }}/jenkins.log
+          echo "`date "+%Y%m%d-%H%M%S"` TDinternalTest/${{ github.env.PR_NUMBER }}:${{ github.run_number }}:${{ github.env.TARGET_BRANCH }}" >>${{ env.WKDIR }}/jenkins.log
+          echo "CHANGE_BRANCH:${{ github.env.SOURCE_BRANCH }}" >>${{ env.WKDIR }}/jenkins.log
           echo "TDinternal log: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
-          git fetch origin +refs/pull/$PR_NUMBER/merge
+          git fetch origin +refs/pull/${{ github.env.PR_NUMBER }}/merge
           git checkout -qf FETCH_HEAD
           git log -5
           echo "TDinternal log merged: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
@@ -125,10 +125,10 @@ jobs:
           git remote prune origin
           git pull >/dev/null
           git log -5
-          echo "`date "+%Y%m%d-%H%M%S"` TDengineTest/$PR_NUMBER:${{ github.run_number }}:$TARGET_BRANCH" >>${{ env.WKDIR }}/jenkins.log
-          echo "CHANGE_BRANCH:$SOURCE_BRANCH" >>${{ env.WKDIR }}/jenkins.log
+          echo "`date "+%Y%m%d-%H%M%S"` TDengineTest/${{ github.env.PR_NUMBER }}:${{ github.run_number }}:${{ github.env.TARGET_BRANCH }}" >>${{ env.WKDIR }}/jenkins.log
+          echo "CHANGE_BRANCH:${{ github.env.SOURCE_BRANCH }}" >>${{ env.WKDIR }}/jenkins.log
           echo "community log: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
-          git fetch origin +refs/pull/$PR_NUMBER/merge
+          git fetch origin +refs/pull/${{ github.env.PR_NUMBER }}/merge
           git checkout -qf FETCH_HEAD
           git log -5
           echo "community log merged: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
@@ -143,10 +143,10 @@ jobs:
       - name: Output the 'file_no_doc_changed' information to the file
         if: ${{ env.IS_TDINTERNAL == 'false' && github.env.TARGET_BRANCH != '3.1' }}
         run: |
-          mkdir -p ${{ env.WKDIR }}/tmp/$PR_NUMBER_${{ github.run_number }}
+          mkdir -p ${{ env.WKDIR }}/tmp/${{ github.env.PR_NUMBER }}_${{ github.run_number }}
           cd ${{ env.WKC }}
-          changed_files_non_doc=$(git --no-pager diff --name-only FETCH_HEAD `git merge-base FETCH_HEAD $TARGET_BRANCH`|grep -v "^docs/en/"|grep -v "^docs/zh/"|grep -v ".md$" | tr '\n' ' ' || :)
-          echo $changed_files_non_doc > ${{ env.WKDIR }}/tmp/$PR_NUMBER_${{ github.run_number }}/docs_changed.txt
+          changed_files_non_doc=$(git --no-pager diff --name-only FETCH_HEAD `git merge-base FETCH_HEAD ${{ github.env.TARGET_BRANCH }}`|grep -v "^docs/en/"|grep -v "^docs/zh/"|grep -v ".md$" | tr '\n' ' ' || :)
+          echo $changed_files_non_doc > ${{ env.WKDIR }}/tmp/${{ github.env.PR_NUMBER }}_${{ github.run_number }}/docs_changed.txt
       - name: Check assert testing
         if: ${{ env.IS_TDINTERNAL == 'false' && github.env.TARGET_BRANCH != '3.1' }}
         run: |
@@ -191,21 +191,21 @@ jobs:
         if: ${{ env.IS_TDINTERNAL == 'false' && github.env.TARGET_BRANCH != '3.1' }}
         run: |
           cd ${{ env.WKC }}/tests/parallel_test
-          ./run_scan_container.sh -d ${{ env.WKDIR }} -b $PR_NUMBER_${{ github.run_number }} -f ${{ env.WKDIR }}/tmp/$PR_NUMBER_${{ github.run_number }}/docs_changed.txt ${{ steps.get_param.outputs.extra_param }}
+          ./run_scan_container.sh -d ${{ env.WKDIR }} -b ${{ github.env.PR_NUMBER }}_${{ github.run_number }} -f ${{ env.WKDIR }}/tmp/${{ github.env.PR_NUMBER }}_${{ github.run_number }}/docs_changed.txt ${{ steps.get_param.outputs.extra_param }}
       - name: Run tdgpt test cases
         if: ${{ env.IS_TDINTERNAL == 'false' && github.env.TARGET_BRANCH != '3.1' && env.RUN_TDGPT_TEST == 'true' }}
         run: |
           cd ${{ env.WKC }}/tests/parallel_test
           export DEFAULT_RETRY_TIME=2
           date
-          timeout 600 time ./run.sh -e -m /home/m.json -t tdgpt_cases.task -b $PR_NUMBER_${{ github.run_number }} -l ${{ env.WKDIR }}/log -o 300 ${{ steps.get_param.outputs.extra_param }}
+          timeout 600 time ./run.sh -e -m /home/m.json -t tdgpt_cases.task -b ${{ github.env.PR_NUMBER }}_${{ github.run_number }} -l ${{ env.WKDIR }}/log -o 300 ${{ steps.get_param.outputs.extra_param }}
       - name: Run function test cases
         if: ${{ env.RUN_FUNCTION_TEST == 'true'}}
         run: |
           cd ${{ env.WKC }}/tests/parallel_test
           export DEFAULT_RETRY_TIME=2
           date
-          ${{ steps.get_param.outputs.timeout_cmd }} time ./run.sh -e -m /home/m.json -t cases.task -b $PR_NUMBER_${{ github.run_number }} -l ${{ env.WKDIR }}/log -o 1200 ${{ steps.get_param.outputs.extra_param }}
+          ${{ steps.get_param.outputs.timeout_cmd }} time ./run.sh -e -m /home/m.json -t cases.task -b ${{ github.env.PR_NUMBER }}_${{ github.run_number }} -l ${{ env.WKDIR }}/log -o 1200 ${{ steps.get_param.outputs.extra_param }}
       - name: Clearup the running cases
         if: always()
         run: |
