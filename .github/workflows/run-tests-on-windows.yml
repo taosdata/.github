@@ -47,28 +47,28 @@ jobs:
     steps:
       - name: Set envrionment variables based on condition
         run: |
+          REM Trim the blank space
+          set SPECIFIED_SOURCE_BRANCH=%SPECIFIED_SOURCE_BRANCH: =%
+          set SPECIFIED_TARGET_BRANCH=%SPECIFIED_TARGET_BRANCH: =%
+          set SPECIFIED_PR_NUMBER=%SPECIFIED_PR_NUMBER: =%
+          set PR_HEAD_REF=%PR_HEAD_REF: =%
+          set PR_BASE_REF=%PR_BASE_REF: =%
+          set PR_NUMBER=%PR_NUMBER: =%
+
           if "%SPECIFIED_SOURCE_BRANCH%"=="unavailable" (
             if "%SPECIFIED_TARGET_BRANCH%"=="unavailable" (
               if "%SPECIFIED_PR_NUMBER%"=="unavailable" (
-                for /f "tokens=*" %%i in ("%PR_HEAD_REF%") do set SOURCE_BRANCH=%%i
-                for /f "tokens=*" %%i in ("%PR_BASE_REF%") do set TARGET_BRANCH=%%i
-                for /f "tokens=*" %%i in ("%PR_NUMBER%") do set PR_NUMBER=%%i
-                echo SOURCE_BRANCH=%PR_HEAD_REF% >> "%GITHUB_ENV%"
-                echo TARGET_BRANCH=%PR_BASE_REF% >> "%GITHUB_ENV%"
-                echo PR_NUMBER=%PR_NUMBER% >> "%GITHUB_ENV%"
+                echo SOURCE_BRANCH=%PR_HEAD_REF%>>"%GITHUB_ENV%"
+                echo TARGET_BRANCH=%PR_BASE_REF%>>"%GITHUB_ENV%"
+                echo PR_NUMBER=%PR_NUMBER%>>"%GITHUB_ENV%"
               )
             )
           ) else (
-            for /f "tokens=*" %%i in ("%SPECIFIED_SOURCE_BRANCH%") do set SOURCE_BRANCH=%%i
-            for /f "tokens=*" %%i in ("%SPECIFIED_TARGET_BRANCH%") do set TARGET_BRANCH=%%i
-            for /f "tokens=*" %%i in ("%SPECIFIED_PR_NUMBER%") do set PR_NUMBER=%%i
-            echo SOURCE_BRANCH=%SPECIFIED_SOURCE_BRANCH% >> "%GITHUB_ENV%"
-            echo TARGET_BRANCH=%SPECIFIED_TARGET_BRANCH% >> "%GITHUB_ENV%"
-            echo PR_NUMBER=%SPECIFIED_PR_NUMBER% >> "%GITHUB_ENV%"
+            echo SOURCE_BRANCH=%SPECIFIED_SOURCE_BRANCH%>>"%GITHUB_ENV%"
+            echo TARGET_BRANCH=%SPECIFIED_TARGET_BRANCH%>>"%GITHUB_ENV%"
+            echo PR_NUMBER=%SPECIFIED_PR_NUMBER%>>"%GITHUB_ENV%"
           )
-          set "SOURCE_BRANCH=%SOURCE_BRANCH: =%"
-          set "TARGET_BRANCH=%TARGET_BRANCH: =%"
-          set "PR_NUMBER=%PR_NUMBER: =%"
+
           echo "Current step debug (GITHUB_ENV content):"
           type "%GITHUB_ENV%"
         shell: cmd
