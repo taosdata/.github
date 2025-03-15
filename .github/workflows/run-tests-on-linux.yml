@@ -9,17 +9,17 @@ on:
         type: boolean
       specified_source_branch:
         description: 'Enter the source branch name of TDengine'
-        required: true
+        required: false
         default: 'unavailable'
         type: string
       specified_target_branch:
         description: 'Enter the target branch name of TDengine'
-        required: true
+        required: false
         default: 'unavailable'
         type: string
       specified_pr_number:
         description: 'Enter the PR number of TDengine'
-        required: true
+        required: false
         default: 'unavailable'
         type: string
 
