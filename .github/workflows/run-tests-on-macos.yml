@@ -7,6 +7,21 @@ on:
         description: 'Is the PR from TDinternal?'
         required: true
         type: boolean
+      specified_source_branch:
+        description: 'Enter the source branch name of TDengine'
+        required: false
+        default: 'unavailable'
+        type: string
+      specified_target_branch:
+        description: 'Enter the target branch name of TDengine'
+        required: false
+        default: 'unavailable'
+        type: string
+      specified_pr_number:
+        description: 'Enter the PR number of TDengine'
+        required: false
+        default: 'unavailable'
+        type: string
 
 jobs:
   run-tests-on-mac:
@@ -22,11 +37,29 @@ jobs:
       WK: '/var/lib/jenkins/workspace/TDinternal'
       WKC: '/var/lib/jenkins/workspace/TDinternal/community'
       IS_TDINTERNAL: ${{ inputs.tdinternal }}
-      SOURCE_BRANCH: ${{ github.event.pull_request.head.ref }}
-      TARGET_BRANCH: ${{ github.event.pull_request.base.ref }}
-      PR_NUMBER: ${{ github.event.pull_request.number }}
+      SOURCE_BRANCH: ""
+      TARGET_BRANCH: ""
+      PR_NUMBER: ""
 
     steps:
+      - name: Set envrionment variables based on condition
+        run: |
+          if [[ "${{ inputs.specified_source_branch }}" == 'unavailable' ]] && \
+            [[ "${{ inputs.specified_target_branch}}" == 'unavailable' ]] && \
+            [[ "${{ inputs.specified_pr_number}}" == 'unavailable' ]]; then
+            echo "set from github event"
+            echo SOURCE_BRANCH="${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
+            echo TARGET_BRANCH="${{ github.event.pull_request.base.ref }}" >> $GITHUB_ENV
+            echo PR_NUMBER="${{ github.event.pull_request.number }}" >> $GITHUB_ENV
+          else
+            echo "set from input"
+            echo "SOURCE_BRANCH=${{ inputs.specified_source_branch }}" >> $GITHUB_ENV
+            echo "TARGET_BRANCH=${{ inputs.specified_target_branch }}" >> $GITHUB_ENV
+            echo "PR_NUMBER=${{ inputs.specified_pr_number }}" >> $GITHUB_ENV
+          fi
+
+          echo "Current step debug (GITHUB_ENV content):"
+          cat $GITHUB_ENV
       - name: Output the environment information
         run: |
           echo "::group::Environment Info"
@@ -50,8 +83,14 @@ jobs:
             git fetch
             git checkout "$2"
           }
-          prepare_environment "${{ env.WK }}" "${{ env.TARGET_BRANCH }}"
-          prepare_environment "${{ env.WKC }}" "${{ env.TARGET_BRANCH }}"
+          if [[ "${{ inputs.specified_source_branch }}" == 'unavailable' ]] && \
+            [[ "${{ inputs.specified_target_branch}}" == 'unavailable' ]] && \
+            [[ "${{ inputs.specified_pr_number}}" == 'unavailable' ]]; then
+             prepare_environment "${{ env.WK }}" $TARGET_BRANCH
+          else
+            prepare_environment "${{ env.WK }}" $SOURCE_BRANCH
+          fi
+          prepare_environment "${{ env.WKC }}" $TARGET_BRANCH
       - name: Get latest codes and logs for TDinternal PR
         if: ${{ env.IS_TDINTERNAL == 'true' }}
         run: |

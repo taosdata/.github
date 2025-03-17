@@ -7,6 +7,21 @@ on:
         description: 'Is the PR from TDinternal?'
         required: true
         type: boolean
+      specified_source_branch:
+        description: 'Enter the source branch name of TDengine'
+        required: false
+        default: 'unavailable'
+        type: string
+      specified_target_branch:
+        description: 'Enter the target branch name of TDengine'
+        required: false
+        default: 'unavailable'
+        type: string
+      specified_pr_number:
+        description: 'Enter the PR number of TDengine'
+        required: false
+        default: 'unavailable'
+        type: string
 
 jobs:
   run-tests-on-windows:
@@ -23,11 +38,41 @@ jobs:
       WIN_VS_PATH: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat"
       WIN_CPU_TYPE: "x64"
       IS_TDINTERNAL: ${{ inputs.tdinternal }}
-      SOURCE_BRANCH: ${{ github.event.pull_request.head.ref }}
-      TARGET_BRANCH: ${{ github.event.pull_request.base.ref }}
+      SPECIFIED_SOURCE_BRANCH: ${{ github.event.inputs.specified_source_branch }}
+      SPECIFIED_TARGET_BRANCH: ${{ github.event.inputs.specified_target_branch }}
+      SPECIFIED_PR_NUMBER: ${{ github.event.inputs.specified_pr_number }}
+      PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+      PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
       PR_NUMBER: ${{ github.event.pull_request.number }}
 
     steps:
+      - name: Set envrionment variables based on condition
+        run: |
+          REM Trim the blank space
+          set SPECIFIED_SOURCE_BRANCH=%SPECIFIED_SOURCE_BRANCH: =%
+          set SPECIFIED_TARGET_BRANCH=%SPECIFIED_TARGET_BRANCH: =%
+          set SPECIFIED_PR_NUMBER=%SPECIFIED_PR_NUMBER: =%
+          set PR_HEAD_REF=%PR_HEAD_REF: =%
+          set PR_BASE_REF=%PR_BASE_REF: =%
+          set PR_NUMBER=%PR_NUMBER: =%
+
+          if "%SPECIFIED_SOURCE_BRANCH%"=="unavailable" (
+            if "%SPECIFIED_TARGET_BRANCH%"=="unavailable" (
+              if "%SPECIFIED_PR_NUMBER%"=="unavailable" (
+                echo SOURCE_BRANCH=%PR_HEAD_REF%>>"%GITHUB_ENV%"
+                echo TARGET_BRANCH=%PR_BASE_REF%>>"%GITHUB_ENV%"
+                echo PR_NUMBER=%PR_NUMBER%>>"%GITHUB_ENV%"
+              )
+            )
+          ) else (
+            echo SOURCE_BRANCH=%SPECIFIED_SOURCE_BRANCH%>>"%GITHUB_ENV%"
+            echo TARGET_BRANCH=%SPECIFIED_TARGET_BRANCH%>>"%GITHUB_ENV%"
+            echo PR_NUMBER=%SPECIFIED_PR_NUMBER%>>"%GITHUB_ENV%"
+          )
+
+          echo "Current step debug (GITHUB_ENV content):"
+          type "%GITHUB_ENV%"
+        shell: cmd
       - name: Output the environment information
         run: |
           hostname
@@ -49,7 +94,15 @@ jobs:
             git clean -f
             git remote prune origin
             git fetch
-            git checkout "%TARGET_BRANCH%"
+            if "%SPECIFIED_SOURCE_BRANCH%"=="unavailable" (
+              if "%SPECIFIED_TARGET_BRANCH%"=="unavailable" (
+                if "%SPECIFIED_PR_NUMBER%"=="unavailable" (
+                  git checkout "%TARGET_BRANCH%"
+                )
+              )
+            ) else (
+              git checkout "%SOURCE_BRANCH%"
+            )
           ) else (
             echo Directory does not exist: "%WIN_INTERNAL_ROOT%"
             exit 1
