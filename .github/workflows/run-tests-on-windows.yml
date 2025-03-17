@@ -38,12 +38,12 @@ jobs:
       WIN_VS_PATH: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat"
       WIN_CPU_TYPE: "x64"
       IS_TDINTERNAL: ${{ inputs.tdinternal }}
-      SPECIFIED_SOURCE_BRANCH: ${{ github.event.inputs.specified_source_branch }}
-      SPECIFIED_TARGET_BRANCH: ${{ github.event.inputs.specified_target_branch }}
-      SPECIFIED_PR_NUMBER: ${{ github.event.inputs.specified_pr_number }}
+      SPECIFIED_SOURCE_BRANCH: ${{ inputs.specified_source_branch }}
+      SPECIFIED_TARGET_BRANCH: ${{ inputs.specified_target_branch }}
+      SPECIFIED_PR_NUMBER: ${{ inputs.specified_pr_number }}
       PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
       PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
-      PR_NUMBER: ${{ github.event.pull_request.number }}
+      PR_NUMBER_PULL: ${{ github.event.pull_request.number }}
 
     steps:
       - name: Set envrionment variables based on condition
@@ -54,14 +54,14 @@ jobs:
           set SPECIFIED_PR_NUMBER=%SPECIFIED_PR_NUMBER: =%
           set PR_HEAD_REF=%PR_HEAD_REF: =%
           set PR_BASE_REF=%PR_BASE_REF: =%
-          set PR_NUMBER=%PR_NUMBER: =%
+          set PR_NUMBER=%PR_NUMBER_PULL: =%
 
           if "%SPECIFIED_SOURCE_BRANCH%"=="unavailable" (
             if "%SPECIFIED_TARGET_BRANCH%"=="unavailable" (
               if "%SPECIFIED_PR_NUMBER%"=="unavailable" (
                 echo SOURCE_BRANCH=%PR_HEAD_REF%>>"%GITHUB_ENV%"
                 echo TARGET_BRANCH=%PR_BASE_REF%>>"%GITHUB_ENV%"
-                echo PR_NUMBER=%PR_NUMBER%>>"%GITHUB_ENV%"
+                echo PR_NUMBER=%PR_NUMBER_PULL%>>"%GITHUB_ENV%"
               )
             )
           ) else (
