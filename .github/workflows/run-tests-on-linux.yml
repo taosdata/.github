@@ -99,7 +99,7 @@ jobs:
           cd ${{ env.WK }}
           git pull >/dev/null
           git log -5
-          echo "`date "+%Y%m%d-%H%M%S"` TDinternalTest/${{ env.PR_NUMBER }}:${{ github.run_number }}:${{ env.TARGET_BRANCH }}" >>${{ env.WKDIR }}/jenkins.log
+          echo "`date "+%Y%m%d-%H%M%S"` TDinternalCI/PR-${{ env.PR_NUMBER }}:${{ github.run_number }}:${{ env.TARGET_BRANCH }}" >>${{ env.WKDIR }}/jenkins.log
           echo "CHANGE_BRANCH:${{ env.SOURCE_BRANCH }}" >>${{ env.WKDIR }}/jenkins.log
           echo "TDinternal log: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
           git fetch origin +refs/pull/${{ env.PR_NUMBER }}/merge
@@ -118,7 +118,7 @@ jobs:
           git remote prune origin
           git pull >/dev/null
           git log -5
-          echo "`date "+%Y%m%d-%H%M%S"` TDengineTest/${{ env.PR_NUMBER }}:${{ github.run_number }}:${{ env.TARGET_BRANCH }}" >>${{ env.WKDIR }}/jenkins.log
+          echo "`date "+%Y%m%d-%H%M%S"` TDengineTest/PR-${{ env.PR_NUMBER }}:${{ github.run_number }}:${{ env.TARGET_BRANCH }}" >>${{ env.WKDIR }}/jenkins.log
           echo "CHANGE_BRANCH:${{ env.SOURCE_BRANCH }}" >>${{ env.WKDIR }}/jenkins.log
           echo "community log: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
           git fetch origin +refs/pull/${{ env.PR_NUMBER }}/merge
