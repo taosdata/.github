@@ -194,59 +194,13 @@ jobs:
           export DEFAULT_RETRY_TIME=2
           date
           ${{ steps.get_param.outputs.timeout_cmd }} time ./run.sh -e -m /home/m.json -t cases.task -b PR-${{ env.PR_NUMBER }}_${{ github.run_number }} -l ${{ env.WKDIR }}/log -o 1200 ${{ steps.get_param.outputs.extra_param }}
-      
-      # - name: Install coverage tools
-      #   run: |
-      #       # 安装 lcov 和 gcov(适用于 C/C++)
-      #       apt-get update && apt-get install -y lcov gcov
-      #       # 如果是 Python 项目，安装 coverage.py
-      #       pip install coverage
-      
-      # - name: Run tests with coverage collection
-      #   run: |
-      #         # C/C++ 示例(使用 gcov 生成覆盖率数据)
-      #         make clean
-      #         make test COVERAGE=1
-    
-      #         # Python 示例(使用 coverage.py)
-      #         # coverage run --source=src/ tests/run_tests.py
-    
-      #         # 通用 lcov 处理(自动收集 .gcda 文件)
-      #         lcov --capture --directory=${{ env.WKC }}/tests/parallel_test --output-file=${{ env.LCOV_OUTPUT }}
 
-      # - name: Merge coverage data from multiple cases
-      #   run: |
-      #           # 如果有多个测试用例，合并覆盖率数据
-      #           # 示例：假设有 test1.lcov 和 test2.lcov
-      #           lcov --add-tracefile=test1.lcov --output-file=merged.lcov
-      #           lcov --add-tracefile=test2.lcov --output-file=merged.lcov
-      #           mv merged.lcov ${{ env.LCOV_OUTPUT }}
       
-      # - name: Generate coverage reports
-      #   run: |
-      #           # 生成 HTML 报告
-      #           lcov --html --output-directory=${{ env.COVERAGE_DIR }} ${{ env.LCOV_OUTPUT }}
-                
-      #           # 生成文本摘要
-      #           lcov --summary --output-file=${{ env.COVERAGESUMmary_FILE }} ${{ env.LCOV_OUTPUT }}
-      
-      #           # 可选：生成 XML 报告(用于 SonarQube 等工具)
-      #           lcov --xml --output-file=${{ env.WKDIR }}/coverage.xml ${{ env.LCOV_OUTPUT }}
-      
-      # - name: Upload coverage to artifacts
-      #   uses: actions/upload-artifact@v3
-      #   with:
-      #           name: coverage-reports
-      #           path: ${{ env.COVERAGE_DIR }}
-      
-      # - name: Run coverage summary
-      #   run: |
-      #           # 检查覆盖率阈值(示例：要求总覆盖率 ≥80%)
-      #           total_coverage=$(grep "TOTAL" ${{ env.COVERAGESUMmary_FILE }} | awk '{print $3}')
-      #           if [ "$total_coverage" -lt 80 ]; then
-      #             echo "Coverage < 80%: $total_coverage%"
-      #             exit 1
-      #           fi
+      - name: Run taosd && taosc coverage 
+        run: |
+            cd ${{ env.WKC }}/tests/parallel_test
+            date
+            ./run_coverage_container.sh -b ${{ env.SOURCE_BRANCH }}
 
       - name: Clearup the running cases
         if: always()
