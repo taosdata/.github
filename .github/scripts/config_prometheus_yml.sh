@@ -8,7 +8,7 @@ config_prometheus_yaml() {
     mkdir -p "$(dirname "$yml_file_path")"
     # Reset the Prometheus YAML file
     echo "scrape_configs:" > "$yml_file_path"
-    echo "  - job_name: 'prometheus_monitor'" >> "$yml_file_path"
+    echo "  - job_name: 'fractal_monitor'" >> "$yml_file_path"
     echo "    file_sd_configs:" >> "$yml_file_path"
     echo "      - files:" >> "$yml_file_path"
     echo "        - 'targets.json'" >> "$yml_file_path"
@@ -30,13 +30,13 @@ config_prometheus_yaml() {
     # Process node exporter hosts
     IFS=',' read -r -a NODE_HOSTS <<< "$node_exporter_hosts"
     for HOST in "${NODE_HOSTS[@]}"; do
-        TARGETS+=("{\"targets\": [\"$HOST:9100\"], \"labels\": {\"instance\": \"${HOST}\"}}")
+        TARGETS+=("{\"targets\": [\"$HOST:9100\"], \"labels\": {\"instance\": \"${HOST}-node\"}}")
     done
 
     # Process process exporter hosts
     IFS=',' read -r -a PROCESS_HOSTS <<< "$process_exporter_hosts"
     for HOST in "${PROCESS_HOSTS[@]}"; do
-        TARGETS+=("{\"targets\": [\"$HOST:9256\"], \"labels\": {\"instance\": \"${HOST}\"}}")
+        TARGETS+=("{\"targets\": [\"$HOST:9256\"], \"labels\": {\"instance\": \"${HOST}-process\"}}")
     done
 
     # Create targets.json

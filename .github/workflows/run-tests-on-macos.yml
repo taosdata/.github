@@ -1,0 +1,146 @@
+name: Run tests on macOS
+
+on:
+  workflow_call:
+    inputs:
+      tdinternal:
+        description: 'Is the PR from TDinternal?'
+        required: true
+        type: boolean
+      specified_source_branch:
+        description: 'Enter the source branch name of TDengine'
+        required: false
+        default: 'unavailable'
+        type: string
+      specified_target_branch:
+        description: 'Enter the target branch name of TDengine'
+        required: false
+        default: 'unavailable'
+        type: string
+      specified_pr_number:
+        description: 'Enter the PR number of TDengine'
+        required: false
+        default: 'unavailable'
+        type: string
+
+jobs:
+  run-tests-on-mac:
+    runs-on: 
+      group: CI
+      labels: [self-hosted, macOS, testing]
+
+    timeout-minutes: 60
+
+    env:
+      CONTAINER_NAME: 'taosd-test'
+      WKDIR: '/var/lib/jenkins/workspace'
+      WK: '/var/lib/jenkins/workspace/TDinternal'
+      WKC: '/var/lib/jenkins/workspace/TDinternal/community'
+      IS_TDINTERNAL: ${{ inputs.tdinternal }}
+      SOURCE_BRANCH: ""
+      TARGET_BRANCH: ""
+      PR_NUMBER: ""
+
+    steps:
+      - name: Set envrionment variables based on condition
+        run: |
+          if [[ "${{ inputs.specified_source_branch }}" == 'unavailable' ]] && \
+            [[ "${{ inputs.specified_target_branch}}" == 'unavailable' ]] && \
+            [[ "${{ inputs.specified_pr_number}}" == 'unavailable' ]]; then
+            echo "set from github event"
+            echo SOURCE_BRANCH="${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
+            echo TARGET_BRANCH="${{ github.event.pull_request.base.ref }}" >> $GITHUB_ENV
+            echo PR_NUMBER="${{ github.event.pull_request.number }}" >> $GITHUB_ENV
+          else
+            echo "set from input"
+            echo "SOURCE_BRANCH=${{ inputs.specified_source_branch }}" >> $GITHUB_ENV
+            echo "TARGET_BRANCH=${{ inputs.specified_target_branch }}" >> $GITHUB_ENV
+            echo "PR_NUMBER=${{ inputs.specified_pr_number }}" >> $GITHUB_ENV
+          fi
+
+          echo "Current step debug (GITHUB_ENV content):"
+          cat $GITHUB_ENV
+      - name: Output the environment information
+        run: |
+          echo "::group::Environment Info"
+          date
+          hostname
+          env
+          echo "Runner: ${{ runner.name }}"
+          echo "Trigger Source from TDinternal: ${{ env.IS_TDINTERNAL }}"
+          echo "Workspace: ${{ env.WKDIR }}"
+          git --version
+          echo "${{ env.WKDIR }}/restore.sh -p ${{ env.PR_NUMBER }} -n ${{ github.run_number }} -c ${{ env.CONTAINER_NAME }}"
+          echo "::endgroup::"
+      - name: Prepare repositories
+        run: |
+          set -euo pipefail
+          prepare_environment() {
+            cd "$1"
+            git reset --hard
+            git clean -f
+            git remote prune origin
+            git fetch
+            git checkout "$2"
+          }
+          if [[ "${{ inputs.specified_source_branch }}" == 'unavailable' ]] && \
+            [[ "${{ inputs.specified_target_branch}}" == 'unavailable' ]] && \
+            [[ "${{ inputs.specified_pr_number}}" == 'unavailable' ]]; then
+             prepare_environment "${{ env.WK }}" $TARGET_BRANCH
+          else
+            prepare_environment "${{ env.WK }}" $SOURCE_BRANCH
+          fi
+          prepare_environment "${{ env.WKC }}" $TARGET_BRANCH
+      - name: Get latest codes and logs for TDinternal PR
+        if: ${{ env.IS_TDINTERNAL == 'true' }}
+        run: |
+          cd ${{ env.WK }}
+          git pull >/dev/null
+          git log -5
+          echo "`date "+%Y%m%d-%H%M%S"` TDinternalTest/${{ env.PR_NUMBER }}:${{ github.run_number }}:${{ env.TARGET_BRANCH }}" >>${{ env.WKDIR }}/jenkins.log
+          echo "CHANGE_BRANCH:${{ env.SOURCE_BRANCH }}" >>${{ env.WKDIR }}/jenkins.log
+          echo "TDinternal log: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
+          git fetch origin +refs/pull/${{ env.PR_NUMBER }}/merge
+          git checkout -qf FETCH_HEAD
+          git log -5
+          echo "TDinternal log merged: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
+          cd ${{ env.WKC }}
+          git remote prune origin
+          git pull >/dev/null
+          git log -5
+          echo "community log: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
+      - name: Get latest codes and logs for TDengine PR
+        if: ${{ env.IS_TDINTERNAL == 'false' }}
+        run: |
+          cd ${{ env.WKC }}
+          git remote prune origin
+          git pull >/dev/null
+          git log -5
+          echo "`date "+%Y%m%d-%H%M%S"` TDengineTest/${{ env.PR_NUMBER }}:${{ github.run_number }}:${{ env.TARGET_BRANCH }}" >>${{ env.WKDIR }}/jenkins.log
+          echo "CHANGE_BRANCH:${{ env.SOURCE_BRANCH }}" >>${{ env.WKDIR }}/jenkins.log
+          echo "community log: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
+          git fetch origin +refs/pull/${{ env.PR_NUMBER }}/merge
+          git checkout -qf FETCH_HEAD
+          git log -5
+          echo "community log merged: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
+          cd ${{ env.WK }}
+          git pull >/dev/null
+          git log -5
+          echo "TDinternal log: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
+      - name: Update submodule
+        run: |
+          cd ${{ env.WKC }}
+          git submodule update --init --recursive
+      - name: Run tests
+        run: |
+          date
+          cd ${{ env.WK }}
+          rm -rf debug
+          mkdir debug
+          cd ${{ env.WK }}/debug
+          echo $PATH
+          echo "PATH=/opt/homebrew/bin:$PATH" >> $GITHUB_ENV
+          cmake .. -DBUILD_TEST=true -DBUILD_HTTPS=false  -DCMAKE_BUILD_TYPE=Release
+          make -j10
+          ctest -j10 || exit 7
+          date
