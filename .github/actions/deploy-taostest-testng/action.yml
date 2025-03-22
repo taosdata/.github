@@ -4,11 +4,17 @@ description: Deploy taostest and TestNG
 inputs:
   taostest-dir:
     description: 'Parent directory for taos-test-framework repository'
+  taostest-dir:
+    description: 'Parent directory for taos-test-framework repository'
     required: true
     default: '$RUNNER_WORKSPACE/../taos-test-framework'
   testng-dir:
     description: 'Parent directory for the TestNG repository'
+    default: '$RUNNER_WORKSPACE/../taos-test-framework'
+  testng-dir:
+    description: 'Parent directory for the TestNG repository'
     required: true
+    default: '$RUNNER_WORKSPACE/../TestNG'
     default: '$RUNNER_WORKSPACE/../TestNG'
 
 runs:
@@ -25,7 +31,11 @@ runs:
     - name: Deploy taostest and TestNG
       shell: bash
       id: deploy-taostest-testng
+      id: deploy-taostest-testng
       run: |
+        TEST_ROOT=${{ inputs.testng-dir }}
+        echo "TEST_ROOT=$TEST_ROOT" >> $GITHUB_ENV
+        cd ${{ inputs.taostest-dir }}
         TEST_ROOT=${{ inputs.testng-dir }}
         echo "TEST_ROOT=$TEST_ROOT" >> $GITHUB_ENV
         cd ${{ inputs.taostest-dir }}
@@ -33,6 +43,8 @@ runs:
         ENV_FILE=~/.taostest/.env
         mkdir -p ~/.taostest
         touch $ENV_FILE
+        echo "TEST_ROOT=$TEST_ROOT" > $ENV_FILE
+        echo "TAOSTEST_SQL_RECORDING_ENABLED=True" >> $ENV_FILE
         echo "TEST_ROOT=$TEST_ROOT" > $ENV_FILE
         echo "TAOSTEST_SQL_RECORDING_ENABLED=True" >> $ENV_FILE
 
