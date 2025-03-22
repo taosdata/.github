@@ -71,7 +71,7 @@ length=${#single_dnode_shell_array[@]}
 for ((i=0; i<length; i++)); do
     edge=${single_dnode_shell_array[$i]}
     mqtt=${mqtt_shell_array[$i]}
-    cat <<EOF > "$TEST_ROOT/env/fractal-edge-$((i+1)).json"
+    cat <<EOF > "$TEST_ROOT/env/ems-edge-$((i+1)).json"
 {
     "taosd": {
         "fqdn": ["$edge"],
@@ -101,7 +101,7 @@ done
 cluster_fqdn=$(printf ',"%s"' "${cluster_dnode_shell_array[@]}")
 cluster_fqdn="[${cluster_fqdn:1}]"
 
-cat <<EOF > "$TEST_ROOT/env/fractal-center.json"
+cat <<EOF > "$TEST_ROOT/env/ems-center.json"
 {
     "taosd": {
         "fqdn": ${cluster_fqdn},
@@ -122,7 +122,7 @@ cat <<EOF > "$TEST_ROOT/env/fractal-center.json"
 }
 EOF
 
-cat <<EOF > "$TEST_ROOT/env/fractal-query.json"
+cat <<EOF > "$TEST_ROOT/env/ems-query.json"
 {
     "taosd": {
         "fqdn": ["${cluster_dnode_shell_array[0]}"],
