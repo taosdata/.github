@@ -197,6 +197,6 @@ jobs:
           time /t
           cd %WIN_SYSTEM_TEST_ROOT%
           echo "testing ..."
-          test-all.bat ci
+          python3 test-win.py ci
           time /t
         shell: cmd
