@@ -1,4 +1,6 @@
-name: Run taosc & taosd coverage tests on Linux
+# Reusable Workflow for taosd & taosc coverage test
+
+name: TDengine Coverage (taosd & taosc)
 
 on:
   workflow_call:
