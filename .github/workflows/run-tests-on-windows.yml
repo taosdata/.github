@@ -189,6 +189,7 @@ jobs:
           echo "windows ctest ..."
           time /t
           cd %WIN_INTERNAL_ROOT%\\debug
+          ctest -j 1 || exit 7
           time /t
         shell: cmd
       - name: Run function test
