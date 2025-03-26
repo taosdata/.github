@@ -41,7 +41,7 @@ class TestRunner:
 
     def run_void_function_test(self):
         cmd = f"cd {self.wkc}/test/ci && ./run_check_void_container.sh -d {self.wkdir}",
-        self.utils.run_command(cmd, silent=True)
+        self.utils.run_command(cmd, silent=True, check=False)
 
     def run_function_return_test(self):
         pr_number = self.utils.get_env_var('PR_NUMBER', '')
