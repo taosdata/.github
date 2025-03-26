@@ -8,6 +8,7 @@ class TestPreparer:
     def __init__(self):
         self.utils = Utils()
         # initialize paths and platform from arguments
+        self.container_name = self.utils.get_env_var('CONTAINER_NAME', 'taosd-test')
         self.wkdir = Path(os.getenv('WKDIR', '/var/lib/jenkins/workspace'))
         self.platform = platform.system().lower()
         print(self.utils.get_env_var('IS_TDINTERNAL'))
@@ -114,7 +115,7 @@ class TestPreparer:
         cmds = [
             f"cd { repo_path } && git pull >/dev/null",
             f"cd { repo_path } && git log -5",
-            f'''echo `date "+%Y%m%d-%H%M%S"` {repo_name}Test/{self.pr_number}:{self.run_number}:{self.target_branch} >> {self.wkdir}/jenkins.log''',
+            f'''echo `date "+%Y%m%d-%H%M%S"` {repo_name}Test/PR-{self.pr_number}:{self.run_number}:{self.target_branch} >> {self.wkdir}/jenkins.log''',
             f"cd { repo_path } && echo CHANGE_BRANCH:{self.source_branch} >> {self.wkdir}/jenkins.log",
             f"cd { repo_path } && echo {repo_name} log: `git log -5` >> {self.wkdir}/jenkins.log",
             f"cd { repo_path } && git fetch origin +refs/pull/{pr_number}/merge",
@@ -135,11 +136,16 @@ class TestPreparer:
         ]
         self.utils.run_commands(cmds)
 
+    def output_environment_info(self):
+        cmd = f"echo {self.wkdir}/restore.sh -p PR-{self.pr_number} -n {self.run_number} -c {self.container_name}"
+        self.utils.run_command(cmd)
+
     def run(self):
         """Execute preparation steps"""
         print("Starting preparation phase...")
         try:
             # update scripts of .github repository
+            self.output_environment_info()
             self.update_github_repo()
             self.prepare_repositories()
             print("Preparation phase completed successfully.")
