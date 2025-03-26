@@ -1,3 +1,4 @@
+import os
 import platform
 from utils import Utils
 
@@ -6,8 +7,8 @@ class TestBuild:
         self.utils = Utils()
         self.workdir = self.utils.get_env_var('WKDIR', False)
         self.build_type = self.utils.get_env_var('BUILD_TYPE', 'repo')
-        self.wk = self.workdir / 'TDinternal'
-        self.wkc = self.wk / 'community'
+        self.wk = self.utils.path(os.path.join(self.workdir, 'TDinternal'))
+        self.wkc = self.utils.path(os.path.join(self.wk, 'community'))
         self.platform = platform.system().lower()
 
         self.ZH_DOC_REPO = 'docs.taosdata.com'

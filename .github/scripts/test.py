@@ -9,8 +9,8 @@ class TestRunner:
         self.utils = Utils()
         self.wkdir = Path(os.getenv('WKDIR', '/var/lib/jenkins/workspace'))
         self.test_type = os.getenv('TEST_TYPE', '')
-        self.wk = self.workdir / 'TDinternal'
-        self.wkc = self.wk / 'community'
+        self.wk = self.utils.path(os.path.join(self.wkdir, 'TDinternal'))
+        self.wkc = self.utils.path(os.path.join(self.wk, 'community'))
         self.platform = platform.system().lower()
 
     def get_testing_params(self):
