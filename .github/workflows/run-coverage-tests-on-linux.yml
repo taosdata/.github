@@ -18,7 +18,7 @@ jobs:
   run-tests-coverage-on-linux:
     runs-on: 
       group: CI
-      labels: [self-hosted, Linux, X64, testing]
+      labels: [self-hosted, Linux, X64, coverage]
     
     timeout-minutes: 300
 
