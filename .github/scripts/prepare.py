@@ -89,9 +89,11 @@ class TestPreparer:
 
     def update_codes(self):
         if self.enterprise:
+            print("Updating codes for TDinternal...")
             self._update_lastest_merge_from_pr(self.wk, self.pr_number)
             self._update_latest_from_target_branch(self.wkc)
         else:
+            print("Updating codes for community...")
             self._update_lastest_merge_from_pr(self.wkc, self.pr_number)
             self._update_latest_from_target_branch(self.wk)
 
