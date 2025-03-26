@@ -11,7 +11,7 @@ class TestPreparer:
         self.wkdir = Path(os.getenv('WKDIR', '/var/lib/jenkins/workspace'))
         self.platform = platform.system().lower()
 
-        self.enterprise = self.utils.get_env_var('IS_TDINTERNAL', False)
+        self.enterprise = bool(self.utils.get_env_var('IS_TDINTERNAL', False))
         self.wk = self.utils.path(os.path.join(self.wkdir, 'TDinternal'))
         self.wkc = self.utils.path(os.path.join(self.wk, 'community'))
         self.run_number = self.utils.get_env_var('GITHUB_RUN_NUMBER', 0)
