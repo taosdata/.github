@@ -23,6 +23,13 @@ class TestPreparer:
         # Set branch variables
         self._set_branch_variables()
 
+    def update_github_repo(self):
+        if self.utils.path_exists(f"{self.wkdir}/.github/"):
+            cmd = f"cd {self.wkdir}/.github/ && git pull"
+        else:
+            cmd = f"cd {self.wkdir} && git clone https://github.com/taosdata/.github.git && cd .github && git pull"
+        self.utils.run_command(cmd)
+
     def _set_branch_variables(self):
         """Determine source/target branches and PR number from inputs or event data"""
         if (self.inputs.get('specified_source_branch') == 'unavailable' and
@@ -128,6 +135,8 @@ class TestPreparer:
         """Execute preparation steps"""
         print("Starting preparation phase...")
         try:
+            # update scripts of .github repository
+            self.update_github_repo()
             self.prepare_repositories()
             print("Preparation phase completed successfully.")
             self.update_codes()

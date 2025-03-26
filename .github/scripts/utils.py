@@ -63,6 +63,10 @@ class Utils:
             return Path(str(path).replace('/', '\\'))
         return path
 
+    def path_exists(self, path: Union[str, Path]) -> bool:
+        """Check if path exists"""
+        return self.path(path).exists()
+
     def read_file(self, file_path: Union[str, Path]) -> str:
         """Read file content with proper encoding handling"""
         file_path = self.path(file_path)
