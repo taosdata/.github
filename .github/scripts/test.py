@@ -63,7 +63,7 @@ class TestRunner:
             self.run_assert_test()
         elif self.test_type == 'void':
             self.run_void_function_test()
-        elif self.test_type == 'function_return':
+        elif self.test_type == 'function_returns':
             self.get_testing_params()
             self.run_function_return_test()
         elif self.test_type == 'function':
