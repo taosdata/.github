@@ -26,14 +26,14 @@ class TestRunner:
                 timeout_param = log_server_data.get("timeout")
                 if timeout_param and timeout_param != 0:
                     timeout_cmd = f"timeout {timeout_param}"
-                if log_server_enabled == "1":
+                if log_server_enabled == 1:
                     log_server = log_server_data.get("server")
                     if log_server:
                         extra_param = f"-w {log_server}"
         else:
             print("log_server.json file not found")
-        self.utils.set_env_var("timeout_cmd", timeout_cmd, os.getenv('GITHUB_ENV', ''))
-        self.utils.set_env_var("extra_param", extra_param, os.getenv('GITHUB_ENV', ''))
+        self.utils.set_env_var("timeout_cmd", timeout_cmd)
+        self.utils.set_env_var("extra_param", extra_param)
 
     def run_assert_test(self):
         cmd = f"cd {self.wkc}/test/ci && ./run_check_assert_container.sh -d {self.wkdir}",
@@ -59,20 +59,19 @@ class TestRunner:
         self.utils.run_commands(cmds)
 
     def run(self):
+        self.get_testing_params()
         if self.test_type == 'assert':
             self.run_assert_test()
         elif self.test_type == 'void':
             self.run_void_function_test()
         elif self.test_type == 'function_returns':
-            self.get_testing_params()
             self.run_function_return_test()
         elif self.test_type == 'function':
-            self.get_testing_params()
             self.run_function_test()
             if self.platform == 'linux':
                 self.cleanup()
         else:
-            print("Invalid test type")
+            raise Exception("Invalid test type")
 
     def cleanup(self):
         """Clean up any remaining test processes"""
