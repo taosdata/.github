@@ -88,6 +88,7 @@ class TestPreparer:
         self.utils.run_commands(cmds)
 
     def update_codes(self):
+        print("is enterprise: ", self.enterprise)
         if self.enterprise:
             print("Updating codes for TDinternal...")
             self._update_lastest_merge_from_pr(self.wk, self.pr_number)
