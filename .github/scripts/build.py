@@ -1,5 +1,5 @@
 import platform
-from .utils import Utils
+from utils import Utils
 
 class TestBuild:
     def __init__(self):

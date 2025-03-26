@@ -1,8 +1,7 @@
 import os
 import json
-import argparse
 import platform
-from .utils import Utils
+from utils import Utils
 from pathlib import Path
 
 class TestPreparer:

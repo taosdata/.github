@@ -2,7 +2,7 @@ import os
 import platform
 import json
 from pathlib import Path
-from .utils import Utils
+from utils import Utils
 
 class TestRunner:
     def __init__(self):
