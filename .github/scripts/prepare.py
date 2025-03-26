@@ -110,7 +110,7 @@ class TestPreparer:
 
     def _update_lastest_merge_from_pr(self, repo_path, pr_number):
         """Update latest codes and merge from PR"""
-        repo_name = 'TDinternal' if 'TDinternal' in repo_path else 'TDengine'
+        repo_name = 'TDinternal' if 'TDinternal' in str(repo_path) else 'TDengine'
         cmds = [
             f"cd { repo_path } && git pull >/dev/null",
             f"cd { repo_path } && git log -5",
