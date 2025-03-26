@@ -12,8 +12,8 @@ class TestPreparer:
         self.platform = platform.system().lower()
 
         self.enterprise = self.utils.get_env_var('IS_TDINTERNAL', False)
-        self.wk = self.wkdir / 'TDinternal'
-        self.wkc = self.wk / 'community'
+        self.wk = self.utils.path(os.path.join(self.wkdir, 'TDinternal'))
+        self.wkc = self.utils.path(os.path.join(self.wk, 'community'))
         self.run_number = self.utils.get_env_var('GITHUB_RUN_NUMBER', 0)
 
         # Load GitHub context data
