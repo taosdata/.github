@@ -103,7 +103,7 @@ class TestPreparer:
         cmds = [
             f"cd {repo_path} && git remote prune origin",
             f"cd {repo_path} && git pull > /dev/null",
-            f"cd {repo_path} && git log -5"
+            f"cd {repo_path} && git log -5",
             f"cd {repo_path} && echo 'community log: `git log -5`' >> {repo_path}/jenkins.log"
         ]
         self.utils.run_commands(cmds)
