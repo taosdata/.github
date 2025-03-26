@@ -36,25 +36,19 @@ class TestRunner:
         self.utils.set_env_var("extra_param", extra_param, os.getenv('GITHUB_ENV', ''))
 
     def run_assert_test(self):
-        cmds = [
-            f"cd {self.wkc}/test/ci && ./run_check_assert_container.sh -d {self.wkdir}",
-        ]
-        self.utils.run_commands(cmds)
+        cmd = f"cd {self.wkc}/test/ci && ./run_check_assert_container.sh -d {self.wkdir}",
+        self.utils.run_command(cmd, silent=True)
 
     def run_void_function_test(self):
-        cmds = [
-            f"cd {self.wkc}/test/ci && ./run_check_void_container.sh -d {self.wkdir}",
-        ]
-        self.utils.run_commands(cmds)
+        cmd = f"cd {self.wkc}/test/ci && ./run_check_void_container.sh -d {self.wkdir}",
+        self.utils.run_command(cmd, silent=True)
 
     def run_function_return_test(self):
         pr_number = self.utils.get_env_var('PR_NUMBER', '')
         run_number = self.utils.get_env_var('GITHUB_RUN_NUMBER', '')
         extra_param = self.utils.get_env_var('extra_param', '')
-        cmds = [
-            f"cd {self.wkc}/test/ci && ./run_scan_container.sh -d {self.wkdir} -b {pr_number}_{run_number} -f {self.wkdir}/tmp/{pr_number}_{run_number}/docs_changed.txt {extra_param}",
-        ]
-        self.utils.run_commands(cmds)
+        cmd = f"cd {self.wkc}/test/ci && ./run_scan_container.sh -d {self.wkdir} -b {pr_number}_{run_number} -f {self.wkdir}/tmp/{pr_number}_{run_number}/docs_changed.txt {extra_param}",
+        self.utils.run_command(cmd, silent=True)
 
     def run_function_test(self):
         cmds = [
