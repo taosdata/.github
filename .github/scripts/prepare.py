@@ -10,7 +10,7 @@ class TestPreparer:
         # initialize paths and platform from arguments
         self.wkdir = Path(os.getenv('WKDIR', '/var/lib/jenkins/workspace'))
         self.platform = platform.system().lower()
-
+        print(self.utils.get_env_var('IS_TDINTERNAL'))
         self.enterprise = False if self.utils.get_env_var('IS_TDINTERNAL') == 'false' else True
         self.wk = self.utils.path(os.path.join(self.wkdir, 'TDinternal'))
         self.wkc = self.utils.path(os.path.join(self.wk, 'community'))
