@@ -56,18 +56,14 @@ class TestPreparer:
 
     def prepare_repositories(self):
         """Prepare both TDengine or TDinternal repository"""
-        if self.enterprise:
-            print(f"Preparing TDinternal in {self.wkdir}...")
-            if (self.inputs.get('specified_source_branch') == 'unavailable' and
-            self.inputs.get('specified_target_branch') == 'unavailable' and
-            self.inputs.get('specified_pr_number') == 'unavailable'):
-                self._prepare_repo(self.wk, self.target_branch)
-            else:
-                self._prepare_repo(self.wk, self.source_branch)
-            self._prepare_repo(self.wkc, self.target_branch)
+        print(f"Preparing TDinternal in {self.wkdir}...")
+        if (self.inputs.get('specified_source_branch') == 'unavailable' and
+        self.inputs.get('specified_target_branch') == 'unavailable' and
+        self.inputs.get('specified_pr_number') == 'unavailable'):
+            self._prepare_repo(self.wk, self.target_branch)
         else:
-            print(f"Preparing TDengine in {self.wkc}...")
-            self._prepare_repo(self.wkc, self.target_branch)
+            self._prepare_repo(self.wk, self.source_branch)
+        self._prepare_repo(self.wkc, self.target_branch)
 
     def _prepare_repo(self, repo_path, branch):
         """Prepare a single repository"""
@@ -112,16 +108,16 @@ class TestPreparer:
         cmds = [
             f"cd { repo_path } && git pull >/dev/null",
             f"cd { repo_path } && git log -5",
-            f'''echo '`date "+%Y%m%d-%H%M%S"` TDinternalTest/{self.pr_number}:{self.run_number}:{self.target_branch}' >> {self.wkdir}/jenkins.log''',
-            f"cd { repo_path } && echo 'CHANGE_BRANCH:{self.source_branch}' >> {repo_path}/jenkins.log",
-            f"cd { repo_path } && echo 'TDinternal log: `git log -5`' >> {repo_path}/jenkins.log",
+            f'''echo `date "+%Y%m%d-%H%M%S"` TDinternalTest/{self.pr_number}:{self.run_number}:{self.target_branch} >> {self.wkdir}/jenkins.log''',
+            f"cd { repo_path } && echo CHANGE_BRANCH:{self.source_branch} >> {self.wkdir}/jenkins.log",
+            f"cd { repo_path } && echo TDinternal log: `git log -5` >> {self.wkdir}/jenkins.log",
             f"cd { repo_path } && git fetch origin +refs/pull/{pr_number}/merge",
             f"cd { repo_path } && git checkout -qf FETCH_HEAD",
             f"cd { repo_path } && git log -5",
-            f"cd { repo_path } && echo 'TDinternal log merged: `git log -5`' >> {repo_path}/jenkins.log"
+            f"cd { repo_path } && echo TDinternal log merged: `git log -5` >> {self.wkdir}/jenkins.log"
         ]
         self.utils.run_commands(cmds)
-    
+
     def outut_file_no_doc_change(self):
         cmds = [
             f"mkdir -p {self.wkdir}/tmp/{self.pr_number}_{self.run_number}",
