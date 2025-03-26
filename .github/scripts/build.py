@@ -19,7 +19,7 @@ class TestBuild:
         cmds = [
             'date',
             f'rm -rf {self.wkc}/debug',
-            f'cd {self.wkc}/tests/parallel_test && time ./container_build.sh -w {self.workdir} -e'
+            f'cd {self.wkc}/test/ci && time ./container_build.sh -w {self.workdir} -e'
         ]
         self.utils.run_commands(cmds)
 

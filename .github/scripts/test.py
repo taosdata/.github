@@ -37,13 +37,13 @@ class TestRunner:
 
     def run_assert_test(self):
         cmds = [
-            f"cd {self.wkc}/tests/parallel_test && ./run_check_assert_container.sh -d {self.wkdir}",
+            f"cd {self.wkc}/test/ci && ./run_check_assert_container.sh -d {self.wkdir}",
         ]
         self.utils.run_commands(cmds)
 
     def run_void_function_test(self):
         cmds = [
-            f"cd {self.wkc}/tests/parallel_test && ./run_check_void_container.sh -d {self.wkdir}",
+            f"cd {self.wkc}/test/ci && ./run_check_void_container.sh -d {self.wkdir}",
         ]
         self.utils.run_commands(cmds)
 
@@ -52,15 +52,15 @@ class TestRunner:
         run_number = self.utils.get_env_var('GITHUB_RUN_NUMBER', '')
         extra_param = self.utils.get_env_var('extra_param', '')
         cmds = [
-            f"cd {self.wkc}/tests/parallel_test && ./run_scan_container.sh -d {self.wkdir} -b {pr_number}_{run_number} -f {self.wkdir}/tmp/{pr_number}_{run_number}/docs_changed.txt {extra_param}",
+            f"cd {self.wkc}/test/ci && ./run_scan_container.sh -d {self.wkdir} -b {pr_number}_{run_number} -f {self.wkdir}/tmp/{pr_number}_{run_number}/docs_changed.txt {extra_param}",
         ]
         self.utils.run_commands(cmds)
 
     def run_function_test(self):
         cmds = [
-            f"cd {self.wkc}/tests/parallel_test && export DEFAULT_RETRY_TIME=2",
+            f"cd {self.wkc}/test/ci && export DEFAULT_RETRY_TIME=2",
             f"date",
-            f"cd {self.wkc}/tests/parallel_test && {self.utils.get_env_var('timeout_cmd')} time ./run.sh -e -m /home/m.json -t cases.task -b PR-{self.utils.get_env_var('PR_NUMBER')}_{self.utils.get_env_var('GITHUB_RUN_NUMBER')} -l {self.wkdir}/log -o 1200 {self.utils.get_env_var('extra_param')}",
+            f"cd {self.wkc}/test/ci && {self.utils.get_env_var('timeout_cmd')} time ./run.sh -e -m /home/m.json -t cases.task -b PR-{self.utils.get_env_var('PR_NUMBER')}_{self.utils.get_env_var('GITHUB_RUN_NUMBER')} -l {self.wkdir}/log -o 1200 {self.utils.get_env_var('extra_param')}",
         ]
         self.utils.run_commands(cmds)
 
