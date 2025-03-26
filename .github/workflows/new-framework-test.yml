@@ -52,9 +52,13 @@ jobs:
       IS_TDINTERNAL: ${{ inputs.tdinternal }}
       CURRENT_PLATFORM: ${{ matrix.platform }}
 
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}/.github/scripts
+
     steps:
       - name: Prepare the environment
-        run: python3 -m ../scripts/prepare.py 
+        run: python3 -m prepare.py 
         env:
           WKDIR: ${{ env.WKDIR }}
           IS_TDINTERNAL: ${{ inputs.tdinternal }}
@@ -64,34 +68,34 @@ jobs:
           GITHUB_INPUTS: ${{ toJson(inputs) }}
 
       - name: Build docker
-        run: python3 -m ../scripts/build.py
+        run: python3 -m build.py
         env:
           WKDIR: ${{ env.WKDIR }}
           BUILD_TYPE: 'docker'
 
       - name: Check assert testing
         if: ${{ env.IS_TDINTERNAL == 'false' && env.TARGET_BRANCH != '3.1' }}
-        run: python3 -m ../scripts/test.py
+        run: python3 -m test.py
         env:
           WKDIR: ${{ env.WKDIR }}
           TEST_TYPE: 'assert'
   
       - name: Check void function testing
         if: ${{ env.IS_TDINTERNAL == 'false' && env.TARGET_BRANCH != '3.1' }}
-        run: python3 -m ../scripts/test.py
+        run: python3 -m test.py
         env:
           WKDIR: ${{ env.WKDIR }}
           TEST_TYPE: 'void'
 
       - name: Run function returns with a null pointer scan testing
         if: ${{ env.IS_TDINTERNAL == 'false' && env.TARGET_BRANCH != '3.1' }}
-        run: python3 -m ../scripts/test.py
+        run: python3 -m test.py
         env:
           WKDIR: ${{ env.WKDIR }}
           TEST_TYPE: 'function_returns'
 
       - name: Run function test cases
-        run: python3 -m ../scripts/test.py
+        run: python3 -m test.py
         env:
           WKDIR: ${{ env.WKDIR }}
           TEST_TYPE: 'function'
