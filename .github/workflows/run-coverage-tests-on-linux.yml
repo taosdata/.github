@@ -166,8 +166,8 @@ jobs:
           cd ${{ env.WKC }}/tests/parallel_test
           export DEFAULT_RETRY_TIME=2
           date
-          ## ${{ steps.get_param.outputs.timeout_cmd }} time ./run.sh -e -m /home/m.json -t cases.task -b PR-${{ github.run_number }} -l ${{ env.WKDIR }}/log -o 1200 ${{ steps.get_param.outputs.extra_param }}
-          ${{ steps.get_param.outputs.timeout_cmd }} time ./run.sh -e -m /home/m.json -t longtimeruning_cases.task -b PR-${{ github.run_number }} -l ${{ env.WKDIR }}/log -o 240 ${{ steps.get_param.outputs.extra_param }}
+          ${{ steps.get_param.outputs.timeout_cmd }} time ./run.sh -e -m /home/m.json -t cases.task -b PR-${{ github.run_number }} -l ${{ env.WKDIR }}/log -o 1200 ${{ steps.get_param.outputs.extra_param }}
+          ## ${{ steps.get_param.outputs.timeout_cmd }} time ./run.sh -e -m /home/m.json -t longtimeruning_cases.task -b PR-${{ github.run_number }} -l ${{ env.WKDIR }}/log -o 240 ${{ steps.get_param.outputs.extra_param }}
           ## ${{ steps.get_param.outputs.timeout_cmd }} time ./run.sh -e -m /home/m.json -t tdgpt_cases.task -b PR-${{ github.run_number }} -l ${{ env.WKDIR }}/log -o 1200 ${{ steps.get_param.outputs.extra_param }}
         continue-on-error: true  
 
