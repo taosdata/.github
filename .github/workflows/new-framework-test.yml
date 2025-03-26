@@ -54,12 +54,9 @@ jobs:
 
     defaults:
       run:
-        working-directory: ${{ github.workspace }}/.github/.github/scripts
+        working-directory: ${{ env.WKDIR }}/.github/.github/scripts
 
     steps:
-      - name: Check out .github repository
-        uses: actions/checkout@v4
-
       - name: Prepare the environment
         run: python3 -m prepare.py 
         env:
