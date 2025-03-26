@@ -54,7 +54,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: ${{ env.WKDIR }}/.github/.github/scripts
+        working-directory: ${{ env.WKDIR }}/.github/.github/scripts/
 
     steps:
       - name: Prepare the environment
