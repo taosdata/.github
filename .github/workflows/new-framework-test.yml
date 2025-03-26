@@ -1,0 +1,97 @@
+name: Run tests with new framework
+
+on:
+  workflow_call:
+    inputs:
+      tdinternal:
+        description: 'Is the PR from TDinternal?'
+        required: true
+        type: boolean
+      specified_source_branch:
+          description: 'Enter the source branch name of TDengine'
+          required: false
+          default: 'unavailable'
+          type: string
+      specified_target_branch:
+        description: 'Enter the target branch name of TDengine'
+        required: false
+        default: 'unavailable'
+        type: string
+      specified_pr_number:
+        description: 'Enter the PR number of TDengine'
+        required: false
+        default: 'unavailable'
+        type: string
+
+jobs:
+  run-tests:
+    strategy:
+      matrix:
+        platform: [linux]
+        include:
+          - platform: linux
+            runner_group: CI
+            runner_labels: [self-hosted, Linux, X64, new-framework]
+          # - platform: macos
+          #   runner_group: CI
+          #   runner_labels: [self-hosted, Linux, X64, new-framework]
+          # - platform: windows
+          #   runner_group: CI
+          #   runner_labels: [self-hosted, Linux, X64, new-framework]
+    runs-on:
+      group: ${{ matrix.runner_group }}
+      labels: ${{ matrix.runner_labels }}
+
+    timeout-minutes: 200
+
+    env:
+      CONTAINER_NAME: 'taosd-test'
+      WKDIR: '/var/lib/jenkins/workspace'
+      WK: '/var/lib/jenkins/workspace/TDinternal'
+      WKC: '/var/lib/jenkins/workspace/TDinternal/community'
+      IS_TDINTERNAL: ${{ inputs.tdinternal }}
+      CURRENT_PLATFORM: ${{ matrix.platform }}
+
+    steps:
+      - name: Prepare the environment
+        run: python3 -m ../scripts/prepare.py 
+        env:
+          WKDIR: ${{ env.WKDIR }}
+          IS_TDINTERNAL: ${{ inputs.tdinternal }}
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+          CONTAINER_NAME: ${{ env.CONTAINER_NAME }}
+          GITHUB_EVENT: ${{ toJson(github.event) }}
+          GITHUB_INPUTS: ${{ toJson(inputs) }}
+
+      - name: Build docker
+        run: python3 -m ../scripts/build.py
+        env:
+          WKDIR: ${{ env.WKDIR }}
+          BUILD_TYPE: 'docker'
+
+      - name: Check assert testing
+        if: ${{ env.IS_TDINTERNAL == 'false' && env.TARGET_BRANCH != '3.1' }}
+        run: python3 -m ../scripts/test.py
+        env:
+          WKDIR: ${{ env.WKDIR }}
+          TEST_TYPE: 'assert'
+  
+      - name: Check void function testing
+        if: ${{ env.IS_TDINTERNAL == 'false' && env.TARGET_BRANCH != '3.1' }}
+        run: python3 -m ../scripts/test.py
+        env:
+          WKDIR: ${{ env.WKDIR }}
+          TEST_TYPE: 'void'
+
+      - name: Run function returns with a null pointer scan testing
+        if: ${{ env.IS_TDINTERNAL == 'false' && env.TARGET_BRANCH != '3.1' }}
+        run: python3 -m ../scripts/test.py
+        env:
+          WKDIR: ${{ env.WKDIR }}
+          TEST_TYPE: 'function_returns'
+
+      - name: Run function test cases
+        run: python3 -m ../scripts/test.py
+        env:
+          WKDIR: ${{ env.WKDIR }}
+          TEST_TYPE: 'function'

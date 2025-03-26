@@ -1,0 +1,23 @@
+# linux dependencies
+build-essential
+cmake
+gawk
+libgeos-dev
+libjansson-dev
+liblzma-dev
+libsnappy-dev
+libssl-dev
+libz-dev
+pkg-config
+zlib1g
+
+# macOS dependencies
+argp-standalone
+gawk
+gflags
+geos
+jansson
+openssl
+pkg-config
+snappy
+zlib
