@@ -165,7 +165,7 @@ class Utils:
         stderr = subprocess.DEVNULL if silent else subprocess.PIPE
         
         try:
-            process = subprocess.run(
+            process = subprocess.Popen(
                 command,
                 cwd=cwd,
                 env=env or os.environ,
@@ -174,14 +174,24 @@ class Utils:
                 stdout=stdout,
                 stderr=stderr,
                 text=True,
-                check=check
+                bufzie=1
             )
             if not silent:
-                if process.stdout:
-                    print(process.stdout)
-                if process.stderr:
-                    print(process.stderr)
-            return process
+                # Print output in real-time
+                for line in iter(process.stdout.readline, ''):
+                    print(line, end="")
+                # Print errors in real-time
+                for line in iter(process.stderr.readline, ''):
+                    print(line, end="")
+            process.wait()
+            if check and process.returncode != 0:
+                raise subprocess.CalledProcessError(process.returncode, command)
+            return subprocess.CompletedProcess(
+                args=command,
+                returncode=process.returncode,
+                stdout=None,
+                stderr=None
+            )
         except subprocess.CalledProcessError as e:
             if not silent:
                 print(f"Command failed: {e.cmd}")
@@ -190,7 +200,7 @@ class Utils:
                 if e.stderr:
                     print(f"Stderr: {e.stderr}")
             raise
-    
+
     def run_commands(self, commands: List[str], cwd: Optional[Union[str, Path]] = None) -> None:
         """Run multiple commands sequentially"""
         for cmd in commands:
