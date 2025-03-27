@@ -164,11 +164,11 @@ jobs:
             date
             ./run_coverage_container.sh -d ${{ env.WKDIR }} -b ${{ env.SOURCE_BRANCH }} > coverage.log 2>&1
             cat coverage.log|wc -l
-            head -n 300 coverage.log
-            tail -n 200 coverage.log
+            head -n 10 coverage.log
+            tail -n 10 coverage.log
             ##cat coverage.log | grep -v "FN|DA:|SF|LF|LH" || true
             cat coverage.log | grep -v FN | grep -v DA | grep -v SF | grep -v LF | grep -v LH || true
-            cat coverage.log | grep -E "ERROR|error|Error|FAILED|failed|Failed" || true
+            ##cat coverage.log | grep -E "ERROR|error|Error|FAILED|failed|Failed" || true
         continue-on-error: true  
 
       - name: Clearup the running cases
