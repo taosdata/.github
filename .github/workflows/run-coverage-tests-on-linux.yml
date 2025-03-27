@@ -135,6 +135,11 @@ jobs:
       - name: Run taosd && taosc coverage 
         if: always() 
         run: |
+            cd ${{ env.WKC }}/tests/parallel_test
+            date
+            ./run_coverage_container.sh -d ${{ env.WKDIR }} -b ${{ env.SOURCE_BRANCH_TDENGINE }} > coverage.log 2>&1
+            cat coverage.log|wc -l
+            cat coverage.log | grep -v FN | grep -v DA | grep -v SF | grep -v LF | grep -v TN |grep -v end | grep -v LH || true
         continue-on-error: true
 
       - name: Clearup the running cases
