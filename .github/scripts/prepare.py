@@ -7,12 +7,11 @@ from pathlib import Path
 class TestPreparer:
     """Prepare the environment for testing TDengine or TDinternal
     1. Prepare the environment
-    2. Update .github repository
-    3. Prepare TDengine or TDinternal repository to source/target branch
-    4. Update codes for TDengine or TDinternal
-    5. Update submodules
-    6. Output file without doc changes
-    7. Get testing parameters
+    2. Prepare TDengine or TDinternal repository to source/target branch
+    3. Update codes for TDengine or TDinternal
+    4. Update submodules
+    5. Output file without doc changes
+    6. Get testing parameters
     """
     def __init__(self):
         self.utils = Utils()
@@ -52,13 +51,6 @@ class TestPreparer:
         self.utils.set_env_var('SOURCE_BRANCH', self.source_branch, os.getenv('GITHUB_ENV', ''))
         self.utils.set_env_var('TARGET_BRANCH', self.target_branch, os.getenv('GITHUB_ENV', ''))
         self.utils.set_env_var('PR_NUMBER', self.pr_number, os.getenv('GITHUB_ENV', ''))
-
-    def update_github_repo(self):
-        if self.utils.path_exists(f"{self.wkdir}/.github/"):
-            cmd = f"cd {self.wkdir}/.github/ && git pull"
-        else:
-            cmd = f"cd {self.wkdir} && git clone https://github.com/taosdata/.github.git && cd .github && git pull"
-        self.utils.run_command(cmd)
 
     def prepare_repositories(self):
         """Prepare both TDengine or TDinternal repository"""
@@ -174,7 +166,6 @@ class TestPreparer:
         try:
             # update scripts of .github repository
             self.output_environment_info()
-            self.update_github_repo()
             self.prepare_repositories()
             self.update_codes()
             self.update_submodules()
