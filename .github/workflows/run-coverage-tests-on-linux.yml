@@ -9,10 +9,15 @@ on:
         description: 'Is the PR from TDinternal?'
         required: true
         type: boolean
-      specified_test_branch:
+      specified_tdengine_test_branch:
         description: 'Enter the test branch name of TDengine'
         required: true
         type: string
+      specified_tdinternal_test_branch:
+        description: 'Enter the test branch of TDinternal'
+        required: true
+        type: string
+        default: '3.0' # default value for TDinternal test branch
 
 jobs:
   run-tests-coverage-on-linux:
@@ -33,12 +38,12 @@ jobs:
     steps:
       - name: Set environment variables based on condition
         run: |
-          if [[ "${{ inputs.specified_test_branch }}" == 'unavailable' ]] ; then
+          if [[ "${{ inputs.specified_tdengine_test_branch }}" == 'unavailable' ]] ; then
             echo "set from github event"
             echo SOURCE_BRANCH="${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
           else
             echo "set from input"
-            echo "SOURCE_BRANCH=${{ inputs.specified_test_branch }}" >> $GITHUB_ENV
+            echo "SOURCE_BRANCH=${{ inputs.specified_tdengine_test_branch }}" >> $GITHUB_ENV
           fi
           echo "Current step debug (GITHUB_ENV content):"
           cat $GITHUB_ENV
@@ -66,7 +71,7 @@ jobs:
             git fetch
             git checkout "$2"
           }
-          if [[ "${{ inputs.specified_test_branch }}" == 'unavailable' ]] ; then
+          if [[ "${{ inputs.specified_tdengine_test_branch }}" == 'unavailable' ]] ; then
             prepare_environment "${{ env.WK }}" "$SOURCE_BRANCH"
           fi
           prepare_environment "${{ env.WKC }}" "$SOURCE_BRANCH"
