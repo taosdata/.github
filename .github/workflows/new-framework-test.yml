@@ -60,6 +60,7 @@ jobs:
       - name: Checkout the repository
         uses: actions/checkout@v4
         with:
+          repository: 'taosdata/.github'
           ref: 'new_test_framework'
           fetch-depth: 0
 
