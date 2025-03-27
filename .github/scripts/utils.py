@@ -175,7 +175,7 @@ class Utils:
                 stdout=stdout,
                 stderr=stderr,
                 text=True,
-                bufsize=1
+                bufsize=256
             )
             if not silent:
                 # print output in real-time with select
