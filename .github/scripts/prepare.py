@@ -165,8 +165,8 @@ class TestPreparer:
         else:
             print("log_server.json file not found")
         print(f"timeout_cmd: {timeout_cmd}, extra_param: {extra_param}")
-        self.utils.set_env_var("timeout_cmd", timeout_cmd, envfile=os.getenv('GITHUB_ENV', ''))
-        self.utils.set_env_var("extra_param", extra_param, envfile=os.getenv('GITHUB_ENV', ''))
+        self.utils.set_env_var("timeout_cmd", timeout_cmd, env_file=os.getenv('GITHUB_ENV', ''))
+        self.utils.set_env_var("extra_param", extra_param, env_file=os.getenv('GITHUB_ENV', ''))
 
     def run(self):
         """Execute preparation steps"""
