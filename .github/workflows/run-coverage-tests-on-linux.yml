@@ -135,12 +135,19 @@ jobs:
       - name: Run taosd && taosc coverage 
         if: always() 
         run: |
-            cd ${{ env.WKC }}/tests/parallel_test
-            date
-            chmod +x ${{ env.WKC }}/tests/parallel_test/run_coverage_container.sh
-            ./run_coverage_container.sh -d ${{ env.WKDIR }} -b ${{ env.SOURCE_BRANCH_TDENGINE }} > coverage.log 2>&1
-            cat coverage.log|wc -l
-            cat coverage.log | grep -v FN | grep -v DA | grep -v SF | grep -v LF | grep -v TN |grep -v end | grep -v LH || true
+          echo "::group::Run taosd && taosc coverage"
+          cd ${{ env.WKC }}/tests/parallel_test
+          echo "Running coverage script at $(date)"
+          chmod +x ${{ env.WKC }}/tests/parallel_test/run_coverage_container.sh
+          ./run_coverage_container.sh -d ${{ env.WKDIR }} -b ${{ env.SOURCE_BRANCH_TDENGINE }} > coverage.log 2>&1
+          if [ $? -ne 0 ]; then
+              echo "Coverage script failed. Check coverage.log for details."
+          fi
+          echo "Coverage log line count:"
+          cat coverage.log | wc -l
+          echo "Filtered coverage log (excluding specific patterns):"
+          cat coverage.log | grep -v FN | grep -v DA | grep -v SF | grep -v LF | grep -v TN | grep -v end | grep -v LH || true
+          echo "::endgroup::"
         continue-on-error: true
 
       - name: Clearup the running cases
