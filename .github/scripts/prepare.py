@@ -169,8 +169,9 @@ class TestPreparer:
             self.prepare_repositories()
             self.update_codes()
             self.update_submodules()
-            self.outut_file_no_doc_change()
-            self.get_testing_params()
+            if platform.system().lower() == 'linux':
+                self.outut_file_no_doc_change()
+                self.get_testing_params()
             print("Preparation phase completed successfully.")
             return True
         except Exception as e:

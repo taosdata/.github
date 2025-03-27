@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import List, Union, Optional, Dict, Any
 
 class Utils:
+    """This class provides utility functions for common operations in steps of workflow"""
     def __init__(self):
         self.platform = platform.system().lower()
         self.is_windows = self.platform == 'windows'
@@ -164,7 +165,7 @@ class Utils:
         stderr = subprocess.DEVNULL if silent else subprocess.PIPE
         
         try:
-            process = subprocess.Popen(
+            process = subprocess.run(
                 command,
                 cwd=cwd,
                 env=env or os.environ,
@@ -173,24 +174,14 @@ class Utils:
                 stdout=stdout,
                 stderr=stderr,
                 text=True,
+                check=check
             )
             if not silent:
-                # print output in real-time
-                for line in process.stdout:
-                    print(line, end="")
-                # print errors in real-time
-                for line in process.stderr:
-                    print(line, end="")
-            process.wait()
-            if check and process.returncode != 0:
-                raise subprocess.CalledProcessError(process.returncode, command)
-
-            return subprocess.CompletedProcess(
-                args=command,
-                returncode=process.returncode,
-                stdout=None,
-                stderr=None
-            )
+                if process.stdout:
+                    print(process.stdout)
+                if process.stderr:
+                    print(process.stderr)
+            return process
         except subprocess.CalledProcessError as e:
             if not silent:
                 print(f"Command failed: {e.cmd}")

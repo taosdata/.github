@@ -3,6 +3,7 @@ import platform
 from utils import Utils
 
 class TestBuild:
+    """This class provides utility functions for building TDengine or TDinternal"""
     def __init__(self):
         self.utils = Utils()
         self.workdir = self.utils.get_env_var('WKDIR', False)
