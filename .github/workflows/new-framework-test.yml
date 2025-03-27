@@ -80,7 +80,6 @@ jobs:
       - name: Build docker
         run: python3 build.py
         env:
-          WKDIR: ${{ env.WKDIR }}
           BUILD_TYPE: 'docker'
 
       - name: Check assert testing
@@ -94,18 +93,15 @@ jobs:
         if: ${{ env.IS_TDINTERNAL == 'false' && env.TARGET_BRANCH != '3.1' }}
         run: python3 test.py
         env:
-          WKDIR: ${{ env.WKDIR }}
           TEST_TYPE: 'void'
 
       - name: Run function returns with a null pointer scan testing
         if: ${{ env.IS_TDINTERNAL == 'false' && env.TARGET_BRANCH != '3.1' }}
         run: python3 test.py
         env:
-          WKDIR: ${{ env.WKDIR }}
           TEST_TYPE: 'function_returns'
 
       - name: Run function test cases
         run: python3 test.py
         env:
-          WKDIR: ${{ env.WKDIR }}
           TEST_TYPE: 'function'

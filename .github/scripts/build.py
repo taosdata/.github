@@ -6,9 +6,9 @@ class TestBuild:
     """This class provides utility functions for building TDengine or TDinternal"""
     def __init__(self):
         self.utils = Utils()
-        self.workdir = self.utils.get_env_var('WKDIR', False)
-        self.build_type = self.utils.get_env_var('BUILD_TYPE', 'repo')
-        self.wk = self.utils.path(os.path.join(self.workdir, 'TDinternal'))
+        self.wkdir = self.utils.get_env_var('WKDIR')
+        self.build_type = self.utils.get_env_var('BUILD_TYPE')
+        self.wk = self.utils.path(os.path.join(self.wkdir, 'TDinternal'))
         self.wkc = self.utils.path(os.path.join(self.wk, 'community'))
         self.platform = platform.system().lower()
 
@@ -20,17 +20,17 @@ class TestBuild:
         cmds = [
             'date',
             f'rm -rf {self.wkc}/debug',
-            f'cd {self.wkc}/test/ci && time ./container_build.sh -w {self.workdir} -e'
+            f'cd {self.wkc}/test/ci && time ./container_build.sh -w {self.wkdir} -e'
         ]
         self.utils.run_commands(cmds)
 
     def doc_build(self):
         # build chinese doc
         cmd = 'yarn ass local && yarn build'
-        self.utils.run_command(cmd, cwd=f'{self.workdir}/{self.ZH_DOC_REPO}')
+        self.utils.run_command(cmd, cwd=f'{self.wkdir}/{self.ZH_DOC_REPO}')
 
         # build english doc
-        self.utils.run_command(cmd, cwd=f'{self.workdir}/{self.EN_DOC_REPO}')
+        self.utils.run_command(cmd, cwd=f'{self.wkdir}/{self.EN_DOC_REPO}')
 
     def repo_build(self, install_dependencies=False):
         linux_cmds = [

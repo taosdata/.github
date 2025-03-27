@@ -8,7 +8,7 @@ class TestRunner:
     """This class runs the test cases for TDengine or TDinternal"""
     def __init__(self):
         self.utils = Utils()
-        self.wkdir = Path(os.getenv('WKDIR', '/var/lib/jenkins/workspace'))
+        self.wkdir = self.utils.get_env_var('WKDIR')
         self.test_type = os.getenv('TEST_TYPE', '')
         self.wk = self.utils.path(os.path.join(self.wkdir, 'TDinternal'))
         self.wkc = self.utils.path(os.path.join(self.wk, 'community'))

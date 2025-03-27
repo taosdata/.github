@@ -18,6 +18,7 @@ class TestPreparer:
         # initialize paths and platform from arguments
         self.container_name = self.utils.get_env_var('CONTAINER_NAME', 'taosd-test')
         self.wkdir = Path(os.getenv('WKDIR', '/var/lib/jenkins/workspace'))
+        self.utils.set_env_var('WKDIR', self.wkdir, os.getenv('GITHUB_ENV', ''))
         self.platform = platform.system().lower()
         print(self.utils.get_env_var('IS_TDINTERNAL'))
         self.enterprise = False if self.utils.get_env_var('IS_TDINTERNAL') == 'false' else True
