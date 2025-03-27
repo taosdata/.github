@@ -1,4 +1,5 @@
 import os
+import select
 import json
 import platform
 import subprocess
@@ -177,12 +178,16 @@ class Utils:
                 bufsize=1
             )
             if not silent:
-                # Print output in real-time
-                for line in iter(process.stdout.readline, ''):
-                    print(line, end="")
-                # Print errors in real-time
-                for line in iter(process.stderr.readline, ''):
-                    print(line, end="")
+                # print output in real-time with select
+                outputs = [process.stdout, process.stderr]
+                while outputs:
+                    readable, _, _ = select.select(outputs, [], [])
+                    for stream in readable:
+                        line = stream.readline()
+                        if line:
+                            print(line, end="")
+                        else:
+                            outputs.remove(stream)
             process.wait()
             if check and process.returncode != 0:
                 raise subprocess.CalledProcessError(process.returncode, command)
