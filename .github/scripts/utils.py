@@ -232,7 +232,6 @@ class Utils:
                     print(f"Stdout: {e.stdout}")
                 if e.stderr:
                     print(f"Stderr: {e.stderr}")
-            raise
 
     def run_commands(self, commands: List[str], cwd: Optional[Union[str, Path]] = None) -> None:
         """Run multiple commands sequentially"""
