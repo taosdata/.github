@@ -178,7 +178,9 @@ jobs:
         run: |
             cd ${{ env.WKC }}/tests/parallel_test
             date
-            ./run_coverage_container.sh -d ${{ env.WKDIR }} -b ${{ env.SOURCE_BRANCH }}
+            ./run_coverage_container.sh -d ${{ env.WKDIR }} -b ${{ env.SOURCE_BRANCH }} > coverage.log 2>&1
+            head -n 300 coverage.log
+            tail -n 300 coverage.log
         continue-on-error: true  
 
       - name: Clearup the running cases
