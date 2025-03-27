@@ -63,6 +63,9 @@ jobs:
           ref: 'new_test_framework'
           fetch-depth: 0
 
+      - name: Pull latest code
+        run: git pull origin new_test_framework
+
       - name: Prepare the environment
         run: python3 prepare.py
         env:
