@@ -5,6 +5,15 @@ from utils import Utils
 from pathlib import Path
 
 class TestPreparer:
+    """Prepare the environment for testing TDengine or TDinternal
+    1. Prepare the environment
+    2. Update .github repository
+    3. Prepare TDengine or TDinternal repository to source/target branch
+    4. Update codes for TDengine or TDinternal
+    5. Update submodules
+    6. Output file without doc changes
+    7. Get testing parameters
+    """
     def __init__(self):
         self.utils = Utils()
         # initialize paths and platform from arguments
@@ -139,6 +148,29 @@ class TestPreparer:
     def output_environment_info(self):
         cmd = f"echo {self.wkdir}/restore.sh -p PR-{self.pr_number} -n {self.run_number} -c {self.container_name}"
         self.utils.run_command(cmd)
+        
+    def get_testing_params(self):
+        """Get testing parameters from log_server.json file"""
+        log_server_file = "/home/log_server.json"
+        timeout_cmd = ""
+        extra_param = ""
+
+        if self.utils.file_exists(log_server_file):
+            with open(log_server_file) as file:
+                log_server_data = json.load(file)
+                log_server_enabled = log_server_data.get("enabled")
+                timeout_param = log_server_data.get("timeout")
+                if timeout_param and timeout_param != 0:
+                    timeout_cmd = f"timeout {timeout_param}"
+                if log_server_enabled == 1:
+                    log_server = log_server_data.get("server")
+                    if log_server:
+                        extra_param = f"-w {log_server}"
+        else:
+            print("log_server.json file not found")
+        print(f"timeout_cmd: {timeout_cmd}, extra_param: {extra_param}")
+        self.utils.set_env_var("timeout_cmd", timeout_cmd, envfile=os.getenv('GITHUB_ENV', ''))
+        self.utils.set_env_var("extra_param", extra_param, envfile=os.getenv('GITHUB_ENV', ''))
 
     def run(self):
         """Execute preparation steps"""
@@ -148,10 +180,11 @@ class TestPreparer:
             self.output_environment_info()
             self.update_github_repo()
             self.prepare_repositories()
-            print("Preparation phase completed successfully.")
             self.update_codes()
             self.update_submodules()
             self.outut_file_no_doc_change()
+            self.get_testing_params()
+            print("Preparation phase completed successfully.")
             return True
         except Exception as e:
             print(f"Error during preparation: {str(e)}")
@@ -159,7 +192,4 @@ class TestPreparer:
 
 if __name__ == '__main__':
     prepare = TestPreparer()
-    if prepare.run():
-        print("Preparation completed successfully.")
-    else:
-        print("Preparation failed.")
+    assert(prepare.run() == True)
