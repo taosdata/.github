@@ -67,25 +67,25 @@ jobs:
           GITHUB_EVENT: ${{ toJson(github.event) }}
           GITHUB_INPUTS: ${{ toJson(inputs) }}
 
-      # - name: Build docker
-      #   run: python3 build.py
-      #   env:
-      #     WKDIR: ${{ env.WKDIR }}
-      #     BUILD_TYPE: 'docker'
+      - name: Build docker
+        run: python3 build.py
+        env:
+          WKDIR: ${{ env.WKDIR }}
+          BUILD_TYPE: 'docker'
 
-      # - name: Check assert testing
-      #   if: ${{ env.IS_TDINTERNAL == 'false' && env.TARGET_BRANCH != '3.1' }}
-      #   run: python3 test.py
-      #   env:
-      #     WKDIR: ${{ env.WKDIR }}
-      #     TEST_TYPE: 'assert'
+      - name: Check assert testing
+        if: ${{ env.IS_TDINTERNAL == 'false' && env.TARGET_BRANCH != '3.1' }}
+        run: python3 test.py
+        env:
+          WKDIR: ${{ env.WKDIR }}
+          TEST_TYPE: 'assert'
   
-      # - name: Check void function testing
-      #   if: ${{ env.IS_TDINTERNAL == 'false' && env.TARGET_BRANCH != '3.1' }}
-      #   run: python3 test.py
-      #   env:
-      #     WKDIR: ${{ env.WKDIR }}
-      #     TEST_TYPE: 'void'
+      - name: Check void function testing
+        if: ${{ env.IS_TDINTERNAL == 'false' && env.TARGET_BRANCH != '3.1' }}
+        run: python3 test.py
+        env:
+          WKDIR: ${{ env.WKDIR }}
+          TEST_TYPE: 'void'
 
       - name: Run function returns with a null pointer scan testing
         if: ${{ env.IS_TDINTERNAL == 'false' && env.TARGET_BRANCH != '3.1' }}
