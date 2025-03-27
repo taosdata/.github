@@ -37,6 +37,8 @@ class TestRunner:
         print(f"timeout_cmd: {timeout_cmd}, extra_param: {extra_param}")
         self.utils.set_env_var("timeout_cmd", timeout_cmd, os.getenv('GITHUB_ENV', ''))
         self.utils.set_env_var("extra_param", extra_param, os.getenv('GITHUB_ENV', ''))
+        print(self.utils.get_env_var("timeout_cmd"))
+        print(self.utils.get_env_var("extra_param"))
 
     def run_assert_test(self):
         cmd = f"cd {self.wkc}/test/ci && ./run_check_assert_container.sh -d {self.wkdir}",
@@ -47,16 +49,18 @@ class TestRunner:
         self.utils.run_command(cmd, silent=True, check=False)
 
     def run_function_return_test(self):
-        extra_param = self.utils.get_env_var('extra_param')
+        extra_param = self.utils.get_env_var("extra_param")
         print(f"PR number: {self.pr_number}, run number: {self.run_number}, extra param: {extra_param}")
         cmd = f"cd {self.wkc}/test/ci && ./run_scan_container.sh -d {self.wkdir} -b {self.pr_number}_{self.run_number} -f {self.wkdir}/tmp/{self.pr_number}_{self.run_number}/docs_changed.txt {extra_param}",
         self.utils.run_command(cmd, silent=True)
 
     def run_function_test(self):
+        timeout = self.utils.get_env_var("timeout_cmd")
+        print(f"timeout: {timeout}")
         cmds = [
             f"cd {self.wkc}/test/ci && export DEFAULT_RETRY_TIME=2",
             f"date",
-            f"cd {self.wkc}/test/ci && {self.utils.get_env_var('timeout_cmd')} time ./run.sh -e -m /home/m.json -t cases.task -b PR-{self.utils.get_env_var('PR_NUMBER')}_{self.utils.get_env_var('GITHUB_RUN_NUMBER')} -l {self.wkdir}/log -o 1200 {self.utils.get_env_var('extra_param')}",
+            f"cd {self.wkc}/test/ci && {timeout} time ./run.sh -e -m /home/m.json -t cases.task -b PR-{self.utils.get_env_var('PR_NUMBER')}_{self.utils.get_env_var('GITHUB_RUN_NUMBER')} -l {self.wkdir}/log -o 1200 {self.utils.get_env_var('extra_param')}",
         ]
         self.utils.run_commands(cmds)
 
