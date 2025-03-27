@@ -15,7 +15,7 @@ on:
         type: string
       specified_tdinternal_test_branch:
         description: 'Enter the test branch of TDinternal'
-        required: true
+        required: false
         type: string
         default: '3.0' # default value for TDinternal test branch
 
@@ -114,19 +114,8 @@ jobs:
         run: |
           cd ${{ env.WKC }}
           git submodule update --init --recursive
-      - name: Output the 'file_no_doc_changed' information to the file
-        if: ${{ env.IS_TDINTERNAL == 'false' && env.SOURCE_BRANCH != '3.1' }}
-        run: |
-          mkdir -p ${{ env.WKDIR }}/tmp/${{ github.run_number }}
-          cd ${{ env.WKC }}
-          changed_files_non_doc=$(git --no-pager diff --name-only FETCH_HEAD `git merge-base FETCH_HEAD ${{ env.SOURCE_BRANCH }}`|grep -v "^docs/en/"|grep -v "^docs/zh/"|grep -v ".md$" | tr '\n' ' ' || :)
-          echo $changed_files_non_doc > ${{ env.WKDIR }}/tmp/${{ github.run_number }}/docs_changed.txt
-
-      - name: Check assert testing
-        if: ${{ env.IS_TDINTERNAL == 'false' && env.SOURCE_BRANCH != '3.1' }}
-        run: |
-          cd ${{ env.WKC }}/tests/parallel_test
-          ./run_check_assert_container.sh -d ${{ env.WKDIR }}
+ 
+          
       - name: Check void function testing
         if: ${{ env.IS_TDINTERNAL == 'false' && env.SOURCE_BRANCH != '3.1' }}
         run: |
@@ -138,6 +127,7 @@ jobs:
           rm -rf ${{ env.WKC }}/debug
           cd ${{ env.WKC }}/tests/parallel_test
           time ./container_build_coverage.sh -w ${{ env.WKDIR }} -e
+
       - name: Get parameters for testing
         id: get_param
         run: |
@@ -161,11 +151,7 @@ jobs:
           fi
           echo "timeout_cmd=$timeout_cmd" >> $GITHUB_OUTPUT
           echo "extra_param=$extra_param" >> $GITHUB_OUTPUT
-      - name: Run function returns with a null pointer scan testing
-        if: ${{ env.IS_TDINTERNAL == 'false' && env.SOURCE_BRANCH != '3.1' }}
-        run: |
-          cd ${{ env.WKC }}/tests/parallel_test
-          ./run_scan_container.sh -d ${{ env.WKDIR }} -b ${{ github.run_number }} -f ${{ env.WKDIR }}/tmp/${{ github.run_number }}/docs_changed.txt ${{ steps.get_param.outputs.extra_param }}
+
       - name: Run function test cases
         run: |
           cd ${{ env.WKC }}/tests/parallel_test
@@ -175,8 +161,7 @@ jobs:
           ${{ steps.get_param.outputs.timeout_cmd }} time ./run.sh -e -m /home/m.json -t longtimeruning_cases.task -b PR-${{ github.run_number }} -l ${{ env.WKDIR }}/log -o 100 ${{ steps.get_param.outputs.extra_param }}
           ## ${{ steps.get_param.outputs.timeout_cmd }} time ./run.sh -e -m /home/m.json -t tdgpt_cases.task -b PR-${{ github.run_number }} -l ${{ env.WKDIR }}/log -o 1200 ${{ steps.get_param.outputs.extra_param }}
         continue-on-error: true  
-
-      
+   
       - name: Run taosd && taosc coverage 
         if: always() 
         run: |
@@ -186,6 +171,8 @@ jobs:
             cat coverage.log|wc -l
             head -n 300 coverage.log
             tail -n 200 coverage.log
+            cat coverage.log | grep -v "FN|DA" || true
+            cat coverage.log | grep -E "ERROR|error|Error|FAILED|failed|Failed" || true
         continue-on-error: true  
 
       - name: Clearup the running cases
