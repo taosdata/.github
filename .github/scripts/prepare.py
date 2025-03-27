@@ -32,10 +32,6 @@ class TestPreparer:
 
         # Set branch variables
         self._set_branch_variables()
-        self.source_branch = self.utils.get_env_var('SOURCE_BRANCH', '')
-        self.target_branch = self.utils.get_env_var('TARGET_BRANCH', '')
-        self.pr_number = self.utils.get_env_var('PR_NUMBER', '')
-        print(f"source branch: {self.source_branch}, target branch: {self.target_branch}, PR number: {self.pr_number}")
 
     def _set_branch_variables(self):
         """Determine source/target branches and PR number from inputs or event data"""
@@ -44,18 +40,18 @@ class TestPreparer:
             self.inputs.get('specified_pr_number') == 'unavailable'):
             # From GitHub event
             pr = self.event.get('pull_request', {})
-            source_branch = pr.get('head', {}).get('ref', '')
-            target_branch = pr.get('base', {}).get('ref', '')
-            pr_number = str(pr.get('number', ''))
+            self.source_branch = pr.get('head', {}).get('ref', '')
+            self.target_branch = pr.get('base', {}).get('ref', '')
+            self.pr_number = str(pr.get('number', ''))
         else:
             # From inputs
-            source_branch = self.inputs.get('specified_source_branch', '')
-            target_branch = self.inputs.get('specified_target_branch', '')
-            pr_number = self.inputs.get('specified_pr_number', '')
+            self.source_branch = self.inputs.get('specified_source_branch', '')
+            self.target_branch = self.inputs.get('specified_target_branch', '')
+            self.pr_number = self.inputs.get('specified_pr_number', '')
 
-        self.utils.set_env_var('SOURCE_BRANCH', source_branch, os.getenv('GITHUB_ENV', ''))
-        self.utils.set_env_var('TARGET_BRANCH', target_branch, os.getenv('GITHUB_ENV', ''))
-        self.utils.set_env_var('PR_NUMBER', pr_number, os.getenv('GITHUB_ENV', ''))
+        self.utils.set_env_var('SOURCE_BRANCH', self.source_branch, os.getenv('GITHUB_ENV', ''))
+        self.utils.set_env_var('TARGET_BRANCH', self.target_branch, os.getenv('GITHUB_ENV', ''))
+        self.utils.set_env_var('PR_NUMBER', self.pr_number, os.getenv('GITHUB_ENV', ''))
 
     def update_github_repo(self):
         if self.utils.path_exists(f"{self.wkdir}/.github/"):
