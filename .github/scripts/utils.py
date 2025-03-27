@@ -1,7 +1,9 @@
 import os
+import sys
 import select
 import json
 import platform
+import threading
 import subprocess
 from pathlib import Path
 from typing import List, Union, Optional, Dict, Any
@@ -135,6 +137,18 @@ class Utils:
     # --------------------------
     # Command Execution
     # --------------------------
+    def _stream_reader(self, stream, stream_type):
+        """Thread function to read stream and print output"""
+        try:
+            for line in iter(stream.readline, ''):
+                if line:
+                    if stream_type == "stderr":
+                        print(line, end="", file=sys.stderr)
+                    else:
+                        print(line, end="")
+        finally:
+            stream.close()
+
     def run_command(
         self,
         command: Union[str, List[str]],
@@ -175,20 +189,34 @@ class Utils:
                 stdout=stdout,
                 stderr=stderr,
                 text=True,
-                bufsize=256
+                bufsize=1,
+                universal_newlines=True
             )
+            threads = []
             if not silent:
-                # print output in real-time with select
-                outputs = [process.stdout, process.stderr]
-                while outputs:
-                    readable, _, _ = select.select(outputs, [], [])
-                    for stream in readable:
-                        line = stream.readline()
-                        if line:
-                            print(line, end="")
-                        else:
-                            outputs.remove(stream)
+                if process.stdout:
+                    t = threading.Thread(
+                        target=self._stream_reader,
+                        args=(process.stdout, "stdout"),
+                        daemon=True
+                    )
+                    t.start()
+                    threads.append(t)
+                
+                if process.stderr:
+                    t = threading.Thread(
+                        target=self._stream_reader,
+                        args=(process.stderr, "stderr"),
+                        daemon=True
+                    )
+                    t.start()
+                    threads.append(t)
+                
             process.wait()
+            # Wait for threads to finish
+            for t in threads:
+                t.join(timeout=0.5)
+                
             if check and process.returncode != 0:
                 raise subprocess.CalledProcessError(process.returncode, command)
             return subprocess.CompletedProcess(
