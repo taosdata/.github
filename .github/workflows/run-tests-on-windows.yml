@@ -177,7 +177,7 @@ jobs:
           time /t
 
           cd %WIN_COMMUNITY_ROOT%/tests/ci
-          pip3 install taospy==2.7.21 
+          pip3 install taospy==2.7.23
           pip3 install taos-ws-py==0.3.8
           xcopy /e/y/i/f %WIN_INTERNAL_ROOT%\\debug\\build\\lib\\taos.dll C:\\Windows\\System32
           if exist "%WIN_INTERNAL_ROOT%\\debug\\build\\lib\\taosnative.dll" (
