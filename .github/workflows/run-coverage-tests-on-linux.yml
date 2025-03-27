@@ -42,11 +42,14 @@ jobs:
       - name: Output the environment information
         run: |
           echo "::group::Environment Info"
-          date
-          hostname
+          echo "Date and Time: $(date)"
+          echo "Hostname: $(hostname)"
+          echo "Environment Variables:"
           env
           echo "Runner: ${{ runner.name }}"
           echo "Workspace: ${{ env.WKDIR }}"
+          echo "TDinternal Branch: ${{ env.SOURCE_BRANCH_TDINTERNAL }}"
+          echo "TDengine Branch: ${{ env.SOURCE_BRANCH_TDENGINE }}"
           git --version
           echo "${{ env.WKDIR }}/restore.sh -n ${{ github.run_number }} -c ${{ env.CONTAINER_NAME }}"
           echo "::endgroup::"
@@ -60,12 +63,12 @@ jobs:
           git remote prune origin
           git fetch
           if git rev-parse --verify origin/${{ env.SOURCE_BRANCH_TDINTERNAL }} >/dev/null 2>&1; then
-            git checkout ${{ env.SOURCE_BRANCH_TDINTERNAL }}
+            git switch ${{ env.SOURCE_BRANCH_TDINTERNAL }}
           else
-            echo "Branch ${{ env.SOURCE_BRANCH_TDINTERNAL }} does not exist. checkout default branch 3.0."
-            git checkout 3.0
+            echo "Branch ${{ env.SOURCE_BRANCH_TDINTERNAL }} does not exist. Switching to default branch 3.0."
+            git switch -c 3.0 origin/3.0
           fi
-          git pull
+          git pull || { echo "Failed to pull the latest code."; exit 1; }
 
       - name: Prepare TDengine repository
         run: |
@@ -76,12 +79,12 @@ jobs:
           git remote prune origin
           git fetch
           if git rev-parse --verify origin/${{ env.SOURCE_BRANCH_TDENGINE }} >/dev/null 2>&1; then
-            git checkout ${{ env.SOURCE_BRANCH_TDENGINE }}
+            git switch ${{ env.SOURCE_BRANCH_TDENGINE }}
           else
-            echo "Branch ${{ env.SOURCE_BRANCH_TDENGINE }} does not exist. checkout default branch 3.0."
-            git checkout 3.0
+            echo "Branch ${{ env.SOURCE_BRANCH_TDENGINE }} does not exist. Switching to default branch 3.0."
+            git switch -c 3.0 origin/3.0
           fi
-          git pull
+          git pull || { echo "Failed to pull the latest code."; exit 1; }
 
       - name: Update submodule
         run: |
@@ -132,12 +135,19 @@ jobs:
       - name: Run taosd && taosc coverage 
         if: always() 
         run: |
-            cd ${{ env.WKC }}/tests/parallel_test
-            date
-            ./run_coverage_container.sh -d ${{ env.WKDIR }} -b ${{ env.SOURCE_BRANCH_TDENGINE }} > coverage.log 2>&1
-            cat coverage.log|wc -l
-            cat coverage.log | grep -v FN | grep -v DA | grep -v SF | grep -v LF | grep -v TN |grep -v end | grep -v LH || true
-        continue-on-error: true  
+          echo "::group::Run taosd && taosc coverage"
+          cd ${{ env.WKC }}/tests/parallel_test
+          echo "Running coverage script at $(date)"
+          ./run_coverage_container.sh -d ${{ env.WKDIR }} -b ${{ env.SOURCE_BRANCH_TDENGINE }} > coverage.log 2>&1
+          if [ $? -ne 0 ]; then
+              echo "Coverage script failed. Check coverage.log for details."
+          fi
+          echo "Coverage log line count:"
+          cat coverage.log | wc -l
+          echo "Filtered coverage log (excluding specific patterns):"
+          cat coverage.log | grep -v FN | grep -v DA | grep -v SF | grep -v LF | grep -v TN | grep -v end | grep -v LH || true
+          echo "::endgroup::"
+        continue-on-error: true
 
       - name: Clearup the running cases
         if: always()
