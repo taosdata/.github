@@ -1,12 +1,10 @@
 #!/bin/bash
 set -eo pipefail
 
-# 接收参数
 TARGET_PARENT_DIR="$1"
 REPO_URL="$2"
 BRANCH="$3"
 GITHUB_TOKEN="$4"
-
 
 ################################################################
 # Main Execution Flow
@@ -26,6 +24,7 @@ if [[ $# -lt 4 ]]; then
 fi
 
 # Get repo name
+mkdir -p "$TARGET_PARENT_DIR"
 REPO_NAME=$(basename "$REPO_URL" .git)
 TARGET_DIR="$TARGET_PARENT_DIR/$REPO_NAME"
 
@@ -35,24 +34,27 @@ TARGET_DIR="$TARGET_PARENT_DIR/$REPO_NAME"
 # Create the target directory
 # mkdir -p "$TARGET_PARENT_DIR"
 
+# Set the authentication URL
+AUTH_URL="https://x-access-token:$GITHUB_TOKEN@${REPO_URL#https://}"
+
 # Clone or update the repository
-if [ -d "$TARGET_DIR" ] && [ "$(ls -A "$TARGET_DIR")" ]; then
+if [ -d "$TARGET_DIR/.git" ]; then
   echo "🔄 Updating existing repository: $REPO_NAME"
   cd "$TARGET_DIR"
 
   # Check if the current branch is the same as the target branch
   CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+  git remote set-url origin "$AUTH_URL"
+  git fetch --all --prune
+
   if [ "$CURRENT_BRANCH" != "$BRANCH" ]; then
     echo "🔀 Switching to branch: $BRANCH"
-    git fetch --all
-    git checkout -f "$BRANCH"
+    git checkout -B "$BRANCH" "origin/$BRANCH" --force
   fi
 
-  # Pull the latest changes
   echo "⬇️ Pulling latest changes..."
-  git remote set-url origin "https://x-access-token:$GITHUB_TOKEN@${REPO_URL#https://}"
-  git reset --hard origin/"$BRANCH"
+  git reset --hard "origin/$BRANCH"
 else
   echo "🆕 Cloning new repository: $REPO_NAME"
-  git clone -b "$BRANCH" "https://x-access-token:$GITHUB_TOKEN@${REPO_URL#https://}" "$TARGET_DIR"
+  git clone -b "$BRANCH" "$AUTH_URL" "$TARGET_DIR"
 fi
