@@ -32,8 +32,8 @@ class TestRunner:
                         extra_param = f"-w {log_server}"
         else:
             print("log_server.json file not found")
-        self.utils.set_env_var("timeout_cmd", timeout_cmd)
-        self.utils.set_env_var("extra_param", extra_param)
+        self.utils.set_env_var("timeout_cmd", timeout_cmd, os.getenv('GITHUB_ENV', ''))
+        self.utils.set_env_var("extra_param", extra_param, os.getenv('GITHUB_ENV', ''))
 
     def run_assert_test(self):
         cmd = f"cd {self.wkc}/test/ci && ./run_check_assert_container.sh -d {self.wkdir}",
@@ -47,6 +47,7 @@ class TestRunner:
         pr_number = self.utils.get_env_var('PR_NUMBER', '')
         run_number = self.utils.get_env_var('GITHUB_RUN_NUMBER', '')
         extra_param = self.utils.get_env_var('extra_param', '')
+        print(f"PR number: {pr_number}, run number: {run_number}, extra param: {extra_param}")
         cmd = f"cd {self.wkc}/test/ci && ./run_scan_container.sh -d {self.wkdir} -b {pr_number}_{run_number} -f {self.wkdir}/tmp/{pr_number}_{run_number}/docs_changed.txt {extra_param}",
         self.utils.run_command(cmd, silent=True)
 

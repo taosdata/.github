@@ -23,13 +23,10 @@ class TestPreparer:
 
         # Set branch variables
         self._set_branch_variables()
-
-    def update_github_repo(self):
-        if self.utils.path_exists(f"{self.wkdir}/.github/"):
-            cmd = f"cd {self.wkdir}/.github/ && git pull"
-        else:
-            cmd = f"cd {self.wkdir} && git clone https://github.com/taosdata/.github.git && cd .github && git pull"
-        self.utils.run_command(cmd)
+        self.source_branch = self.utils.get_env_var('SOURCE_BRANCH', '')
+        self.target_branch = self.utils.get_env_var('TARGET_BRANCH', '')
+        self.pr_number = self.utils.get_env_var('PR_NUMBER', '')
+        print(f"source branch: {self.source_branch}, target branch: {self.target_branch}, PR number: {self.pr_number}")
 
     def _set_branch_variables(self):
         """Determine source/target branches and PR number from inputs or event data"""
@@ -38,22 +35,25 @@ class TestPreparer:
             self.inputs.get('specified_pr_number') == 'unavailable'):
             # From GitHub event
             pr = self.event.get('pull_request', {})
-            self.source_branch = pr.get('head', {}).get('ref', '')
-            self.target_branch = pr.get('base', {}).get('ref', '')
-            self.pr_number = str(pr.get('number', ''))
+            source_branch = pr.get('head', {}).get('ref', '')
+            target_branch = pr.get('base', {}).get('ref', '')
+            pr_number = str(pr.get('number', ''))
         else:
             # From inputs
-            self.source_branch = self.inputs.get('specified_source_branch', '')
-            self.target_branch = self.inputs.get('specified_target_branch', '')
-            self.pr_number = self.inputs.get('specified_pr_number', '')
+            source_branch = self.inputs.get('specified_source_branch', '')
+            target_branch = self.inputs.get('specified_target_branch', '')
+            pr_number = self.inputs.get('specified_pr_number', '')
 
-        self._set_env_var('SOURCE_BRANCH', self.source_branch)
-        self._set_env_var('TARGET_BRANCH', self.target_branch)
-        self._set_env_var('PR_NUMBER', self.pr_number)
+        self.utils.set_env_var('SOURCE_BRANCH', source_branch, os.getenv('GITHUB_ENV', ''))
+        self.utils.set_env_var('TARGET_BRANCH', target_branch, os.getenv('GITHUB_ENV', ''))
+        self.utils.set_env_var('PR_NUMBER', pr_number, os.getenv('GITHUB_ENV', ''))
 
-    def _set_env_var(self, name, value):
-        """Set environment variable in specified file"""
-        self.utils.set_env_var(name, value, os.getenv('GITHUB_ENV', ''))
+    def update_github_repo(self):
+        if self.utils.path_exists(f"{self.wkdir}/.github/"):
+            cmd = f"cd {self.wkdir}/.github/ && git pull"
+        else:
+            cmd = f"cd {self.wkdir} && git clone https://github.com/taosdata/.github.git && cd .github && git pull"
+        self.utils.run_command(cmd)
 
     def prepare_repositories(self):
         """Prepare both TDengine or TDinternal repository"""
@@ -83,12 +83,11 @@ class TestPreparer:
         self.utils.run_commands(cmds)
 
     def update_submodules(self):
-        cmds = [
-            f"cd {self.wkc} && git submodule update --init --recursive"
-        ]
-        self.utils.run_commands(cmds)
+        cmd = "git submodule update --init --recursive"
+        self.utils.run_command(cmd, cwd=self.wkc)
 
     def update_codes(self):
+        """Update codes for TDengine or TDinternal"""
         print("is enterprise: ", self.enterprise)
         if self.enterprise:
             print("Updating codes for TDinternal...")
@@ -112,10 +111,11 @@ class TestPreparer:
     def _update_lastest_merge_from_pr(self, repo_path, pr_number):
         """Update latest codes and merge from PR"""
         repo_name = 'TDinternal' if 'TDinternal' in str(repo_path) else 'TDengine'
+
         cmds = [
             f"cd { repo_path } && git pull >/dev/null",
             f"cd { repo_path } && git log -5",
-            f'''echo `date "+%Y%m%d-%H%M%S"` {repo_name}Test/PR-{self.pr_number}:{self.run_number}:{self.target_branch} >> {self.wkdir}/jenkins.log''',
+            f'''echo `date "+%Y%m%d-%H%M%S"` {repo_name}Test/PR-{pr_number}:{self.run_number}:{self.target_branch} >> {self.wkdir}/jenkins.log''',
             f"cd { repo_path } && echo CHANGE_BRANCH:{self.source_branch} >> {self.wkdir}/jenkins.log",
             f"cd { repo_path } && echo {repo_name} log: `git log -5` >> {self.wkdir}/jenkins.log",
             f"cd { repo_path } && git fetch origin +refs/pull/{pr_number}/merge",
