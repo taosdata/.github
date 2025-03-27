@@ -40,7 +40,6 @@ class TestRunner:
         self.utils.run_commands(cmds)
 
     def run(self):
-        self.get_testing_params()
         if self.test_type == 'assert':
             self.run_assert_test()
         elif self.test_type == 'void':
