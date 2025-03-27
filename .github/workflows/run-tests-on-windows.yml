@@ -54,7 +54,7 @@ jobs:
         run: |
           tasklist /FI "IMAGENAME eq python3.exe" /NH | findstr /I python3.exe >nul
           if %errorlevel% equ 0 (
-              taskkill /F /IM python3.exe 2>nul
+              wmic process where "name='python3.exe'" delete
               echo Python3 process has been terminated.
           ) else (
               echo No Python3 process was found.
