@@ -27,7 +27,7 @@ jobs:
   run-tests-on-windows:
     runs-on:
       group: CI
-      labels: [self-hosted, Windows, X64, testing]
+      labels: [self-hosted, Windows, X64, testwin]
 
     timeout-minutes: 126
 
