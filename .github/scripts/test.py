@@ -23,13 +23,18 @@ class TestRunner:
             with open(log_server_file) as file:
                 log_server_data = json.load(file)
                 log_server_enabled = log_server_data.get("enabled")
+                print(f"log_server_enabled: {log_server_enabled}")
                 timeout_param = log_server_data.get("timeout")
+                print(f"timeout_param: {timeout_param}")
                 if timeout_param and timeout_param != 0:
                     timeout_cmd = f"timeout {timeout_param}"
+                    print(f"timeout_cmd: {timeout_cmd}")
                 if log_server_enabled == 1:
                     log_server = log_server_data.get("server")
+                    print(f"log_server: {log_server}")
                     if log_server:
                         extra_param = f"-w {log_server}"
+                print(f"extra_param: {extra_param}")
         else:
             print("log_server.json file not found")
         self.utils.set_env_var("timeout_cmd", timeout_cmd, os.getenv('GITHUB_ENV', ''))
