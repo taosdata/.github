@@ -5,16 +5,12 @@ name: TDengine Coverage (taosd & taosc)
 on:
   workflow_call:
     inputs:
-      tdinternal:
-        description: 'Is the PR from TDinternal?'
-        required: true
-        type: boolean
-      specified_tdengine_test_branch:
-        description: 'Enter the test branch name of TDengine'
-        required: true
-        type: string
       specified_tdinternal_test_branch:
         description: 'Enter the test branch of TDinternal'
+        required: true
+        type: string
+      specified_tdengine_test_branch:
+        description: 'Enter the test branch of TDengine'
         required: true
         type: string
 
@@ -31,16 +27,15 @@ jobs:
       WKDIR: '/var/lib/jenkins/workspace'
       WK: '/var/lib/jenkins/workspace/TDinternal'
       WKC: '/var/lib/jenkins/workspace/TDinternal/community'
-      IS_TDINTERNAL: ${{ github.event.inputs.tdinternal }}
-      SOURCE_BRANCH_TDENGINE: ""
       SOURCE_BRANCH_TDINTERNAL: ""
+      SOURCE_BRANCH_TDENGINE: ""
 
     steps:
       - name: Set environment variables based on condition
         run: |
           echo "Setting SOURCE_BRANCH_TDENGINE and SOURCE_BRANCH_TDINTERNAL based on inputs..."
-          echo "SOURCE_BRANCH_TDENGINE=${{ inputs.specified_tdengine_test_branch }}" >> $GITHUB_ENV
           echo "SOURCE_BRANCH_TDINTERNAL=${{ inputs.specified_tdinternal_test_branch }}" >> $GITHUB_ENV
+          echo "SOURCE_BRANCH_TDENGINE=${{ inputs.specified_tdengine_test_branch }}" >> $GITHUB_ENV
           echo "Current step debug (GITHUB_ENV content):"
           cat $GITHUB_ENV
 
@@ -51,7 +46,6 @@ jobs:
           hostname
           env
           echo "Runner: ${{ runner.name }}"
-          echo "Trigger Source from TDinternal: ${{ env.IS_TDINTERNAL }}"
           echo "Workspace: ${{ env.WKDIR }}"
           git --version
           echo "${{ env.WKDIR }}/restore.sh -n ${{ github.run_number }} -c ${{ env.CONTAINER_NAME }}"
