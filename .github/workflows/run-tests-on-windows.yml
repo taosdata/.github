@@ -210,3 +210,16 @@ jobs:
           )
           time /t
         shell: cmd
+        
+      - name: Clearup the running cases
+        shell: cmd
+        continue-on-error: true
+        if: always()
+        run: |
+          tasklist /FI "IMAGENAME eq python3.exe" /NH | findstr /I python3.exe >nul
+          if %errorlevel% equ 0 (
+              taskkill /F /IM python3.exe 2>nul
+              echo Python3 process has been terminated.
+          ) else (
+              echo No Python3 process was found.
+          )   
