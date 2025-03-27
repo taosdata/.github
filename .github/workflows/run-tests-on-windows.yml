@@ -46,6 +46,20 @@ jobs:
       PR_NUMBER_PULL: ${{ github.event.pull_request.number }}
 
     steps:
+    
+      - name: init environment
+        shell: cmd
+        continue-on-error: true
+        if: always()
+        run: |
+          tasklist /FI "IMAGENAME eq python3.exe" /NH | findstr /I python3.exe >nul
+          if %errorlevel% equ 0 (
+              taskkill /F /IM python3.exe 2>nul
+              echo Python3 process has been terminated.
+          ) else (
+              echo No Python3 process was found.
+          )   
+          
       - name: Set envrionment variables based on condition
         run: |
           REM Trim the blank space
@@ -222,4 +236,5 @@ jobs:
               echo Python3 process has been terminated.
           ) else (
               echo No Python3 process was found.
-          )   
+          )           
+
