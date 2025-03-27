@@ -54,11 +54,13 @@ jobs:
 
     defaults:
       run:
-        working-directory: ${{ github.workspace }}/.github/.github/scripts/
+        working-directory: ${{ github.workspace }}/.github/scripts/
 
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v4
+        with:
+          ref: 'new_test_framework'
 
       - name: Prepare the environment
         run: python3 prepare.py
