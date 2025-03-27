@@ -174,7 +174,7 @@ class Utils:
                 stdout=stdout,
                 stderr=stderr,
                 text=True,
-                bufzie=1
+                bufsize=1
             )
             if not silent:
                 # Print output in real-time
