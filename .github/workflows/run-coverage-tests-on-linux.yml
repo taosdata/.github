@@ -15,9 +15,8 @@ on:
         type: string
       specified_tdinternal_test_branch:
         description: 'Enter the test branch of TDinternal'
-        required: false
+        required: true
         type: string
-        default: '3.0' # default value for TDinternal test branch
 
 jobs:
   run-tests-coverage-on-linux:
@@ -33,20 +32,18 @@ jobs:
       WK: '/var/lib/jenkins/workspace/TDinternal'
       WKC: '/var/lib/jenkins/workspace/TDinternal/community'
       IS_TDINTERNAL: ${{ github.event.inputs.tdinternal }}
-      SOURCE_BRANCH: ""
+      SOURCE_BRANCH_TDENGINE: ""
+      SOURCE_BRANCH_TDINTERNAL: ""
 
     steps:
       - name: Set environment variables based on condition
         run: |
-          if [[ "${{ inputs.specified_tdengine_test_branch }}" == 'unavailable' ]] ; then
-            echo "set from github event"
-            echo SOURCE_BRANCH="${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
-          else
-            echo "set from input"
-            echo "SOURCE_BRANCH=${{ inputs.specified_tdengine_test_branch }}" >> $GITHUB_ENV
-          fi
+          echo "Setting SOURCE_BRANCH_TDENGINE and SOURCE_BRANCH_TDINTERNAL based on inputs..."
+          echo "SOURCE_BRANCH_TDENGINE=${{ inputs.specified_tdengine_test_branch }}" >> $GITHUB_ENV
+          echo "SOURCE_BRANCH_TDINTERNAL=${{ inputs.specified_tdinternal_test_branch }}" >> $GITHUB_ENV
           echo "Current step debug (GITHUB_ENV content):"
           cat $GITHUB_ENV
+
       - name: Output the environment information
         run: |
           echo "::group::Environment Info"
@@ -60,56 +57,37 @@ jobs:
           echo "${{ env.WKDIR }}/restore.sh -n ${{ github.run_number }} -c ${{ env.CONTAINER_NAME }}"
           echo "::endgroup::"
 
-      - name: Prepare repositories
+      - name: Prepare TDinternal repository
         run: |
-          set -euo pipefail
-          prepare_environment() {
-            cd "$1"
-            git reset --hard
-            git clean -f
-            git remote prune origin
-            git fetch
-            git checkout "$2"
-          }
-          if [[ "${{ inputs.specified_tdengine_test_branch }}" == 'unavailable' ]] ; then
-            prepare_environment "${{ env.WK }}" "$SOURCE_BRANCH"
+          echo "Preparing TDinternal repository..."
+          cd ${{ env.WK }}
+          git reset --hard
+          git clean -f
+          git remote prune origin
+          git fetch
+          if git rev-parse --verify origin/${{ env.SOURCE_BRANCH_TDINTERNAL }} >/dev/null 2>&1; then
+            git checkout ${{ env.SOURCE_BRANCH_TDINTERNAL }}
+          else
+            echo "Branch ${{ env.SOURCE_BRANCH_TDINTERNAL }} does not exist. checkout default branch 3.0."
+            git checkout 3.0
           fi
-          prepare_environment "${{ env.WKC }}" "$SOURCE_BRANCH"
+          git pull
 
-      - name: Get latest codes and logs for TDinternal PR
-        if: ${{ env.IS_TDINTERNAL == 'true' }}
+      - name: Prepare TDengine repository
         run: |
-          cd ${{ env.WK }}
-          git pull >/dev/null
-          git log -5
-          echo "`date "+%Y%m%d-%H%M%S"` TDinternalTest/${{ github.run_number }}:${{ env.SOURCE_BRANCH }}" >>${{ env.WKDIR }}/jenkins.log
-          echo "CHANGE_BRANCH:${{ env.SOURCE_BRANCH }}" >>${{ env.WKDIR }}/jenkins.log
-          echo "TDinternal log: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
-          git checkout -qf FETCH_HEAD
-          git log -5
-          echo "TDinternal log merged: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
+          echo "Preparing TDengine repository..."
           cd ${{ env.WKC }}
+          git reset --hard
+          git clean -f
           git remote prune origin
-          git pull >/dev/null
-          git log -5
-          echo "community log: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
-      - name: Get latest codes and logs for TDengine PR
-        if: ${{ env.IS_TDINTERNAL == 'false' }}
-        run: |
-          cd ${{ env.WKC }}
-          git remote prune origin
-          git pull >/dev/null
-          git log -5
-          echo "`date "+%Y%m%d-%H%M%S"` TDengineTest/${{ github.run_number }}:${{ env.SOURCE_BRANCH }}" >>${{ env.WKDIR }}/jenkins.log
-          echo "CHANGE_BRANCH:${{ env.SOURCE_BRANCH }}" >>${{ env.WKDIR }}/jenkins.log
-          echo "community log: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
-          git checkout -qf FETCH_HEAD
-          git log -5
-          echo "community log merged: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
-          cd ${{ env.WK }}
-          git pull >/dev/null
-          git log -5
-          echo "TDinternal log: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
+          git fetch
+          if git rev-parse --verify origin/${{ env.SOURCE_BRANCH_TDENGINE }} >/dev/null 2>&1; then
+            git checkout ${{ env.SOURCE_BRANCH_TDENGINE }}
+          else
+            echo "Branch ${{ env.SOURCE_BRANCH_TDENGINE }} does not exist. checkout default branch 3.0."
+            git checkout 3.0
+          fi
+          git pull
 
       - name: Update submodule
         run: |
@@ -162,13 +140,9 @@ jobs:
         run: |
             cd ${{ env.WKC }}/tests/parallel_test
             date
-            ./run_coverage_container.sh -d ${{ env.WKDIR }} -b ${{ env.SOURCE_BRANCH }} > coverage.log 2>&1
+            ./run_coverage_container.sh -d ${{ env.WKDIR }} -b ${{ env.SOURCE_BRANCH_TDENGINE }} > coverage.log 2>&1
             cat coverage.log|wc -l
-            head -n 10 coverage.log
-            tail -n 10 coverage.log
-            ##cat coverage.log | grep -v "FN|DA:|SF|LF|LH" || true
             cat coverage.log | grep -v FN | grep -v DA | grep -v SF | grep -v LF | grep -v TN |grep -v end | grep -v LH || true
-            ##cat coverage.log | grep -E "ERROR|error|Error|FAILED|failed|Failed" || true
         continue-on-error: true  
 
       - name: Clearup the running cases
