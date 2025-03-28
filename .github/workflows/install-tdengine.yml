@@ -1,0 +1,24 @@
+name: Install TDengine
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+      group:
+        required: true
+        type: string
+      labels:
+        required: true
+        type: string
+
+jobs:
+  install-tdengine:
+    runs-on:
+      group: ${{ inputs.group }}
+      labels: ${{ inputs.labels }}
+    steps:
+      - name: Execute installation
+        shell: bash
+        run: |
+          ${GITHUB_ACTION_PATH}/../../scripts/install_tdengine_enterprise.sh "${{ inputs.version }}" "${{ secrets.NAS_DOWNLOAD_URL }}"
