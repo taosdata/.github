@@ -16,7 +16,7 @@ jobs:
   install-tdengine:
     runs-on:
       group: ${{ inputs.group }}
-      labels: ${{ fromJson(format('[{0}]', inputs.labels)) }}
+      labels: ${{ fromJson(inputs.labels) }}
     steps:
       - name: Execute installation
         shell: bash
