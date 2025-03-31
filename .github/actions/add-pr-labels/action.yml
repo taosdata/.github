@@ -59,10 +59,11 @@ runs:
                     // 初始化 labelAdded 变量
                     let labelAdded = false;
                     // 获取用户所属团队
-                    const { data: teams } = await github.rest.teams.list({
-                    org: context.repo.owner,
+                    const { data: userTeams } = await github.rest.teams.listForUser({
+                        org: context.repo.owner,
+                        username: pr.user.login, // 指定用户
                     });
-                    const filteredTeams = teams.map(({ all, ...rest }) => rest);
+                    const filteredTeams = userTeams.map(({ all, ...rest }) => rest);
                     // 查找匹配的团队标签
                     for (const team of filteredTeams) {
                     const teamName = team.slug; // 使用团队 slug 更可靠
