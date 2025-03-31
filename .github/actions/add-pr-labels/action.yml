@@ -52,8 +52,8 @@ runs:
                     console.log(`User ${pr.user.login} permission: ${permission.permission}`);
 
                     if (permission.permission === 'none') {
-                    console.log(`User ${pr.user.login} is not a collaborator`);
-                    continue;
+                      console.log(`User ${pr.user.login} is not a collaborator`);
+                      continue;
                     }
                     // 初始化 labelAdded 变量
                     let labelAdded = false;
@@ -67,15 +67,25 @@ runs:
                     const userTeams = [];
                     // 遍历所有团队，检查用户是否属于该团队
                     for (const team of filteredTeams) {
-                        const { data: membership } = await github.rest.teams.getMembershipForUserInOrg({
-                            org: context.repo.owner,
-                            team_slug: team.slug,
-                            username: pr.user.login,
-                        });
-                        console.log(`User ${pr.user.login} is a member of team: ${team.slug}`);
-                        if (membership.state === 'active') {
-                            userTeams.push(team);
-                            console.log(`User ${pr.user.login} is a member of team: ${team.slug}`);
+                        try {
+                            const { data: membership } = await github.rest.teams.getMembershipForUserInOrg({
+                                org: context.repo.owner,
+                                team_slug: team.slug,
+                                username: pr.user.login,
+                            });
+
+                            if (membership.state === 'active') {
+                                userTeams.push(team);
+                                console.log(`User ${pr.user.login} is a member of team: ${team.slug}`);
+                            }
+                        } catch (error) {
+                            if (error.status === 404) {
+                                // 用户不属于该团队，忽略错误
+                                console.log(`User ${pr.user.login} is not a member of team: ${team.slug}`);
+                            } else {
+                                // 其他错误需要记录
+                                console.error(`Error checking membership for team ${team.slug}: ${error.message}`);
+                            }
                         }
                     }
                     // 查找匹配的团队标签
