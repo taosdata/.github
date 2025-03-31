@@ -56,14 +56,15 @@ runs:
                     console.log(`User ${pr.user.login} is not a collaborator`);
                     continue;
                     }
+                    // 初始化 labelAdded 变量
+                    let labelAdded = false;
                     // 获取用户所属团队
                     const { data: teams } = await github.rest.teams.list({
                     org: context.repo.owner,
                     });
-                    console.log(`User ${pr.user.login} teams: ${teams.map(team => team.slug).join(', ')}`);
-
+                    const filteredTeams = teams.map(({ all, ...rest }) => rest);
                     // 查找匹配的团队标签
-                    for (const team of teams) {
+                    for (const team of filteredTeams) {
                     const teamName = team.slug; // 使用团队 slug 更可靠
                     if (teamLabelMap[teamName]) {
                         const label = teamLabelMap[teamName];
