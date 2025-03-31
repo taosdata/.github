@@ -28,5 +28,5 @@ ls "$test_root"/env "$test_root"/run
 ENV_FILE=~/.taostest/.env
 mkdir -p ~/.taostest
 touch $ENV_FILE
-echo "TEST_ROOT=$TEST_ROOT" > $ENV_FILE
+echo "TEST_ROOT=$test_root" > $ENV_FILE
 echo "TAOSTEST_SQL_RECORDING_ENABLED=True" >> $ENV_FILE
