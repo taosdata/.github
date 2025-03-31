@@ -2,11 +2,7 @@ name: Add PR Labels
 description: Add labels to PRs based on team membership
 on:
     pull_request:
-    workflow_dispatch:
-      inputs:
-        team-label-Map:
-            description: 'Map of team names to labels'
-            required: true
+
 
 
 jobs:
@@ -26,4 +22,5 @@ jobs:
           uses: taosdata/github-actions/add-pr-labels
           with:
             gh-token: ${{ steps.app-token.outputs.token }}
-            team-label-Map: ${{ github.event.inputs.team-label-Map }}
+
+                

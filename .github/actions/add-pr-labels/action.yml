@@ -10,7 +10,6 @@ runs:
   steps:
     - name: Add Team Labels
       uses: actions/github-script@v6
-      env: TEAM_LABEL_MAPPING=${{ inputs.team-label-Map }}
       with:
         github-token: ${{ inputs.github-token }}
         script: |
