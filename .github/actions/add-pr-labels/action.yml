@@ -79,7 +79,6 @@ runs:
                         }
                     }
                     // 查找匹配的团队标签
-                    let labelAdded = false;
                     for (const team of userTeams) {
                         const teamName = team.slug; // 使用团队 slug 更可靠
                         if (teamLabelMap[teamName]) {
