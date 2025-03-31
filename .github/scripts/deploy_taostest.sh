@@ -24,6 +24,7 @@ pip3 install taostest-0.1.5-py3-none-any.whl -i "$pip_source"
 # Set TEST_ROOT
 echo "TEST_ROOT=$test_root"
 mkdir -p "$test_root"/env "$test_root"/run
+ls "$test_root"/env "$test_root"/run
 ENV_FILE=~/.taostest/.env
 mkdir -p ~/.taostest
 touch $ENV_FILE
