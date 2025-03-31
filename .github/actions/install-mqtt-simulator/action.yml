@@ -2,7 +2,7 @@ name: Install MQTT simulator
 description: Install MQTT simulator
 
 inputs:
-  nas_public_url:
+  pub_dl_url:
     required: true
     description: 'A secrets'
 runs:
@@ -44,21 +44,4 @@ runs:
     - name: Set up variables
       shell: bash
       run: |
-        BASE_URL=${{ inputs.nas_public_url }}
-
-        # Get major version
-        MAJOR_VERSION=$(echo $VERSION | cut -d '.' -f 1-2)
-
-        # Get download URL
-        URL="${BASE_URL}/mqtt-simulator/mqtt_pub"
-        echo "Download URL: $URL"
-        echo "URL=$URL" >> $GITHUB_ENV
-    - name: Download Mqtt simulator
-      shell: bash
-      run: |
-        if ! wget "$URL"; then
-          echo "::error ::Failed to download Mqtt simulator from $URL"
-          exit 1
-        fi
-
-
+        wget -N --no-clobber ${{ inputs.pub_dl_url }}/binary_tools/mqtt_pub
