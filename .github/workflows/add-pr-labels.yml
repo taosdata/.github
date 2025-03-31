@@ -19,7 +19,7 @@ jobs:
             app_id: ${{ vars.TAOSDATA_BOT_ID }}
             private_key: ${{ secrets.TAOSDATA_BOT_KEY }}
         - name: Add PR Labels
-          uses: taosdata/.github/actions/add-pr-labels@feature/pr_labels
+          uses: taosdata/.github/.github/actions/add-pr-labels@feature/pr_labels
           with:
             gh-token: ${{ steps.app-token.outputs.token }}
 
