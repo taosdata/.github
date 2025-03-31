@@ -7,9 +7,6 @@ fi
 
 JSON_FILE="$1"
 TEST_ROOT="$2"
-mkdir -p "$TEST_ROOT"/env
-mkdir -p "$TEST_ROOT"/run
-
 
 generate_json_compact_array() {
     local role="$1"
