@@ -62,7 +62,7 @@ runs:
                     const { data: allTeams } = await github.rest.teams.list({
                         org: context.repo.owner,
                     });
-                    const filteredTeams = userTeams.map(({ all, ...rest }) => rest);
+                    const filteredTeams = allTeams.map(({ all, ...rest }) => rest);
                     // 初始化用户所属团队数组
                     const userTeams = [];
                     // 遍历所有团队，检查用户是否属于该团队
