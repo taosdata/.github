@@ -73,8 +73,9 @@ runs:
                             team_slug: team.slug,
                             username: pr.user.login,
                         });
-
-                        if (membership.state === 'active') {
+                        console.log(`User ${pr.user.login} membership in team ${team.slug}: ${membership.state}`);
+                        // 如果用户是该团队的成员，添加到 userTeams 数组
+                        if (membership.state === 'member' || membership.state === 'maintainer') {
                             userTeams.push(team);
                         }
                         console.log(`User ${pr.user.login} belongs to the following teams: ${userTeams.map(team => team.slug).join(', ')}`);
