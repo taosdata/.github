@@ -21,7 +21,13 @@ runs:
         script: |
                 // 团队到标签的映射
                 const teamLabelMap = {
-                'platform': 'platform',
+                'platform': 'team platform',
+                'application-aloud': 'team application',
+                'application-TDasset': 'team application',
+                'engine-query': 'team engine',
+                'engine-storage': 'team engine',
+                'tools-connectors': 'team tools',
+                'tools-taosx': 'team tools',
                 // 添加更多映射...
                 };
 
@@ -96,14 +102,14 @@ runs:
                         issue_number: pr.number
                     });
 
-                    if (!labels.some(l => l.name === 'community')) {
+                    if (!labels.some(l => l.name === 'from community')) {
                         await github.rest.issues.addLabels({
                         owner: context.repo.owner,
                         repo: context.repo.repo,
                         issue_number: pr.number,
-                        labels: ['community']
+                        labels: ['from community']
                         });
-                        console.log(`Added label 'community' to PR #${pr.number}`);
+                        console.log(`Added label 'from community' to PR #${pr.number}`);
                     }
                     }
                         
