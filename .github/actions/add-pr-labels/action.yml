@@ -111,6 +111,7 @@ runs:
                                 });
                                 console.log(`Added label '${label}' to PR #${pr.number}`);
                             }
+                            labelAdded = true; // 设置 labelAdded 为 true
                             break; // 只添加第一个匹配的团队标签
                         }
                     }
