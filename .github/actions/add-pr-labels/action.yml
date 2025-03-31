@@ -58,12 +58,32 @@ runs:
                     }
                     // 初始化 labelAdded 变量
                     let labelAdded = false;
-                    // 获取用户所属团队
-                    const { data: userTeams } = await github.rest.teams.listForUser({
+                    // 获取组织的所有团队
+                    const { data: allTeams } = await github.rest.teams.list({
                         org: context.repo.owner,
-                        username: pr.user.login, // 指定用户
                     });
                     const filteredTeams = userTeams.map(({ all, ...rest }) => rest);
+                    // 初始化用户所属团队数组
+                    const userTeams = [];
+                    // 遍历所有团队，检查用户是否属于该团队
+                    for (const team of filteredTeams) {
+                        try {
+                            const { data: membership } = await github.rest.teams.getMembershipForUserInOrg({
+                                org: context.repo.owner,
+                                team_slug: team.slug,
+                                username: pr.user.login,
+                            });
+
+                            if (membership.state === 'active') {
+                                userTeams.push(team);
+                            }
+                        } catch (error) {
+                            // 如果用户不属于某个团队，GitHub API 会返回 404，忽略该错误
+                            if (error.status !== 404) {
+                                console.error(`Error checking membership for team ${team.slug}: ${error.message}`);
+                            }
+                        }
+                    }
                     // 查找匹配的团队标签
                     for (const team of filteredTeams) {
                     const teamName = team.slug; // 使用团队 slug 更可靠
