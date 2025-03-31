@@ -44,4 +44,4 @@ runs:
     - name: Set up variables
       shell: bash
       run: |
-        wget -N --no-clobber ${{ inputs.pub_dl_url }}/binary_tools/mqtt_pub
+        wget -N ${{ inputs.pub_dl_url }}/binary_tools/mqtt_pub
