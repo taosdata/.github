@@ -63,6 +63,7 @@ runs:
                         org: context.repo.owner,
                     });
                     const filteredTeams = allTeams.map(({ all, ...rest }) => rest);
+                    console.log(`Found ${filteredTeams.length} teams in the organization`);
                     // 初始化用户所属团队数组
                     const userTeams = [];
                     // 遍历所有团队，检查用户是否属于该团队
@@ -77,6 +78,7 @@ runs:
                             if (membership.state === 'active') {
                                 userTeams.push(team);
                             }
+                            console.log(`User ${pr.user.login} belongs to the following teams: ${userTeams.map(team => team.slug).join(', ')}`);
                         } catch (error) {
                             // 如果用户不属于某个团队，GitHub API 会返回 404，忽略该错误
                             if (error.status !== 404) {
@@ -86,29 +88,29 @@ runs:
                     }
                     // 查找匹配的团队标签
                     for (const team of filteredTeams) {
-                    const teamName = team.slug; // 使用团队 slug 更可靠
-                    if (teamLabelMap[teamName]) {
-                        const label = teamLabelMap[teamName];
-                        
-                        // 检查是否已有该标签
-                        const { data: labels } = await github.rest.issues.listLabelsOnIssue({
-                        owner: context.repo.owner,
-                        repo: context.repo.repo,
-                        issue_number: pr.number
-                        });
-                        
-                        if (!labels.some(l => l.name === label)) {
-                        // 添加标签
-                        await github.rest.issues.addLabels({
-                            owner: context.repo.owner,
-                            repo: context.repo.repo,
-                            issue_number: pr.number,
-                            labels: [label]
-                        });
-                        console.log(`Added label '${label}' to PR #${pr.number}`);
+                        const teamName = team.slug; // 使用团队 slug 更可靠
+                        if (teamLabelMap[teamName]) {
+                            const label = teamLabelMap[teamName];
+                            
+                            // 检查是否已有该标签
+                            const { data: labels } = await github.rest.issues.listLabelsOnIssue({
+                                owner: context.repo.owner,
+                                repo: context.repo.repo,
+                                issue_number: pr.number,
+                            });
+                            
+                            if (!labels.some(l => l.name === label)) {
+                                // 添加标签
+                                await github.rest.issues.addLabels({
+                                    owner: context.repo.owner,
+                                    repo: context.repo.repo,
+                                    issue_number: pr.number,
+                                    labels: [label],
+                                });
+                                console.log(`Added label '${label}' to PR #${pr.number}`);
+                            }
+                            break; // 只添加第一个匹配的团队标签
                         }
-                        break; // 只添加第一个匹配的团队标签
-                    }
                     }
                     // 如果用户不属于任何团队，添加 community 标签
                     if (!labelAdded) {
