@@ -4,11 +4,6 @@ inputs:
     description: 'GitHub access token'
     required: true
     default: 'A secret'
-  team-label-Map:
-    description: 'Map of team names to labels'
-    required: true
-
-
 
 runs:
   using: "composite"

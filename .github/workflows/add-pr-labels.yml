@@ -1,0 +1,29 @@
+name: Add PR Labels
+description: Add labels to PRs based on team membership
+on:
+    pull_request:
+    workflow_dispatch:
+      inputs:
+        team-label-Map:
+            description: 'Map of team names to labels'
+            required: true
+
+
+jobs:
+  Add_Labels:
+    runs-on: ubuntu-latest
+    steps:
+        - name: Checkout repository
+          uses: actions/checkout@v4
+
+        - name: Generate GitHub App Token
+          id: app-token
+          uses: tibdex/github-app-token@v1
+          with:
+            app_id: ${{ vars.TAOSDATA_BOT_ID }}
+            private_key: ${{ secrets.TAOSDATA_BOT_KEY }}
+        - name: Add PR Labels
+          uses: taosdata/github-actions/add-pr-labels
+          with:
+            gh-token: ${{ steps.app-token.outputs.token }}
+            team-label-Map: ${{ github.event.inputs.team-label-Map }}
