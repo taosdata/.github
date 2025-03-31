@@ -17,12 +17,11 @@ runs:
                 const teamLabelMap = {
                 'platform': 'team platform',
                 'application-aloud': 'team application',
-                'application-TDasset': 'team application',
+                'application-tdasset': 'team application',
                 'engine-query': 'team engine',
                 'engine-storage': 'team engine',
                 'tools-connectors': 'team tools',
                 'tools-taosx': 'team tools',
-                // 添加更多映射...
                 };
 
                 // 获取所有 open 状态的 PR
@@ -73,16 +72,15 @@ runs:
                             team_slug: team.slug,
                             username: pr.user.login,
                         });
-                        console.log(`User ${pr.user.login} membership in team ${team.slug}: ${membership.state}`);
-                        // 如果用户是该团队的成员，添加到 userTeams 数组
-                        if (membership.state === 'member' || membership.state === 'maintainer') {
+                        console.log(`User ${pr.user.login} is a member of team: ${team.slug}`);
+                        if (membership.state === 'active') {
                             userTeams.push(team);
+                            console.log(`User ${pr.user.login} is a member of team: ${team.slug}`);
                         }
-                        console.log(`User ${pr.user.login} belongs to the following teams: ${userTeams.map(team => team.slug).join(', ')}`);
-                        
                     }
                     // 查找匹配的团队标签
-                    for (const team of filteredTeams) {
+                    let labelAdded = false;
+                    for (const team of userTeams) {
                         const teamName = team.slug; // 使用团队 slug 更可靠
                         if (teamLabelMap[teamName]) {
                             const label = teamLabelMap[teamName];
@@ -109,11 +107,11 @@ runs:
                     }
                     // 如果用户不属于任何团队，添加 community 标签
                     if (!labelAdded) {
-                    const { data: labels } = await github.rest.issues.listLabelsOnIssue({
-                        owner: context.repo.owner,
-                        repo: context.repo.repo,
-                        issue_number: pr.number
-                    });
+                      const { data: labels } = await github.rest.issues.listLabelsOnIssue({
+                          owner: context.repo.owner,
+                          repo: context.repo.repo,
+                          issue_number: pr.number
+                      });
 
                     if (!labels.some(l => l.name === 'from community')) {
                         await github.rest.issues.addLabels({
