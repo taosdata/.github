@@ -88,6 +88,25 @@ runs:
                         break; // 只添加第一个匹配的团队标签
                     }
                     }
+                    // 如果用户不属于任何团队，添加 community 标签
+                    if (!labelAdded) {
+                    const { data: labels } = await github.rest.issues.listLabelsOnIssue({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        issue_number: pr.number
+                    });
+
+                    if (!labels.some(l => l.name === 'community')) {
+                        await github.rest.issues.addLabels({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        issue_number: pr.number,
+                        labels: ['community']
+                        });
+                        console.log(`Added label 'community' to PR #${pr.number}`);
+                    }
+                    }
+                        
                 } catch (error) {
                     console.error(`Error processing PR #${pr.number}: ${error.message}`);
                 }
