@@ -1,0 +1,94 @@
+name: 'Add label for each pr'
+inputs:
+  github-token:
+    description: 'GitHub access token'
+    required: true
+    default: 'A secret'
+  team-label-Map:
+    description: 'Map of team names to labels'
+    required: true
+
+
+
+runs:
+  using: "composite"
+  steps:
+    - name: Add Team Labels
+      uses: actions/github-script@v6
+      env: TEAM_LABEL_MAPPING=${{ inputs.team-label-Map }}
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+                // 团队到标签的映射
+                const teamLabelMap = {
+                'platform': 'platform',
+                // 添加更多映射...
+                };
+
+                // 获取所有 open 状态的 PR
+                const { data: prs } = await github.rest.pulls.list({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open'
+                });
+                console.log(`Found ${prs.length} open PRs`);
+
+                // 处理每个 PR
+                for (const pr of prs) {
+                try {
+                    console.log(`Processing PR #${pr.number} by ${pr.user.login}`);
+                    
+                    // 跳过机器人账户
+                    if (pr.user.type === 'Bot') {
+                    console.log(`Skipping bot PR #${pr.number}`);
+                    continue;
+                    }
+
+                    // 检查用户是否是仓库协作者
+                    const { data: permission } = await github.rest.repos.getCollaboratorPermissionLevel({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    username: pr.user.login
+                    });
+                    console.log(`User ${pr.user.login} permission: ${permission.permission}`);
+
+                    if (permission.permission === 'none') {
+                    console.log(`User ${pr.user.login} is not a collaborator`);
+                    continue;
+                    }
+                    // 获取用户所属团队
+                    const { data: teams } = await github.rest.teams.list({
+                    org: context.repo.owner,
+                    });
+                    console.log(`User ${pr.user.login} teams: ${teams.map(team => team.slug).join(', ')}`);
+
+                    // 查找匹配的团队标签
+                    for (const team of teams) {
+                    const teamName = team.slug; // 使用团队 slug 更可靠
+                    if (teamLabelMap[teamName]) {
+                        const label = teamLabelMap[teamName];
+                        
+                        // 检查是否已有该标签
+                        const { data: labels } = await github.rest.issues.listLabelsOnIssue({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        issue_number: pr.number
+                        });
+                        
+                        if (!labels.some(l => l.name === label)) {
+                        // 添加标签
+                        await github.rest.issues.addLabels({
+                            owner: context.repo.owner,
+                            repo: context.repo.repo,
+                            issue_number: pr.number,
+                            labels: [label]
+                        });
+                        console.log(`Added label '${label}' to PR #${pr.number}`);
+                        }
+                        break; // 只添加第一个匹配的团队标签
+                    }
+                    }
+                } catch (error) {
+                    console.error(`Error processing PR #${pr.number}: ${error.message}`);
+                }
+                }
