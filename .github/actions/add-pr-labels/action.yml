@@ -24,16 +24,10 @@ runs:
                 'tools-taosx': 'team tools',
                 };
 
-                // 获取所有 open 状态的 PR
-                const { data: prs } = await github.rest.pulls.list({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                state: 'open'
-                });
-                console.log(`Found ${prs.length} open PRs`);
+                // 获取触发当前 action 的 PR
+                const pr = github.context.payload.pull_request;
 
-                // 处理每个 PR
-                for (const pr of prs) {
+                // 处理 PR
                 try {
                     console.log(`Processing PR #${pr.number} by ${pr.user.login}`);
                     
@@ -137,4 +131,4 @@ runs:
                 } catch (error) {
                     console.error(`Error processing PR #${pr.number}: ${error.message}`);
                 }
-                }
+                
