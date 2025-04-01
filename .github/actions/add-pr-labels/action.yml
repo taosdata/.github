@@ -47,7 +47,6 @@ runs:
 
                     if (permission.permission === 'none') {
                       console.log(`User ${pr.user.login} is not a collaborator`);
-                      continue;
                     }
                     // 初始化 labelAdded 变量
                     let labelAdded = false;
