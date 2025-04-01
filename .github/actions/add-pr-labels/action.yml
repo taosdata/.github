@@ -14,5 +14,6 @@ runs:
       with:
         github-token: ${{ inputs.github-token }}
         script: |
-          const addLabels = require('./add-pr-labels.js');
+          const path = require('path');
+          const addLabels = require('${{ github.workspace }}/.github/actions/add-pr-labels/scripts/add-pr-labels.js');
           await addLabels({ github, context });
