@@ -6,125 +6,131 @@ inputs:
     default: 'A secret'
 
 runs:
-  using: "node16"
-  main: "add-pr-labels.js"
-        # script: |
-        #         // 团队到标签的映射
-        #         const teamLabelMap = {
-        #         'platform': 'team platform',
-        #         'application-aloud': 'team application',
-        #         'application-tdasset': 'team application',
-        #         'engine-query': 'team engine',
-        #         'engine-storage': 'team engine',
-        #         'tools-connectors': 'team tools',
-        #         'tools-taosx': 'team tools',
-        #         };
+  using: "composite"
+  steps:
+    - name: Add Team Labels
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const addLabels = require('./add-pr-labels.js');
+          await addLabels({ github, context });
+                # // 团队到标签的映射
+                # const teamLabelMap = {
+                # 'platform': 'team platform',
+                # 'application-aloud': 'team application',
+                # 'application-tdasset': 'team application',
+                # 'engine-query': 'team engine',
+                # 'engine-storage': 'team engine',
+                # 'tools-connectors': 'team tools',
+                # 'tools-taosx': 'team tools',
+                # };
 
-        #         // 获取触发当前 action 的 PR
-        #         const pr = github.context.payload.pull_request;
+                # // 获取触发当前 action 的 PR
+                # const pr = github.context.payload.pull_request;
 
-        #         // 处理 PR
-        #         try {
-        #             console.log(`Processing PR #${pr.number} by ${pr.user.login}`);
+                # // 处理 PR
+                # try {
+                #     console.log(`Processing PR #${pr.number} by ${pr.user.login}`);
                     
-        #             // 跳过机器人账户
-        #             if (pr.user.type === 'Bot') {
-        #             console.log(`Skipping bot PR #${pr.number}`);
-        #             continue;
-        #             }
+                #     // 跳过机器人账户
+                #     if (pr.user.type === 'Bot') {
+                #     console.log(`Skipping bot PR #${pr.number}`);
+                #     continue;
+                #     }
 
-        #             // 检查用户是否是仓库协作者
-        #             const { data: permission } = await github.rest.repos.getCollaboratorPermissionLevel({
-        #             owner: context.repo.owner,
-        #             repo: context.repo.repo,
-        #             username: pr.user.login
-        #             });
-        #             console.log(`User ${pr.user.login} permission: ${permission.permission}`);
+                #     // 检查用户是否是仓库协作者
+                #     const { data: permission } = await github.rest.repos.getCollaboratorPermissionLevel({
+                #     owner: context.repo.owner,
+                #     repo: context.repo.repo,
+                #     username: pr.user.login
+                #     });
+                #     console.log(`User ${pr.user.login} permission: ${permission.permission}`);
 
-        #             if (permission.permission === 'none') {
-        #               console.log(`User ${pr.user.login} is not a collaborator`);
-        #               continue;
-        #             }
-        #             // 初始化 labelAdded 变量
-        #             let labelAdded = false;
-        #             // 获取组织的所有团队
-        #             const { data: allTeams } = await github.rest.teams.list({
-        #                 org: context.repo.owner,
-        #             });
-        #             const filteredTeams = allTeams.filter(team => team.slug !== 'all');
-        #             console.log(`Found ${filteredTeams.length} teams in the organization after filtering out 'all'.`);
-        #             // 初始化用户所属团队数组
-        #             const userTeams = [];
-        #             // 遍历所有团队，检查用户是否属于该团队
-        #             for (const team of filteredTeams) {
-        #                 try {
-        #                     const { data: membership } = await github.rest.teams.getMembershipForUserInOrg({
-        #                         org: context.repo.owner,
-        #                         team_slug: team.slug,
-        #                         username: pr.user.login,
-        #                     });
+                #     if (permission.permission === 'none') {
+                #       console.log(`User ${pr.user.login} is not a collaborator`);
+                #       continue;
+                #     }
+                #     // 初始化 labelAdded 变量
+                #     let labelAdded = false;
+                #     // 获取组织的所有团队
+                #     const { data: allTeams } = await github.rest.teams.list({
+                #         org: context.repo.owner,
+                #     });
+                #     const filteredTeams = allTeams.filter(team => team.slug !== 'all');
+                #     console.log(`Found ${filteredTeams.length} teams in the organization after filtering out 'all'.`);
+                #     // 初始化用户所属团队数组
+                #     const userTeams = [];
+                #     // 遍历所有团队，检查用户是否属于该团队
+                #     for (const team of filteredTeams) {
+                #         try {
+                #             const { data: membership } = await github.rest.teams.getMembershipForUserInOrg({
+                #                 org: context.repo.owner,
+                #                 team_slug: team.slug,
+                #                 username: pr.user.login,
+                #             });
 
-        #                     if (membership.state === 'active') {
-        #                         userTeams.push(team);
-        #                         console.log(`User ${pr.user.login} is a member of team: ${team.slug}`);
-        #                     }
-        #                 } catch (error) {
-        #                     if (error.status === 404) {
-        #                         // 用户不属于该团队，忽略错误
-        #                         console.log(`User ${pr.user.login} is not a member of team: ${team.slug}`);
-        #                     } else {
-        #                         // 其他错误需要记录
-        #                         console.error(`Error checking membership for team ${team.slug}: ${error.message}`);
-        #                     }
-        #                 }
-        #             }
-        #             // 查找匹配的团队标签
-        #             for (const team of userTeams) {
-        #                 const teamName = team.slug; // 使用团队 slug 更可靠
-        #                 if (teamLabelMap[teamName]) {
-        #                     const label = teamLabelMap[teamName];
+                #             if (membership.state === 'active') {
+                #                 userTeams.push(team);
+                #                 console.log(`User ${pr.user.login} is a member of team: ${team.slug}`);
+                #             }
+                #         } catch (error) {
+                #             if (error.status === 404) {
+                #                 // 用户不属于该团队，忽略错误
+                #                 console.log(`User ${pr.user.login} is not a member of team: ${team.slug}`);
+                #             } else {
+                #                 // 其他错误需要记录
+                #                 console.error(`Error checking membership for team ${team.slug}: ${error.message}`);
+                #             }
+                #         }
+                #     }
+                #     // 查找匹配的团队标签
+                #     for (const team of userTeams) {
+                #         const teamName = team.slug; // 使用团队 slug 更可靠
+                #         if (teamLabelMap[teamName]) {
+                #             const label = teamLabelMap[teamName];
                             
-        #                     // 检查是否已有该标签
-        #                     const { data: labels } = await github.rest.issues.listLabelsOnIssue({
-        #                         owner: context.repo.owner,
-        #                         repo: context.repo.repo,
-        #                         issue_number: pr.number,
-        #                     });
+                #             // 检查是否已有该标签
+                #             const { data: labels } = await github.rest.issues.listLabelsOnIssue({
+                #                 owner: context.repo.owner,
+                #                 repo: context.repo.repo,
+                #                 issue_number: pr.number,
+                #             });
                             
-        #                     if (!labels.some(l => l.name === label)) {
-        #                         // 添加标签
-        #                         await github.rest.issues.addLabels({
-        #                             owner: context.repo.owner,
-        #                             repo: context.repo.repo,
-        #                             issue_number: pr.number,
-        #                             labels: [label],
-        #                         });
-        #                         console.log(`Added label '${label}' to PR #${pr.number}`);
-        #                     }
-        #                     labelAdded = true; // 设置 labelAdded 为 true
-        #                     break; // 只添加第一个匹配的团队标签
-        #                 }
-        #             }
-        #             // 如果用户不属于任何团队，添加 community 标签
-        #             if (!labelAdded) {
-        #               const { data: labels } = await github.rest.issues.listLabelsOnIssue({
-        #                   owner: context.repo.owner,
-        #                   repo: context.repo.repo,
-        #                   issue_number: pr.number
-        #               });
+                #             if (!labels.some(l => l.name === label)) {
+                #                 // 添加标签
+                #                 await github.rest.issues.addLabels({
+                #                     owner: context.repo.owner,
+                #                     repo: context.repo.repo,
+                #                     issue_number: pr.number,
+                #                     labels: [label],
+                #                 });
+                #                 console.log(`Added label '${label}' to PR #${pr.number}`);
+                #             }
+                #             labelAdded = true; // 设置 labelAdded 为 true
+                #             break; // 只添加第一个匹配的团队标签
+                #         }
+                #     }
+                #     // 如果用户不属于任何团队，添加 community 标签
+                #     if (!labelAdded) {
+                #       const { data: labels } = await github.rest.issues.listLabelsOnIssue({
+                #           owner: context.repo.owner,
+                #           repo: context.repo.repo,
+                #           issue_number: pr.number
+                #       });
 
-        #             if (!labels.some(l => l.name === 'from community')) {
-        #                 await github.rest.issues.addLabels({
-        #                 owner: context.repo.owner,
-        #                 repo: context.repo.repo,
-        #                 issue_number: pr.number,
-        #                 labels: ['from community']
-        #                 });
-        #                 console.log(`Added label 'from community' to PR #${pr.number}`);
-        #             }
-        #             }
+                #     if (!labels.some(l => l.name === 'from community')) {
+                #         await github.rest.issues.addLabels({
+                #         owner: context.repo.owner,
+                #         repo: context.repo.repo,
+                #         issue_number: pr.number,
+                #         labels: ['from community']
+                #         });
+                #         console.log(`Added label 'from community' to PR #${pr.number}`);
+                #     }
+                #     }
                         
-        #         } catch (error) {
-        #             console.error(`Error processing PR #${pr.number}: ${error.message}`);
-        #         }
+                # } catch (error) {
+                #     console.error(`Error processing PR #${pr.number}: ${error.message}`);
+                # }
                 
