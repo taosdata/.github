@@ -9,6 +9,7 @@ runs:
   using: "composite"
   steps:
     - name: Add Team Labels
+      uses: actions/checkout@v4
       uses: actions/github-script@v6
       with:
         github-token: ${{ inputs.github-token }}
