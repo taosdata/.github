@@ -34,7 +34,7 @@ runs:
                     // 跳过机器人账户
                     if (pr.user.type === 'Bot') {
                     console.log(`Skipping bot PR #${pr.number}`);
-                    continue;
+                    
                     }
 
                     // 检查用户是否是仓库协作者
