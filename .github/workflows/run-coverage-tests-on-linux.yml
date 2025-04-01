@@ -140,7 +140,7 @@ jobs:
           cd ${{ env.WKC }}/tests/parallel_test
           echo "Running coverage script at $(date)"
           chmod +x ${{ env.WKC }}/tests/parallel_test/run_coverage_container.sh
-          ./run_coverage_container.sh -d ${{ env.WKDIR }} -b ${{ env.SOURCE_BRANCH_TDENGINE }} > coverage.log 2>&1
+          ./run_coverage_container.sh -d ${{ env.WK }} -b ${{ env.SOURCE_BRANCH_TDENGINE }} > coverage.log 2>&1
           if [ $? -ne 0 ]; then
               echo "Coverage script failed. Check coverage.log for details."
           fi
