@@ -1,15 +1,17 @@
 name: 'Add label for each pr'
+description: Lable PR with team label
+
 inputs:
   github-token:
     description: 'GitHub access token'
     required: true
-    default: 'A secret'
   pr-number:
     description: 'Pull request number'
     required: true
   pr-user:
     description: 'Pull request user login'
     required: true
+
 runs:
   using: "composite"
   steps:
@@ -18,110 +20,110 @@ runs:
       with:
         github-token: ${{ inputs.github-token }}
         script: |
-                const teamLabelMap = {
-                  'platform': 'team platform',
-                  'application-aloud': 'team application',
-                  'application-tdasset': 'team application',
-                  'engine-query': 'team engine',
-                  'engine-storage': 'team engine',
-                  'tools-connectors': 'team tools',
-                  'tools-taosx': 'team tools',
-                };
+          const teamLabelMap = {
+            'platform': 'team platform',
+            'application-aloud': 'team application',
+            'application-tdasset': 'team application',
+            'engine-query': 'team engine',
+            'engine-storage': 'team engine',
+            'tools-connectors': 'team tools',
+            'tools-taosx': 'team tools',
+          };
 
-                const prNumber = parseInt('${{ inputs.pr-number }}', 10);
-                const prUser = '${{ inputs.pr-user }}';
+          const prNumber = parseInt('${{ inputs.pr-number }}', 10);
+          const prUser = '${{ inputs.pr-user }}';
 
-                console.log(`Processing PR #${prNumber} by ${prUser}`);
+          console.log(`Processing PR #${prNumber} by ${prUser}`);
 
-                // 检查用户是否是仓库协作者
-                const { data: permission } = await github.rest.repos.getCollaboratorPermissionLevel({
+          // 检查用户是否是仓库协作者
+          const { data: permission } = await github.rest.repos.getCollaboratorPermissionLevel({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            username: prUser,
+          });
+
+          console.log(`User ${prUser} permission: ${permission.permission}`);
+
+          if (permission.permission === 'none') {
+            console.log(`User ${prUser} is not a collaborator`);
+            return;
+          }
+
+          let labelAdded = false;
+
+          // 获取组织的所有团队
+          const { data: allTeams } = await github.rest.teams.list({
+            org: context.repo.owner,
+          });
+
+          const filteredTeams = allTeams.filter(team => team.slug !== 'all');
+          console.log(`Found ${filteredTeams.length} teams in the organization after filtering out 'all'.`);
+
+          const userTeams = [];
+
+          // 遍历所有团队，检查用户是否属于该团队
+          for (const team of filteredTeams) {
+            try {
+              const { data: membership } = await github.rest.teams.getMembershipForUserInOrg({
+                org: context.repo.owner,
+                team_slug: team.slug,
+                username: prUser,
+              });
+
+              if (membership.state === 'active') {
+                userTeams.push(team);
+                console.log(`User ${prUser} is a member of team: ${team.slug}`);
+              }
+            } catch (error) {
+              if (error.status === 404) {
+                console.log(`User ${prUser} is not a member of team: ${team.slug}`);
+              } else {
+                console.error(`Error checking membership for team ${team.slug}: ${error.message}`);
+              }
+            }
+          }
+
+          // 查找匹配的团队标签
+          for (const team of userTeams) {
+            const teamName = team.slug;
+            if (teamLabelMap[teamName]) {
+              const label = teamLabelMap[teamName];
+              const { data: labels } = await github.rest.issues.listLabelsOnIssue({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+              });
+
+              if (!labels.some(l => l.name === label)) {
+                await github.rest.issues.addLabels({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
-                  username: prUser,
+                  issue_number: prNumber,
+                  labels: [label],
                 });
+                console.log(`Added label '${label}' to PR #${prNumber}`);
+              }
+              labelAdded = true;
+              break;
+            }
+          }
 
-                console.log(`User ${prUser} permission: ${permission.permission}`);
+          // 如果用户不属于任何团队，添加 community 标签
+          if (!labelAdded) {
+            const { data: labels } = await github.rest.issues.listLabelsOnIssue({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+            });
 
-                if (permission.permission === 'none') {
-                  console.log(`User ${prUser} is not a collaborator`);
-                  return;
-                }
-
-                let labelAdded = false;
-
-                // 获取组织的所有团队
-                const { data: allTeams } = await github.rest.teams.list({
-                  org: context.repo.owner,
-                });
-
-                const filteredTeams = allTeams.filter(team => team.slug !== 'all');
-                console.log(`Found ${filteredTeams.length} teams in the organization after filtering out 'all'.`);
-
-                const userTeams = [];
-
-                // 遍历所有团队，检查用户是否属于该团队
-                for (const team of filteredTeams) {
-                  try {
-                    const { data: membership } = await github.rest.teams.getMembershipForUserInOrg({
-                      org: context.repo.owner,
-                      team_slug: team.slug,
-                      username: prUser,
-                    });
-
-                    if (membership.state === 'active') {
-                      userTeams.push(team);
-                      console.log(`User ${prUser} is a member of team: ${team.slug}`);
-                    }
-                  } catch (error) {
-                    if (error.status === 404) {
-                      console.log(`User ${prUser} is not a member of team: ${team.slug}`);
-                    } else {
-                      console.error(`Error checking membership for team ${team.slug}: ${error.message}`);
-                    }
-                  }
-                }
-
-                // 查找匹配的团队标签
-                for (const team of userTeams) {
-                  const teamName = team.slug;
-                  if (teamLabelMap[teamName]) {
-                    const label = teamLabelMap[teamName];
-                    const { data: labels } = await github.rest.issues.listLabelsOnIssue({
-                      owner: context.repo.owner,
-                      repo: context.repo.repo,
-                      issue_number: prNumber,
-                    });
-
-                    if (!labels.some(l => l.name === label)) {
-                      await github.rest.issues.addLabels({
-                        owner: context.repo.owner,
-                        repo: context.repo.repo,
-                        issue_number: prNumber,
-                        labels: [label],
-                      });
-                      console.log(`Added label '${label}' to PR #${prNumber}`);
-                    }
-                    labelAdded = true;
-                    break;
-                  }
-                }
-
-                // 如果用户不属于任何团队，添加 community 标签
-                if (!labelAdded) {
-                  const { data: labels } = await github.rest.issues.listLabelsOnIssue({
-                    owner: context.repo.owner,
-                    repo: context.repo.repo,
-                    issue_number: prNumber,
-                  });
-
-                  if (!labels.some(l => l.name === 'from community')) {
-                    await github.rest.issues.addLabels({
-                      owner: context.repo.owner,
-                      repo: context.repo.repo,
-                      issue_number: prNumber,
-                      labels: ['from community'],
-                    });
-                    console.log(`Added label 'from community' to PR #${prNumber}`);
-                  }
-                }
-                
+            if (!labels.some(l => l.name === 'from community')) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                labels: ['from community'],
+              });
+              console.log(`Added label 'from community' to PR #${prNumber}`);
+            }
+          }
+          
