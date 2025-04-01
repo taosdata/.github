@@ -23,7 +23,10 @@ runs:
                 'tools-connectors': 'team tools',
                 'tools-taosx': 'team tools',
                 };
-
+                if (!github.context.payload || !github.context.payload.pull_request) {
+                  console.error('This workflow was not triggered by a pull request.');
+                  return;
+                }
                 // 获取触发当前 action 的 PR
                 const pr = github.context.payload.pull_request;
 
