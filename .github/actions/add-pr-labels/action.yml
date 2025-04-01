@@ -13,6 +13,7 @@ runs:
       with:
         github-token: ${{ inputs.github-token }}
         script: |
+          console.log('Current working directory:', __dirname);
           const addLabels = require('./add-pr-labels.js');
           await addLabels({ github, context });
                 # // 团队到标签的映射
