@@ -6,15 +6,8 @@ inputs:
     default: 'A secret'
 
 runs:
-  using: "composite"
-  steps:
-    - name: Add Team Labels
-      uses: actions/github-script@v6
-      with:
-        github-token: ${{ inputs.github-token }}
-        script: |
-          const addLabels = require('./add-pr-labels.js');
-          await addLabels({ github, context });
+  using: "node16"
+  main: "add-pr-labels.js"
         # script: |
         #         // 团队到标签的映射
         #         const teamLabelMap = {
