@@ -1,0 +1,36 @@
+name: 'Import Grafana Dashboard'
+description: 'Import Grafana Dashboard with Json'
+inputs:
+  grafana-url:
+    description: 'Url of Grafana'
+    required: true
+    default: http://127.0.0.1:3000
+  prometheus-url:
+    description: 'Url of Prometheus'
+    required: true
+    default: http://127.0.0.1:9090
+  username:
+    description: 'User of Grafana'
+    required: false
+    default: admin
+  password:
+    description: 'Password of Grafana'
+    required: false
+    default: admin
+  datasource-name:
+    description: 'Datasource Name of Prometheus'
+    required: false
+    default: td_processes
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Import Grafana Dashboard with Json
+      shell: bash
+      run: |
+        ${GITHUB_ACTION_PATH}/../../scripts/import_grafana_dashboard.sh \
+          "${{ inputs.grafana-url }}" \
+          "${{ inputs.prometheus-url }}" \
+          "${{ inputs.username }}" \
+          "${{ inputs.password }}" \
+          "${{ inputs.datasource-name }}"
