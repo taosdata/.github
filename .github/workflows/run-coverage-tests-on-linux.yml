@@ -1,6 +1,5 @@
-# Reusable Workflow for taosd & taosc coverage test
-
 name: TDengine Coverage (taosd & taosc)
+description: Reusable Workflow for taosd & taosc coverage test
 
 on:
   workflow_call:
