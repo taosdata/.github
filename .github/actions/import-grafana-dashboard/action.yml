@@ -25,9 +25,6 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-
     - name: Import Grafana Dashboard with Json
       shell: bash
       run: |
