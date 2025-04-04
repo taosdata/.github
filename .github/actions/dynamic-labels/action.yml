@@ -14,6 +14,12 @@ inputs:
   runner_name:
     description: 'Runner name'
     required: true
+  scope:
+    description: 'Runner scope (org/repo)'
+    default: 'org'
+  target:
+    description: 'Organization name or repo slug'
+    default: 'taosdata'
 runs:
   using: "composite"
   steps:
@@ -22,8 +28,22 @@ runs:
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
       run: |
-        response=$(curl -sS -H "Authorization: Bearer ${{ inputs.gh_token }}" \
-          "https://api.github.com/orgs/taosdata/actions/runners")
+        # Validate scope and target format
+        if [[ "${{ inputs.scope }}" == "repo" && "${{ inputs.target }}" != */* ]]; then
+          echo "::error::Repo target must be in 'owner/repo' format"
+          exit 1
+        elif [[ "${{ inputs.scope }}" != "org" && "${{ inputs.scope }}" != "repo" ]]; then
+          echo "::error::Invalid scope: must be 'org' or 'repo'"
+          exit 1
+        fi
+
+        # Construct API URL
+        if [[ "${{ inputs.scope }}" == "org" ]]; then
+          api_url="https://api.github.com/orgs/${target}/actions/runners"
+        else
+          api_url="https://api.github.com/repos/${target}/actions/runners"
+        fi
+        response=$(curl -sS -H "Authorization: Bearer ${{ inputs.gh_token }}" $api_url
 
         RUNNER_ID=$(echo "$response" | jq -r ".runners[] | select(.name == \"${{ inputs.runner_name }}\") | .id")
         echo "runner id: $RUNNER_ID"
@@ -35,7 +55,7 @@ runs:
             curl -X POST -sS \
               -H "Authorization: token ${{ inputs.gh_token }}" \
               -H "Accept: application/vnd.github.v3+json" \
-              "https://api.github.com/orgs/taosdata/actions/runners/$RUNNER_ID/labels" \
+              "$api_url/$RUNNER_ID/labels" \
               -d "$JSON_DATA"
 
             echo "Added labels: ${{ inputs.labels }}"
@@ -46,7 +66,7 @@ runs:
             for label in "${LABELS[@]}"; do
               curl -X DELETE -sS \
                 -H "Authorization: token ${{ inputs.gh_token }}" \
-                "https://api.github.com/orgs/taosdata/actions/runners/$RUNNER_ID/labels/${label// /%20}" \
+                "$api_url/$RUNNER_ID/labels/${label// /%20}" \
                 -o /dev/null
 
               echo "Deleted label: $label"
