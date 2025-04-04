@@ -59,7 +59,7 @@ function download_tdengine() {
 # Function to extract TDengine
 function extract_tdengine() {
     VERSION="$1"
-    if ! tar -xzvf "${WORK_DIR}/TDengine-enterprise-${VERSION}-Linux-x64.tar.gz -C ${WORK_DIR}"; then
+    if ! tar -xzvf "${WORK_DIR}/TDengine-enterprise-${VERSION}-Linux-x64.tar.gz" -C ${WORK_DIR}; then
         echo "::error ::Failed to extract TDengine archive"
         exit 1
     fi
