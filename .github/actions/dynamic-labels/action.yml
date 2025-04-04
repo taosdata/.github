@@ -39,11 +39,11 @@ runs:
 
         # Construct API URL
         if [[ "${{ inputs.scope }}" == "org" ]]; then
-          api_url="https://api.github.com/orgs/${{ inputs.target }}/actions/runners"
+          API_URL="https://api.github.com/orgs/${{ inputs.target }}/actions/runners"
         else
-          api_url="https://api.github.com/repos/${{ inputs.target }}/actions/runners"
+          API_URL="https://api.github.com/repos/${{ inputs.target }}/actions/runners"
         fi
-        response=$(curl -sS -H "Authorization: Bearer ${{ inputs.gh_token }}" "$api_url")
+        response=$(curl -sS -H "Authorization: Bearer ${{ inputs.gh_token }}" "$API_URL")
 
         RUNNER_ID=$(echo "$response" | jq -r ".runners[] | select(.name == \"${{ inputs.runner_name }}\") | .id")
         echo "runner id: $RUNNER_ID"
@@ -55,7 +55,7 @@ runs:
             curl -X POST -sS \
               -H "Authorization: token ${{ inputs.gh_token }}" \
               -H "Accept: application/vnd.github.v3+json" \
-              "$api_url/$RUNNER_ID/labels" \
+              "$API_URL/$RUNNER_ID/labels" \
               -d "$JSON_DATA"
 
             echo "Added labels: ${{ inputs.labels }}"
@@ -66,7 +66,7 @@ runs:
             for label in "${LABELS[@]}"; do
               curl -X DELETE -sS \
                 -H "Authorization: token ${{ inputs.gh_token }}" \
-                "$api_url/$RUNNER_ID/labels/${label// /%20}" \
+                "$API_URL/$RUNNER_ID/labels/${label// /%20}" \
                 -o /dev/null
 
               echo "Deleted label: $label"
