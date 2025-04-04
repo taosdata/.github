@@ -17,9 +17,9 @@ runs:
       shell: bash
       run: |
         echo "🔄 Authenticating GitHub CLI..."
+        "${GITHUB_ACTION_PATH}/../../scripts/install_via_apt.sh" gh
         echo "${{ inputs.gh_token }}" | gh auth login --with-token
         echo "🔄 Downloading artifacts to: ${{ inputs.download_dir }}"
         rm -rf "${{ inputs.download_dir }}"
         mkdir -p "${{ inputs.download_dir }}"
-        "${GITHUB_ACTION_PATH}/../../scripts/install_via_apt.sh" gh
         gh run download $GITHUB_RUN_ID --dir "${{ inputs.download_dir }}"
