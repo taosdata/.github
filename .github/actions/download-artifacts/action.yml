@@ -21,6 +21,5 @@ runs:
         echo "🔄 Downloading artifacts to: ${{ inputs.download_dir }}"
         rm -rf "${{ inputs.download_dir }}"
         mkdir -p "${{ inputs.download_dir }}"
-        script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-        "$script_dir/../scripts/install_via_apt.sh" gh
+        ${GITHUB_ACTION_PATH}/../../scripts/install_via_apt.sh" gh
         gh run download $GITHUB_RUN_ID --dir "${{ inputs.download_dir }}"
