@@ -45,3 +45,7 @@ runs:
       shell: bash
       run: |
         wget -N ${{ inputs.pub_dl_url }}/binary_tools/mqtt_pub
+        if [ $? -ne 0 ]; then
+          echo "Error: Failed to download mqtt_pub" >&2
+          exit 1
+        fi
