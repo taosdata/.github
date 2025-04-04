@@ -1,0 +1,25 @@
+name: Deploy taostest
+description: Deploy taostest
+
+inputs:
+  pub_dl_url:
+    description: 'Public download url'
+    required: true
+  test_root:
+    description: 'Parent directory of TEST_ROOT'
+    required: false
+    default: '$GITHUB_WORKSPACE/tests'
+  pip_source:
+    description: 'Pip download source'
+    required: false
+    default: 'https://pypi.tuna.tsinghua.edu.cn/simple'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Deploy taostest
+      shell: bash
+      id: deploy-taostest
+      run: |
+        echo "🔄 Deploying taostest..."
+        ${GITHUB_ACTION_PATH}/../../scripts/deploy_taostest.sh "${{ inputs.pub_dl_url }}" "${{ inputs.test_root }}" "${{ inputs.pip_source }}"
