@@ -39,9 +39,9 @@ runs:
 
         # Construct API URL
         if [[ "${{ inputs.scope }}" == "org" ]]; then
-          api_url="https://api.github.com/orgs/${target}/actions/runners"
+          api_url="https://api.github.com/orgs/${{ inputs.target }}/actions/runners"
         else
-          api_url="https://api.github.com/repos/${target}/actions/runners"
+          api_url="https://api.github.com/repos/${{ inputs.target }}/actions/runners"
         fi
         echo "api_url---"
         echo $api_url
