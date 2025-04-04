@@ -1,5 +1,5 @@
 #!/bin/bash
-
+WORK_DIR=/opt
 # Function to display help
 function display_help() {
     echo "Usage: $0 <version> <download_url>"
@@ -40,17 +40,26 @@ function construct_download_url() {
 # Function to download TDengine
 function download_tdengine() {
     URL="$1"
-    OUTPUT_FILE="TDengine-enterprise-${VERSION}-Linux-x64.tar.gz"
+    OUTPUT_FILE="${WORK_DIR}/TDengine-enterprise-${VERSION}-Linux-x64.tar.gz"
+
+    # Check if file already exists
+    if [ -f "$OUTPUT_FILE" ]; then
+        echo "TDengine package already exists, skipping download."
+        return 0
+    fi
+
     if ! wget -O "$OUTPUT_FILE" "$URL"; then
         echo "::error ::Failed to download TDengine from $URL"
         exit 1
     fi
+
+    echo "Successfully downloaded TDengine package."
 }
 
 # Function to extract TDengine
 function extract_tdengine() {
     VERSION="$1"
-    if ! tar -xzvf "TDengine-enterprise-${VERSION}-Linux-x64.tar.gz"; then
+    if ! tar -xzvf "${WORK_DIR}/TDengine-enterprise-${VERSION}-Linux-x64.tar.gz -C ${WORK_DIR}"; then
         echo "::error ::Failed to extract TDengine archive"
         exit 1
     fi
@@ -59,7 +68,7 @@ function extract_tdengine() {
 # Function to install TDengine
 function install_tdengine() {
     VERSION="$1"
-    cd "TDengine-enterprise-${VERSION}" || {
+    cd "${WORK_DIR}/TDengine-enterprise-${VERSION}" || {
         echo "::error ::Failed to enter TDengine directory"
         exit 1
     }
@@ -71,7 +80,7 @@ function cleanup() {
     echo "Cleaning up pkg files..."
     VERSION="$1"
     cd ..
-    rm -f "TDengine-enterprise-${VERSION}-Linux-x64.tar.gz"
+    # rm -f "TDengine-enterprise-${VERSION}-Linux-x64.tar.gz"
     rm -rf "TDengine-enterprise-${VERSION}"
 }
 
