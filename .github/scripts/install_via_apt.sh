@@ -4,7 +4,7 @@ install_packages() {
     local packages=("$@")
 
     for package in "${packages[@]}"; do
-        if ! dpkg -l | grep -q "$package"; then
+        if ! dpkg -l | grep -wq "$package"; then
             echo "Installing $package..."
             if ! apt-get install -y "$package"; then
                 if ! apt-get install -y --fix-missing "$package"; then
