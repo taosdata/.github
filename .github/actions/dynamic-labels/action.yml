@@ -43,7 +43,7 @@ runs:
         else
           api_url="https://api.github.com/repos/${target}/actions/runners"
         fi
-        response=$(curl -sS -H "Authorization: Bearer ${{ inputs.gh_token }}" $api_url
+        response=$(curl -sS -H "Authorization: Bearer ${{ inputs.gh_token }}" $api_url)
 
         RUNNER_ID=$(echo "$response" | jq -r ".runners[] | select(.name == \"${{ inputs.runner_name }}\") | .id")
         echo "runner id: $RUNNER_ID"
