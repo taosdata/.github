@@ -1,0 +1,30 @@
+name: Basic Reusable Workflow
+
+on:
+  workflow_call:
+    inputs:
+      message:
+        required: false
+        type: string
+        default: "Hello, World!"
+
+jobs:
+  reusable-job:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Print Message
+        run: |
+          echo "message: ${{ inputs.message }}"
+
+      - name: Run GitHub Script
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const prOwner = context.payload.pull_request.user.login;
+
+            console.log(`PR #${prNumber} by ${prOwner}`);

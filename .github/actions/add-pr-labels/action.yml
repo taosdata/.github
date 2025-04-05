@@ -1,16 +1,16 @@
 name: 'Add label for each pr'
 description: Lable PR with team label
 
-inputs:
-  github-token:
-    description: 'GitHub access token'
-    required: true
-  pr-number:
-    description: 'Pull request number'
-    required: true
-  pr-user:
-    description: 'Pull request user login'
-    required: true
+# inputs:
+#   github-token:
+#    description: 'GitHub access token'
+#    required: true
+#   pr-number:
+#     description: 'Pull request number'
+#     required: true
+#   pr-user:
+#     description: 'Pull request user login'
+#     required: true
 
 runs:
   using: "composite"
@@ -18,7 +18,7 @@ runs:
     - name: Add Team Labels
       uses: actions/github-script@v7
       with:
-        github-token: ${{ inputs.github-token }}
+        # github-token: ${{ inputs.github-token }}
         script: |
           const teamLabelMap = {
             'platform': 'team platform',
@@ -30,8 +30,8 @@ runs:
             'tools-taosx': 'team tools',
           };
 
-          const prNumber = parseInt('${{ inputs.pr-number }}', 10);
-          const prUser = '${{ inputs.pr-user }}';
+          const prNumber = context.payload.pull_request.number;
+          const prUser = context.payload.pull_request.user.login;
 
           console.log(`Processing PR #${prNumber} by ${prUser}`);
 
