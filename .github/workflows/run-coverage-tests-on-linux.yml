@@ -149,7 +149,7 @@ jobs:
           echo "Coverage log line count:"
           cat coverage.log | wc -l
           echo "Filtered coverage log (excluding specific patterns):"
-          cat coverage.log | grep -v FN | grep -v DA | grep -v SF | grep -v LF | grep -v TN | grep -v end | grep -v LH | grep -v No | grep -v Lines | grep -v Branches | grep -v Taken | grep -v Calls || true
+          cat coverage.log | grep -v FN | grep -v DA | grep -v LF | grep -v TN | grep -v end | grep -v LH | grep -v No | grep -v Lines | grep -v Branches | grep -v Taken | grep -v Calls | grep . || true
           echo "::endgroup::"
         continue-on-error: true
 
