@@ -102,7 +102,42 @@ runs:
             }
           }
 
-          // 如果用户不属于任何团队，添加 community 标签
+          // 如果用户不属于任何团队，检查是否属于组织成员
+          if (!labelAdded) {
+            try {
+              const { data: orgMembership } = await github.rest.orgs.getMembershipForUser({
+                org: context.repo.owner,
+                username: prUser,
+              });
+
+              if (orgMembership.state === 'active') {
+                const { data: labels } = await github.rest.issues.listLabelsOnIssue({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: prNumber,
+                });
+
+                if (!labels.some(l => l.name === 'internal')) {
+                  await github.rest.issues.addLabels({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: prNumber,
+                    labels: ['internal'],
+                  });
+                  console.log(`Added label 'internal' to PR #${prNumber}`);
+                }
+                labelAdded = true;
+              }
+            } catch (error) {
+              if (error.status === 404) {
+                console.log(`User ${prUser} is not a member of the organization.`);
+              } else {
+                console.error(`Error checking organization membership for user ${prUser}: ${error.message}`);
+              }
+            }
+          }
+
+          // 如果用户既不属于任何团队，也不属于组织成员，添加 community 标签
           if (!labelAdded) {
             const { data: labels } = await github.rest.issues.listLabelsOnIssue({
               owner: context.repo.owner,
