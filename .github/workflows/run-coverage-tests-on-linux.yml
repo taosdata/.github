@@ -135,21 +135,39 @@ jobs:
           #${{ steps.get_param.outputs.timeout_cmd }} time ./run.sh -e -m /home/m.json -t tdgpt_cases.task -b PR-${{ github.run_number }} -l ${{ env.WKDIR }}/log -o 1200 ${{ steps.get_param.outputs.extra_param }} || true
         continue-on-error: true  
    
-      - name: Run taosd && taosc coverage 
+      - name: Run TDengine coverage 
         if: always() 
         run: |
-          echo "::group::Run taosd && taosc coverage"
+          echo "::group::Run TDengine coverage"
           cd ${{ env.WKC }}/tests/parallel_test
           echo "Running coverage script at $(date)"
           chmod +x ${{ env.WKC }}/tests/parallel_test/run_coverage_container.sh
-          ./run_coverage_container.sh -d ${{ env.WKC }} -b ${{ env.SOURCE_BRANCH_TDENGINE }} > coverage.log 2>&1
+          ./run_coverage_container.sh -d ${{ env.WKC }} -b ${{ env.SOURCE_BRANCH_TDENGINE }} > coverage_tdengine.log 2>&1
           if [ $? -ne 0 ]; then
-              echo "Coverage script failed. Check coverage.log for details."
+              echo "Coverage script failed. Check coverage_tdengine.log for details."
           fi
           echo "Coverage log line count:"
-          cat coverage.log | wc -l
-          echo "Filtered coverage log (excluding specific patterns):"
-          cat coverage.log | grep -v FN | grep -v DA | grep -v LF | grep -v TN | grep -v end | grep -v LH | grep -v No | grep -v Lines | grep -v Branches | grep -v Taken | grep -v Calls | grep . || true
+          cat coverage_tdengine.log | wc -l
+          echo "Filtered coverage_tdengine log (excluding specific patterns):"
+          cat coverage_tdengine.log | grep -v FN | grep -v DA | grep -v LF | grep -v TN | grep -v end | grep -v LH | grep -v No | grep -v Lines | grep -v Branches | grep -v Taken | grep -v Calls | grep . || true
+          echo "::endgroup::"
+        continue-on-error: true
+   
+      - name: Run TDinternal coverage 
+        if: always() 
+        run: |
+          echo "::group::Run TDinternal coverage"
+          cd ${{ env.WKC }}/tests/parallel_test
+          echo "Running coverage script at $(date)"
+          chmod +x ${{ env.WKC }}/tests/parallel_test/run_coverage_container_internal.sh
+          ./run_coverage_container_internal.sh -d ${{ env.WK }} -b ${{ env.SOURCE_BRANCH_TDINTERNAL }} > coverage_tdinternal.log 2>&1
+          if [ $? -ne 0 ]; then
+              echo "Coverage script failed. Check coverage_tdinternal.log for details."
+          fi
+          echo "Coverage log line count:"
+          cat coverage_tdinternal.log | wc -l
+          echo "Filtered coverage_tdinternal log (excluding specific patterns):"
+          cat coverage_tdinternal.log | grep -v FN | grep -v DA | grep -v LF | grep -v TN | grep -v end | grep -v LH | grep -v No | grep -v Lines | grep -v Branches | grep -v Taken | grep -v Calls | grep . || true
           echo "::endgroup::"
         continue-on-error: true
 
