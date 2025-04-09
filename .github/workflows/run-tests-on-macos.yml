@@ -140,7 +140,7 @@ jobs:
           cd ${{ env.WK }}/debug
           echo $PATH
           echo "PATH=/opt/homebrew/bin:$PATH" >> $GITHUB_ENV
-          cmake .. -DBUILD_TEST=true -DBUILD_HTTPS=false  -DCMAKE_BUILD_TYPE=Release
+          cmake .. -DBUILD_TEST=true -DBUILD_HTTPS=internal  -DBUILD_TOOLS=true  -DCMAKE_BUILD_TYPE=Release
           make -j10
           ctest -j10  -E "pcre*|example*"  || exit 7
           date
