@@ -60,7 +60,7 @@ jobs:
               echo No Python3 process was found.
           )   
           
-      - name: Set envrionment variables based on condition
+      - name: Set environment variables based on condition
         run: |
           REM Trim the blank space
           set SPECIFIED_SOURCE_BRANCH=%SPECIFIED_SOURCE_BRANCH: =%
