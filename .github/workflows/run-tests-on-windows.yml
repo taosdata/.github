@@ -184,7 +184,7 @@ jobs:
           set CL=/MP8
           echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> cmake"
           time /t
-          cmake .. -G "NMake Makefiles JOM" -DBUILD_TEST=true -DBUILD_TOOLS=true || exit 7
+          cmake .. -G "NMake Makefiles JOM" -DBUILD_TEST=true -DBUILD_TOOLS=true -DBUILD_HTTP=internal || exit 7
           echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> jom -j 6"
           time /t
           jom -j 6 || exit 8
