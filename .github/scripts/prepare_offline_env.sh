@@ -64,7 +64,10 @@ function install_system_packages() {
             repotrack -p "$system_packages_dir" $formated_system_packages
         elif [ -f /etc/debian_version ]; then
             # TODO
-            apt-get install --download-only -y $formated_system_packages -o Dir::Cache::archives="$system_packages_dir"
+            # apt-get install --download-only -y $formated_system_packages -o Dir::Cache::archives="$system_packages_dir"
+            apt install apt-offline
+            apt-offline set $system_packages_dir/download_list.sig $formated_system_packages
+            apt-offline get $system_packages_dir/download_list.sig $system_packages_dir
         else
             echo "Unsupported Linux distribution.. Please install the packages manually."
         fi
