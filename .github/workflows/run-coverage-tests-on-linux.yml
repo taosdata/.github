@@ -64,10 +64,13 @@ jobs:
           if git rev-parse --verify origin/${{ env.SOURCE_BRANCH_TDINTERNAL }} >/dev/null 2>&1; then
             git switch ${{ env.SOURCE_BRANCH_TDINTERNAL }}
           else
-            echo "Branch ${{ env.SOURCE_BRANCH_TDINTERNAL }} does not exist. Switching to default branch 3.0."
-            git switch -c 3.0 origin/3.0
+            echo "Branch ${{ env.SOURCE_BRANCH_TDINTERNAL }} does not exist. Switching to default branch cover/3.0."
+            git switch -c cover/3.0 origin/cover/3.0
           fi
+          echo "Pulling latest code from 3.0 branch..."
+          git pull origin 3.0 || { echo "Failed to pull from 3.0 branch"; exit 1; }
           git pull || { echo "Failed to pull the latest code."; exit 1; }
+          echo "Current branch: $(git branch --show-current)"
           echo "Current commit:" && git log -1 --oneline  
 
       - name: Prepare TDengine repository
@@ -81,10 +84,13 @@ jobs:
           if git rev-parse --verify origin/${{ env.SOURCE_BRANCH_TDENGINE }} >/dev/null 2>&1; then
             git switch ${{ env.SOURCE_BRANCH_TDENGINE }}
           else
-            echo "Branch ${{ env.SOURCE_BRANCH_TDENGINE }} does not exist. Switching to default branch 3.0."
-            git switch -c 3.0 origin/3.0
+            echo "Branch ${{ env.SOURCE_BRANCH_TDENGINE }} does not exist. Switching to default branch cover/3.0."
+            git switch -c cover/3.0 origin/cover/3.0
           fi
+          echo "Pulling latest code from 3.0 branch..."
+          git pull origin 3.0 || { echo "Failed to pull from 3.0 branch"; exit 1; }
           git pull || { echo "Failed to pull the latest code."; exit 1; }
+          echo "Current branch: $(git branch --show-current)"
           echo "Current commit:" && git log -1 --oneline  
 
       - name: Update submodule
@@ -131,7 +137,6 @@ jobs:
           chmod +x ${{ env.WKC }}/tests/parallel_test/run.sh
           ${{ steps.get_param.outputs.timeout_cmd }} time ./run.sh -e -m /home/m.json -t cases.task -b PR-${{ github.run_number }} -l ${{ env.WKDIR }}/log -o 1200 ${{ steps.get_param.outputs.extra_param }} || true
           ${{ steps.get_param.outputs.timeout_cmd }} time ./run.sh -e -m /home/m.json -t longtimeruning_cases.task -b PR-${{ github.run_number }} -l ${{ env.WKDIR }}/log -o 1800 ${{ steps.get_param.outputs.extra_param }} || true
-          #${{ steps.get_param.outputs.timeout_cmd }} time ./run.sh -e -m /home/m.json -t cases.task -b PR-${{ github.run_number }} -l ${{ env.WKDIR }}/log -o 1200 ${{ steps.get_param.outputs.extra_param }} || true
           #${{ steps.get_param.outputs.timeout_cmd }} time ./run.sh -e -m /home/m.json -t tdgpt_cases.task -b PR-${{ github.run_number }} -l ${{ env.WKDIR }}/log -o 1200 ${{ steps.get_param.outputs.extra_param }} || true
         continue-on-error: true  
    
