@@ -59,15 +59,17 @@ function install_system_packages() {
         if [ -f /etc/redhat-release ]; then
             # TODO Confirm
             config_yum
-            yum install -y yum-utils
+            yum update -y
+            yum install -y yum-utils wget curl
             # yum install -y $formated_system_packages --downloadonly --downloaddir="$system_packages_dir" --setopt=installonly=False
             repotrack -p "$system_packages_dir" $formated_system_packages
         elif [ -f /etc/debian_version ]; then
             # TODO
             # apt-get install --download-only -y $formated_system_packages -o Dir::Cache::archives="$system_packages_dir"
-            apt install apt-offline
-            apt-offline set $system_packages_dir/download_list.sig $formated_system_packages
-            apt-offline get $system_packages_dir/download_list.sig $system_packages_dir
+            apt update -y
+            apt install -y apt-offline wget curl
+            apt-offline set $system_packages_dir/download_list.sig --install-packages $formated_system_packages
+            apt-offline get $system_packages_dir/download_list.sig -d $system_packages_dir
         else
             echo "Unsupported Linux distribution.. Please install the packages manually."
         fi
