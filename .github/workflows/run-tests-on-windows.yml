@@ -187,7 +187,6 @@ jobs:
           cmake .. -G "NMake Makefiles JOM" -DBUILD_TEST=true -DBUILD_TOOLS=true || exit 7
           echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> jom -j 6"
           time /t
-          dumpbin /directives "%WIN_INTERNAL_ROOT%\\.externals\\install\\ext_geos\\Debug\\lib\\geos_c.lib
           jom -j 6 || exit 8
           time /t
 
@@ -203,14 +202,14 @@ jobs:
             dir "%WIN_INTERNAL_ROOT%\debug\build\bin\taosnative.dll" C:\Windows\System32\taosnative.dll
           )
         shell: cmd
-      # - name: Run ctest
-      #   run: |
-      #     echo "windows ctest ..."
-      #     time /t
-      #     cd %WIN_INTERNAL_ROOT%\\debug
-      #     ctest -E "pcre*|example*" || exit 7
-      #     time /t
-      #   shell: cmd
+      - name: Run ctest
+        run: |
+          echo "windows ctest ..."
+          time /t
+          cd %WIN_INTERNAL_ROOT%\\debug
+          ctest -E "pcre*|example*" || exit 7
+          time /t
+        shell: cmd
       - name: Run function test
         run: |
           echo "windows test ..."
