@@ -187,6 +187,7 @@ jobs:
           cmake .. -G "NMake Makefiles JOM" -DBUILD_TEST=true -DBUILD_TOOLS=true || exit 7
           echo ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> jom -j 6"
           time /t
+          dumpbin /directives "%WIN_INTERNAL_ROOT%\\.externals\\install\\ext_geos\\Debug\\lib\\geos_c.lib
           jom -j 6 || exit 8
           time /t
 
