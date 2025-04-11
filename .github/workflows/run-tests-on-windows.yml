@@ -177,6 +177,7 @@ jobs:
           echo "building ..."
           time /t
           cd %WIN_INTERNAL_ROOT%
+          rmdir /s /q debug .externals
           mkdir debug
           cd debug
           time /t
