@@ -57,6 +57,8 @@ jobs:
         run: |
           echo "Preparing TDinternal repository..."
           cd ${{ env.WK }}
+          git config --global user.email "haoran920c@163.com"
+          git config --global user.name "chenhaoran"
           git reset --hard
           git clean -f
           git remote prune origin
