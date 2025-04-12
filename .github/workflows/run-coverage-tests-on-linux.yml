@@ -68,8 +68,8 @@ jobs:
             git switch -c cover/3.0 origin/cover/3.0
           fi
           echo "Pulling latest code from 3.0 branch..."
-          git pull --no-commit origin 3.0 || { echo "Failed to pull from 3.0 branch"; exit 1; }
           git pull || { echo "Failed to pull the latest code."; exit 1; }
+          git pull origin 3.0 || { echo "Failed to pull from 3.0 branch"; exit 1; }
           echo "Current branch: $(git branch --show-current)"
           echo "Current commit:" && git log -1 --oneline  
 
@@ -88,8 +88,8 @@ jobs:
             git switch -c cover/3.0 origin/cover/3.0
           fi
           echo "Pulling latest code from 3.0 branch..."
-          git pull --no-commit origin 3.0 || { echo "Failed to pull from 3.0 branch"; exit 1; }
           git pull || { echo "Failed to pull the latest code."; exit 1; }
+          git pull origin 3.0 || { echo "Failed to pull from 3.0 branch"; exit 1; }
           echo "Current branch: $(git branch --show-current)"
           echo "Current commit:" && git log -1 --oneline  
 
