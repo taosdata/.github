@@ -58,7 +58,7 @@ jobs:
           echo "Preparing TDinternal repository..."
           cd ${{ env.WK }}
           git reset --hard
-          git clean -f
+          git clean -fd
           git remote prune origin
           git fetch
           if git rev-parse --verify origin/${{ env.SOURCE_BRANCH_TDINTERNAL }} >/dev/null 2>&1; then
@@ -78,7 +78,7 @@ jobs:
           echo "Preparing TDengine repository..."
           cd ${{ env.WKC }}
           git reset --hard
-          git clean -f
+          git clean -fd
           git remote prune origin
           git fetch
           if git rev-parse --verify origin/${{ env.SOURCE_BRANCH_TDENGINE }} >/dev/null 2>&1; then
