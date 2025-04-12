@@ -53,6 +53,12 @@ jobs:
           echo "${{ env.WKDIR }}/restore.sh -n ${{ github.run_number }} -c ${{ env.CONTAINER_NAME }}"
           echo "::endgroup::"
 
+      - name: Configure Git
+        run: |
+            git config --global user.name "GitHub Actions"
+            git config --global user.email "actions@github.com"
+        
+
       - name: Prepare TDinternal repository
         run: |
           echo "Preparing TDinternal repository..."
@@ -68,7 +74,7 @@ jobs:
             git switch -c cover/3.0 origin/cover/3.0
           fi
           echo "Pulling latest code from 3.0 branch..."
-          git pull origin 3.0 || { echo "Failed to pull from 3.0 branch"; exit 1; }
+          git pull --no-commit origin 3.0 || { echo "Failed to pull from 3.0 branch"; exit 1; }
           git pull || { echo "Failed to pull the latest code."; exit 1; }
           echo "Current branch: $(git branch --show-current)"
           echo "Current commit:" && git log -1 --oneline  
@@ -88,7 +94,7 @@ jobs:
             git switch -c cover/3.0 origin/cover/3.0
           fi
           echo "Pulling latest code from 3.0 branch..."
-          git pull origin 3.0 || { echo "Failed to pull from 3.0 branch"; exit 1; }
+          git pull --no-commit origin 3.0 || { echo "Failed to pull from 3.0 branch"; exit 1; }
           git pull || { echo "Failed to pull the latest code."; exit 1; }
           echo "Current branch: $(git branch --show-current)"
           echo "Current commit:" && git log -1 --oneline  
