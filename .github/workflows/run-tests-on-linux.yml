@@ -155,6 +155,8 @@ jobs:
         run: |
           date
           rm -rf ${{ env.WKC }}/debug
+          git log -p -1
+          git status
           cd ${{ env.WKC }}/tests/parallel_test
           time ./container_build.sh -w ${{ env.WKDIR }} -e
       - name: Get parameters for testing
