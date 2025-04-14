@@ -13,8 +13,18 @@ on:
         required: true
         type: string
 
+# 修改并发策略，使用运行编号来区分不同实例
+concurrency: 
+  group: ${{ github.workflow }}-${{ github.run_id }}
+  cancel-in-progress: false
+
 jobs:
   run-tests-coverage-on-linux:
+    # 修改运行策略，使用矩阵策略在可用的runner上分配任务
+    strategy:
+      fail-fast: false
+      max-parallel: 3  # 最多同时运行3个实例
+
     runs-on: 
       group: CI
       labels: [self-hosted, Linux, X64, testing]
