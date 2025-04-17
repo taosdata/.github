@@ -1,0 +1,197 @@
+name: TDengine taostools coverage 
+description: Reusable Workflow for taostools coverage test
+
+on:
+  workflow_call:
+    inputs:
+      tdinternal:
+        description: 'Is the PR from TDinternal?'
+        required: true
+        type: boolean
+      specified_source_branch:
+        description: 'Enter the source branch name of TDengine'
+        required: false
+        default: 'unavailable'
+        type: string
+      specified_target_branch:
+        description: 'Enter the target branch name of TDengine'
+        required: false
+        default: 'unavailable'
+        type: string
+      specified_pr_number:
+        description: 'Enter the PR number of TDengine'
+        required: false
+        default: 'unavailable'
+        type: string
+
+# 修改并发策略，使用运行编号来区分不同实例
+concurrency: 
+  group: ${{ github.workflow }}-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  run-tests-coverage-on-linux:
+    runs-on: 
+      group: CI
+      labels: [self-hosted, Linux, X64, testing]
+    
+    timeout-minutes: 300
+
+    env:
+      CONTAINER_NAME: 'taosd-test'
+      WKDIR: '/var/lib/jenkins/workspace'
+      WK: '/var/lib/jenkins/workspace/TDinternal'
+      WKC: '/var/lib/jenkins/workspace/TDinternal/community'
+      IS_TDINTERNAL: ${{ github.event.inputs.tdinternal }}
+      SOURCE_BRANCH: ""
+      TARGET_BRANCH: ""
+      PR_NUMBER: ""
+
+    steps:
+      - name: Set environment variables based on condition
+        run: |
+          if [[ "${{ inputs.specified_source_branch }}" == 'unavailable' ]] && \
+            [[ "${{ inputs.specified_target_branch}}" == 'unavailable' ]] && \
+            [[ "${{ inputs.specified_pr_number}}" == 'unavailable' ]]; then
+            echo "set from github event"
+            echo SOURCE_BRANCH="${{ github.event.pull_request.head.ref }}" >> $GITHUB_ENV
+            echo TARGET_BRANCH="${{ github.event.pull_request.base.ref }}" >> $GITHUB_ENV
+            echo PR_NUMBER="${{ github.event.pull_request.number }}" >> $GITHUB_ENV
+          else
+            echo "set from input"
+            echo "SOURCE_BRANCH=${{ inputs.specified_source_branch }}" >> $GITHUB_ENV
+            echo "TARGET_BRANCH=${{ inputs.specified_target_branch }}" >> $GITHUB_ENV
+            echo "PR_NUMBER=${{ inputs.specified_pr_number }}" >> $GITHUB_ENV
+          fi
+
+          echo "Current step debug (GITHUB_ENV content):"
+          cat $GITHUB_ENV
+
+      - name: Output the environment information
+        run: |
+          echo "::group::Environment Info"
+          echo "Date and Time: $(date)"
+          echo "Hostname: $(hostname)"
+          echo "Environment Variables:"
+          env
+          echo "Runner: ${{ runner.name }}"
+          echo "Trigger Source from TDinternal: ${{ env.IS_TDINTERNAL }}"
+          echo "Workspace: ${{ env.WKDIR }}"
+          echo "TDinternal Branch: ${{ env.SOURCE_BRANCH }}"
+          echo "TDengine Branch: ${{ env.TARGET_BRANCH }}"
+          git --version
+          echo "${{ env.WKDIR }}/restore.sh -p PR-${{ env.PR_NUMBER }} -n ${{ github.run_number }} -c ${{ env.CONTAINER_NAME }}"
+          echo "::endgroup::"
+
+      - name: Prepare TDinternal repository
+        run: |
+          echo "Preparing TDinternal repository..."
+          cd ${{ env.WK }}
+          git reset --hard
+          git clean -f
+          git remote prune origin
+          git fetch
+          if git rev-parse --verify origin/${{ env.SOURCE_BRANCH }} >/dev/null 2>&1; then
+            git checkout ${{ env.SOURCE_BRANCH }}
+          else
+            echo "Branch ${{ env.SOURCE_BRANCH }} does not exist. Switching to default branch 3.0."
+            git switch -c 3.0 origin/3.0
+          fi
+          echo "Pulling latest code from 3.0 branch..."
+          git pull || { echo "Failed to pull the latest code."; exit 1; }
+          echo "Current branch: $(git branch --show-current)"
+          echo "Current commit:" && git log -1 --oneline  
+
+      - name: Prepare TDengine repository
+        run: |
+          echo "Preparing TDengine repository..."
+          cd ${{ env.WKC }}
+          git reset --hard
+          git clean -f
+          git remote prune origin
+          git fetch
+          if git rev-parse --verify origin/${{ env.SOURCE_BRANCH }} >/dev/null 2>&1; then
+            git switch ${{ env.SOURCE_BRANCH }}
+          else
+            echo "Branch ${{ env.SOURCE_BRANCH }} does not exist. Switching to default branch 3.0."
+            git switch -c 3.0 origin/3.0
+          fi
+          echo "Pulling latest code from 3.0 branch..."
+          git pull || { echo "Failed to pull the latest code."; exit 1; }
+          echo "Current branch: $(git branch --show-current)"
+          echo "Current commit:" && git log -1 --oneline  
+
+      - name: Update submodule
+        run: |
+          cd ${{ env.WKC }}
+          git submodule update --init --recursive
+ 
+      - name: Build docker container
+        run: |
+          date
+          rm -rf ${{ env.WKC }}/debug
+          cd ${{ env.WKC }}/tests/parallel_test
+          time ./container_build_coverage.sh -w ${{ env.WKDIR }} -e
+
+      - name: Get parameters for testing
+        id: get_param
+        run: |
+          log_server_file="/home/log_server.json"
+          timeout_cmd=""
+          extra_param=""
+
+          if [ -f "$log_server_file" ]; then
+            log_server_enabled=$(jq '.enabled' "$log_server_file")
+            timeout_param=$(jq '.timeout' "$log_server_file")
+            if [ "$timeout_param" != "null" ] && [ "$timeout_param" != "0" ]; then
+              timeout_cmd="timeout $timeout_param"
+            fi
+
+            if [ "$log_server_enabled" == "1" ]; then
+              log_server=$(jq '.server' "$log_server_file" | sed 's/\\\"//g')
+              if [ "$log_server" != "null" ] && [ "$log_server" != "" ]; then
+                extra_param="-w $log_server"
+              fi
+            fi
+          fi
+          echo "timeout_cmd=$timeout_cmd" >> $GITHUB_OUTPUT
+          echo "extra_param=$extra_param" >> $GITHUB_OUTPUT
+
+      - name: Run function test cases
+        run: |
+          cd ${{ env.WKC }}/tests/parallel_test
+          export DEFAULT_RETRY_TIME=1
+          date
+          chmod +x ${{ env.WKC }}/tests/parallel_test/run.sh
+          ${{ steps.get_param.outputs.timeout_cmd }} time ./run.sh -e -m /home/m.json -t cases.task -b COVER-${{ github.run_number }} -l ${{ env.WKDIR }}/log -o 1200 ${{ steps.get_param.outputs.extra_param }} || true
+          ${{ steps.get_param.outputs.timeout_cmd }} time ./run.sh -e -m /home/m.json -t longtimeruning_cases.task -b COVER-${{ github.run_number }} -l ${{ env.WKDIR }}/log -o 1800 ${{ steps.get_param.outputs.extra_param }} || true
+          #${{ steps.get_param.outputs.timeout_cmd }} time ./run.sh -e -m /home/m.json -t tdgpt_cases.task -b COVER-${{ github.run_number }} -l ${{ env.WKDIR }}/log -o 1200 ${{ steps.get_param.outputs.extra_param }} || true
+        continue-on-error: true  
+   
+      - name: Run TDengine coverage 
+        if: always() 
+        run: |
+          echo "::group::Run TDengine coverage"
+          cd ${{ env.WKC }}/tests/parallel_test
+          echo "Running coverage script at $(date)"
+          chmod +x ${{ env.WKC }}/tests/parallel_test/run_coverage_container.sh
+          ./run_coverage_container.sh -d ${{ env.WKC }} -b ${{ env.SOURCE_BRANCH }} > coverage_tdengine.log 2>&1
+          if [ $? -ne 0 ]; then
+              echo "Coverage script failed. Check coverage_tdengine.log for details."
+          fi
+          echo "Coverage log line count:"
+          cat coverage_tdengine.log | wc -l
+          echo "Filtered coverage_tdengine log (excluding specific patterns):"
+          cat coverage_tdengine.log | grep -v FN | grep -v DA | grep -v LF | grep -v TN | grep -v end | grep -v LH | grep -v No | grep -v Lines | grep -v Branches | grep -v Taken | grep -v Calls | grep . || true
+          echo "::endgroup::"
+        continue-on-error: true
+
+      - name: Clearup the running cases
+        if: always()
+        run: |
+          pid=$(ps -ef | grep 'run_case.sh' | grep -v 'grep' | awk '{print $2}')
+          if [ -n "$pid" ]; then
+            ps -ef | grep 'run_case.sh'  | grep -v 'grep' | awk '{print $2}'| xargs kill -9
+          else
+              echo "No run_case.sh process is running."
+          fi
