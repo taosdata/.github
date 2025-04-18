@@ -169,7 +169,7 @@ jobs:
           echo "Coverage log line count:"
           cat coverage_tdengine.log | wc -l
           echo "Filtered coverage_tdengine log (excluding specific patterns):"
-          #cat coverage_tdengine.log | grep -v FN | grep -v DA | grep -v LF | grep -v TN | grep -v end | grep -v LH | grep -v No | grep -v Lines | grep -v Branches | grep -v Taken | grep -v Calls | grep . || true
+          cat coverage_tdengine.log | grep -v FN | grep -v DA | grep -v LF | grep -v TN | grep -v end | grep -v LH | grep -v No | grep -v Lines | grep -v Branches | grep -v Taken | grep -v Calls | grep . || true
           echo "::endgroup::"
         continue-on-error: true
 
