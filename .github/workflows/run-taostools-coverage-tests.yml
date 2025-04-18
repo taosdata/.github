@@ -24,11 +24,6 @@ on:
         default: 'unavailable'
         type: string
 
-# 修改并发策略，使用运行编号来区分不同实例
-concurrency: 
-  group: ${{ github.workflow }}-${{ github.run_id }}
-  cancel-in-progress: false
-
 jobs:
   run-tests-coverage-on-linux:
     runs-on: 
