@@ -86,16 +86,10 @@ jobs:
           git clean -f
           git remote prune origin
           git fetch
-          if git rev-parse --verify origin/${{ env.SOURCE_BRANCH }} >/dev/null 2>&1; then
-            git checkout ${{ env.SOURCE_BRANCH }}
-          else
-            echo "Branch ${{ env.SOURCE_BRANCH }} does not exist. Switching to default branch 3.0."
-            git switch -c 3.0 origin/3.0
-          fi
-          echo "Pulling latest code from 3.0 branch..."
-          git pull || { echo "Failed to pull the latest code."; exit 1; }
+          git switch -c 3.0 origin/3.0 || git checkout 3.0
+          git pull origin 3.0 || { echo "Failed to pull from 3.0 branch"; exit 1; }
           echo "Current branch: $(git branch --show-current)"
-          echo "Current commit:" && git log -1 --oneline  
+          echo "Current commit:" && git log -1 --oneline
 
       - name: Prepare TDengine repository
         run: |
