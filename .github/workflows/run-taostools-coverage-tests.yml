@@ -162,14 +162,14 @@ jobs:
           cd ${{ env.WKC }}/tests/parallel_test
           echo "Running coverage script at $(date)"
           chmod +x ${{ env.WKC }}/tests/parallel_test/run_coverage_container.sh
-          ./run_coverage_container.sh -d ${{ env.WKC }} -b ${{ env.SOURCE_BRANCH }} > coverage_tdengine.log 2>&1
+          ./run_coverage_container.sh -d ${{ env.WKC }} -b ${{ env.SOURCE_BRANCH }} -t taostools > coverage_tdengine.log 2>&1
           if [ $? -ne 0 ]; then
               echo "Coverage script failed. Check coverage_tdengine.log for details."
           fi
           echo "Coverage log line count:"
           cat coverage_tdengine.log | wc -l
           echo "Filtered coverage_tdengine log (excluding specific patterns):"
-          cat coverage_tdengine.log | grep -v FN | grep -v DA | grep -v LF | grep -v TN | grep -v end | grep -v LH | grep -v No | grep -v Lines | grep -v Branches | grep -v Taken | grep -v Calls | grep . || true
+          #cat coverage_tdengine.log | grep -v FN | grep -v DA | grep -v LF | grep -v TN | grep -v end | grep -v LH | grep -v No | grep -v Lines | grep -v Branches | grep -v Taken | grep -v Calls | grep . || true
           echo "::endgroup::"
         continue-on-error: true
 
