@@ -47,11 +47,19 @@ client_shell_array=("${shell_array[@]}")
 echo "$client_json_array"
 echo "${client_shell_array[0]}"
 
+kafka_json_array=$(generate_json_compact_array "kafka")
+eval "$(generate_shell_literal_array "$kafka_json_array")"
+kafka_shell_array=("${shell_array[@]}")
+echo "$kafka_json_array"
+echo "${kafka_shell_array[0]}"
+echo "${kafka_shell_array[1]}"
+
 hostname_info=(
     "${mqtt_shell_array[@]}"
     "${single_dnode_shell_array[@]}"
     "${client_shell_array[@]}"
     "${cluster_dnode_shell_array[@]}"
+    "${kafka_shell_array[@]}"
 )
 hostname_info_str=$(IFS=,; echo "${hostname_info[*]}")
 
@@ -62,6 +70,7 @@ hostname_info_str=$(IFS=,; echo "${hostname_info[*]}")
     echo "TAOS_BENCHMARK_HOSTS=$client_json_array"
     echo "CLUSTER_HOSTS=$cluster_dnode_json_array"
     echo "HOSTNAME_INFO=$hostname_info_str"
+    echo "KAFKA_HOSTS=$kafka_json_array"
 } >> "$GITHUB_OUTPUT"
 
 # # Get the length of the first array (assuming both arrays are of the same length)
