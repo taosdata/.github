@@ -24,3 +24,4 @@ runs:
         echo "TAOS_BENCHMARK_HOSTS=$(cat $GITHUB_OUTPUT | grep TAOS_BENCHMARK_HOSTS | cut -d'=' -f2-)" >> $GITHUB_ENV
         echo "CLUSTER_HOSTS=$(cat $GITHUB_OUTPUT | grep CLUSTER_HOSTS | cut -d'=' -f2-)" >> $GITHUB_ENV
         echo "HOSTNAME_INFO=$(cat $GITHUB_OUTPUT | grep HOSTNAME_INFO | cut -d'=' -f2-)" >> $GITHUB_ENV
+        echo "KAFKA_HOSTS=$(cat $GITHUB_OUTPUT | grep KAFKA_HOSTS | cut -d'=' -f2-)" >> $GITHUB_ENV
