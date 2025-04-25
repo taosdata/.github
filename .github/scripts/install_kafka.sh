@@ -1,5 +1,27 @@
 #!/bin/bash
 
+install_java() {
+    if ! command -v java &> /dev/null; then
+        echo "Java is not installed. Installing Java..."
+        apt-get update
+        apt-get install -y openjdk-11-jdk
+    else
+        echo "Java is already installed."
+    fi
+}
+
+# Function to check if Java is installed
+check_java() {
+    if ! command -v java &> /dev/null; then
+        echo "Java is not installed. Please install Java (e.g., OpenJDK 11) and try again."
+        install_java
+        if [ $? -ne 0 ]; then
+            echo "Failed to install Java. Exiting."
+            exit 1
+        fi
+    fi
+}
+
 # Function to determine if the network is domestic or international
 is_domestic() {
     # Test connectivity to a domestic server (e.g., Tsinghua mirror)
@@ -48,12 +70,32 @@ install_kafka() {
     fi
 }
 
+start_zookeeper() {
+    if ! pgrep -f zookeeper &> /dev/null; then
+        echo "Starting Zookeeper..."
+        /opt/kafka/bin/zookeeper-server-start.sh -daemon /opt/kafka/config/zookeeper.properties
+        sleep 5  # Wait for Zookeeper to initialize
+
+        # Check if Zookeeper started successfully
+        if ! pgrep -f zookeeper &> /dev/null; then
+            echo "Failed to start Zookeeper."
+            exit 1
+        fi
+        echo "Zookeeper started successfully."
+    else
+        echo "Zookeeper is already running."
+    fi
+}
+
 start_kafka() {
     if ! pgrep -f kafka.Kafka &> /dev/null; then
         echo "Starting Kafka..."
         /opt/kafka/bin/kafka-server-start.sh -daemon /opt/kafka/config/server.properties
-        if [ $? -ne 0 ]; then
-            echo "Failed to start Kafka. Exiting."
+        sleep 5  # Wait for Kafka to initialize
+
+        # Check if Kafka started successfully
+        if ! pgrep -f kafka.Kafka &> /dev/null; then
+            echo "Failed to start Kafka."
             exit 1
         fi
         echo "Kafka started successfully."
@@ -63,5 +105,7 @@ start_kafka() {
 }
 
 # Run the functions
+check_java
 install_kafka
+start_zookeeper
 start_kafka
