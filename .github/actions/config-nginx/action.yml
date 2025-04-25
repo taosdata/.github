@@ -23,14 +23,6 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Add Port to Adapter Hosts
-      shell: bash
-      run: |
-        # 将 adapter_hosts 的每个 IP 添加端口
-        adapter_hosts_with_port=$(echo "${{ inputs.adapter_hosts }}" | awk -v port="${{ inputs.adapter_port }}" -F',' '{for (i=1; i<=NF; i++) printf "%s:%s,", $i, port; printf "\n"}' | sed 's/,$//')
-        echo "Adapter Hosts with Port: $adapter_hosts_with_port"
-        echo "adapter_hosts_with_port=$adapter_hosts_with_port" >> $GITHUB_ENV
-
     - name: Config Nginx
       shell: bash
       run: |
