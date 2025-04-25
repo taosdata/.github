@@ -1,12 +1,47 @@
 #!/bin/bash
 
+# Function to determine if the network is domestic or international
+is_domestic() {
+    # Test connectivity to a domestic server (e.g., Tsinghua mirror)
+    ping -c 1 mirrors.tuna.tsinghua.edu.cn &> /dev/null
+    if [ $? -eq 0 ]; then
+        return 0  # Domestic
+    else
+        return 1  # International
+    fi
+}
+
 # Function to check and install Kafka
 install_kafka() {
     if ! command -v kafka-server-start.sh &> /dev/null; then
         echo "Kafka is not installed. Installing Kafka..."
-        wget https://downloads.apache.org/kafka/3.5.0/kafka_2.13-3.5.0.tgz -O /tmp/kafka.tgz
+
+        # Choose the appropriate mirror based on network environment
+        if is_domestic; then
+            echo "Using domestic mirror for Kafka download."
+            wget https://mirrors.tuna.tsinghua.edu.cn/apache/kafka/3.7.2/kafka_2.13-3.7.2.tgz -O /tmp/kafka.tgz
+        else
+            echo "Using international mirror for Kafka download."
+            wget https://downloads.apache.org/kafka/3.7.2/kafka_2.13-3.7.2.tgz -O /tmp/kafka.tgz
+        fi
+
+        if [ $? -ne 0 ]; then
+            echo "Failed to download Kafka. Exiting."
+            exit 1
+        fi
+
         tar -xzf /tmp/kafka.tgz -C /opt
-        mv /opt/kafka_2.13-3.5.0 /opt/kafka
+        if [ $? -ne 0 ]; then
+            echo "Failed to extract Kafka. Exiting."
+            exit 1
+        fi
+
+        mv /opt/kafka_2.13-3.7.2 /opt/kafka
+        if [ $? -ne 0 ]; then
+            echo "Failed to move Kafka directory. Exiting."
+            exit 1
+        fi
+
         echo "Kafka installed successfully."
     else
         echo "Kafka is already installed."
@@ -17,21 +52,16 @@ start_kafka() {
     if ! pgrep -f kafka.Kafka &> /dev/null; then
         echo "Starting Kafka..."
         /opt/kafka/bin/kafka-server-start.sh -daemon /opt/kafka/config/server.properties
+        if [ $? -ne 0 ]; then
+            echo "Failed to start Kafka. Exiting."
+            exit 1
+        fi
         echo "Kafka started successfully."
     else
         echo "Kafka is already running."
     fi
 }
 
-# Function to check Kafka status
-check_kafka_status() {
-    if pgrep -f kafka.Kafka &> /dev/null; then
-        echo "Kafka is running."
-    else
-        echo "Kafka is not running."
-    fi
-}
-
 # Run the functions
 install_kafka
-check_kafka_status
+start_kafka
