@@ -70,42 +70,76 @@ install_kafka() {
     fi
 }
 
-start_zookeeper() {
-    if ! pgrep -f zookeeper &> /dev/null; then
-        echo "Starting Zookeeper..."
-        /opt/kafka/bin/zookeeper-server-start.sh -daemon /opt/kafka/config/zookeeper.properties
-        sleep 5  # Wait for Zookeeper to initialize
+create_service_files() {
+    echo "Creating Zookeeper systemd service file..."
+    cat <<EOF > /etc/systemd/system/zookeeper.service
+[Unit]
+Description=Apache Zookeeper Service
+After=network.target
 
-        # Check if Zookeeper started successfully
-        if ! pgrep -f zookeeper &> /dev/null; then
-            echo "Failed to start Zookeeper."
-            exit 1
-        fi
-        echo "Zookeeper started successfully."
-    else
-        echo "Zookeeper is already running."
+[Service]
+Type=simple
+ExecStart=/opt/kafka/bin/zookeeper-server-start.sh /opt/kafka/config/zookeeper.properties
+ExecStop=/opt/kafka/bin/zookeeper-server-stop.sh
+Restart=on-failure
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    echo "Creating Kafka systemd service file..."
+    cat <<EOF > /etc/systemd/system/kafka.service
+[Unit]
+Description=Apache Kafka Service
+After=zookeeper.service
+
+[Service]
+Type=simple
+ExecStart=/opt/kafka/bin/kafka-server-start.sh /opt/kafka/config/server.properties
+ExecStop=/opt/kafka/bin/kafka-server-stop.sh
+Restart=on-failure
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    echo "Reloading systemd daemon and enabling services..."
+    systemctl daemon-reload
+    systemctl enable zookeeper
+    systemctl enable kafka
+}
+
+start_zookeeper() {
+    echo "Starting Zookeeper service..."
+    systemctl start zookeeper
+
+    # Check if Zookeeper started successfully
+    if ! systemctl is-active --quiet zookeeper; then
+        echo "Failed to start Zookeeper service."
+        exit 1
     fi
+    echo "Zookeeper service started successfully."
 }
 
 start_kafka() {
-    if ! pgrep -f kafka.Kafka &> /dev/null; then
-        echo "Starting Kafka..."
-        /opt/kafka/bin/kafka-server-start.sh -daemon /opt/kafka/config/server.properties
-        sleep 5  # Wait for Kafka to initialize
+    echo "Starting Kafka service..."
+    systemctl start kafka
 
-        # Check if Kafka started successfully
-        if ! pgrep -f kafka.Kafka &> /dev/null; then
-            echo "Failed to start Kafka."
-            exit 1
-        fi
-        echo "Kafka started successfully."
-    else
-        echo "Kafka is already running."
+    # Check if Kafka started successfully
+    if ! systemctl is-active --quiet kafka; then
+        echo "Failed to start Kafka service."
+        exit 1
     fi
+    echo "Kafka service started successfully."
 }
 
 # Run the functions
 check_java
 install_kafka
+create_service_files
 start_zookeeper
 start_kafka
