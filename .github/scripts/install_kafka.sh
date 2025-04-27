@@ -35,7 +35,7 @@ is_domestic() {
 
 # Function to check and install Kafka
 install_kafka() {
-    if ! command -v kafka-server-start.sh &> /dev/null; then
+    if [ ! -d "/opt/kafka/kafka_2.13-3.7.2" ]; then
         echo "Kafka is not installed. Installing Kafka..."
 
         # Choose the appropriate mirror based on network environment
