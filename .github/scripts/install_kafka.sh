@@ -113,22 +113,21 @@ EOF
     systemctl enable kafka
 }
 
-start_zookeeper() {
+start_service() {
+    systemctl stop kafka
+    systemctl stop zookeeper
+
     echo "Starting Zookeeper service..."
     systemctl start zookeeper
-
     # Check if Zookeeper started successfully
     if ! systemctl is-active --quiet zookeeper; then
         echo "Failed to start Zookeeper service."
         exit 1
     fi
     echo "Zookeeper service started successfully."
-}
 
-start_kafka() {
     echo "Starting Kafka service..."
     systemctl start kafka
-
     # Check if Kafka started successfully
     if ! systemctl is-active --quiet kafka; then
         echo "Failed to start Kafka service."
@@ -141,5 +140,4 @@ start_kafka() {
 check_java
 install_kafka
 create_service_files
-start_zookeeper
-start_kafka
+start_service
