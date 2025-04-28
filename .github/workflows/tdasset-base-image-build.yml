@@ -2,11 +2,33 @@ name: Build base image for TDasset
 
 on:
   workflow_call:
+    secrets:
+      URL:
+        required: true
+        description: 'Docker registry URL'
+      USERNAME:
+        required: true
+        description: 'Docker registry username'
+      PASSWORD:
+        required: true
+        description: 'Docker registry password'
+    inputs:
+      BASEIMAGE_PROJECT_NAME:
+        type: string
+        required: true
+        description: "Base image project name"
+      BASEIMAGE_IMAGE_NAME:
+        type: string
+        required: true
+        description: "Base image name"
+      BASEIMAGE_TAG:
+        type: string
+        required: true
+        description: "Base image tag"
 
 jobs:
   build-base-image:
     runs-on: ubuntu-latest
-    environment: IMAGE_SERVER
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v4
@@ -32,7 +54,7 @@ jobs:
           file: build/Dockerfile.base
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ secrets.URL }}/${{ env.BASEIMAGE_PROJECT_NAME}}/${{ env.BASEIMAGE_IMAGE_NAME }}:${{ env.BASEIMAGE_TAG }}
+          tags: ${{ secrets.URL }}/${{ inputs.BASEIMAGE_PROJECT_NAME }}/${{ inputs.BASEIMAGE_IMAGE_NAME }}:${{ inputs.BASEIMAGE_TAG }}
 
       - name: Clear cache and logout from Docker Registry
         run: docker builder prune -af && docker logout ${{ secrets.URL }}
