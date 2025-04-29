@@ -94,8 +94,8 @@ for ((i=0; i<length; i++)); do
         "spec": {}
     },
     "taoskeeper": {
-        "fqdn": ["${cluster_dnode_shell_array[0]}"],
-        "spec": {}
+        "fqdn": ["$edge"],
+        "spec": {"host": "${cluster_dnode_shell_array[0]}"}
     },
     "taosx": {
         "fqdn": ["$edge"],
@@ -128,8 +128,8 @@ cat <<EOF > "$TEST_ROOT/env/ems-center.json"
         "spec": {}
     },
     "taoskeeper": {
-        "fqdn": ["${cluster_dnode_shell_array[0]}"],
-        "spec": {}
+        "fqdn": ${cluster_fqdn},
+        "spec": {"host": "${cluster_dnode_shell_array[0]}"}
     },
     "taosx": {
         "fqdn": ${cluster_fqdn},
