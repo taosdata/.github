@@ -92,6 +92,14 @@ for ((i=0; i<length; i++)); do
     "taospy": {
         "fqdn": ["${client_shell_array[0]}"],
         "spec": {}
+    },
+    "taoskeeper": {
+        "fqdn": ["${cluster_dnode_shell_array[0]}"],
+        "spec": {}
+    },
+    "taosx": {
+        "fqdn": ["$edge"],
+        "spec": {}
     }
 }
 EOF
@@ -117,6 +125,14 @@ cat <<EOF > "$TEST_ROOT/env/ems-center.json"
     },
     "taospy": {
         "fqdn": ["${client_shell_array[0]}"],
+        "spec": {}
+    },
+    "taoskeeper": {
+        "fqdn": ["${cluster_dnode_shell_array[0]}"],
+        "spec": {}
+    },
+    "taosx": {
+        "fqdn": ${cluster_fqdn},
         "spec": {}
     }
 }
