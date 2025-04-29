@@ -40,11 +40,11 @@ jobs:
         run: |
           cd ${{ env.TDasset_repo_path }}
           git checkout ${{ github.event.pull_request.base.ref }}
-          git remote prune origin
-          git pull >/dev/null
-          git log -5
-          git fetch origin +refs/pull/${{ github.event.pull_request.number }}/merge
-          git checkout -qf FETCH_HEAD
+          # git remote prune origin
+          # git pull >/dev/null
+          # git log -5
+          # git fetch origin +refs/pull/${{ github.event.pull_request.number }}/merge
+          # git checkout -qf FETCH_HEAD
           git log -5
 
       # - name: Set up Docker Buildx
