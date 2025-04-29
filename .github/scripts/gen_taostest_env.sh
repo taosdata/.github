@@ -155,6 +155,14 @@ cat <<EOF > "$TEST_ROOT/env/ems-query.json"
     "taospy": {
         "fqdn": ["${client_shell_array[0]}"],
         "spec": {}
+    },
+    "taoskeeper": {
+        "fqdn": ${cluster_fqdn},
+        "spec": {"host": "${cluster_dnode_shell_array[0]}"}
+    },
+    "taosx": {
+        "fqdn": ${cluster_fqdn},
+        "spec": {}
     }
 }
 EOF
