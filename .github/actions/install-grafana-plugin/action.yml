@@ -2,11 +2,11 @@ name: Install Grafana Plugin
 description: Install Grafana And Config Datasource
 
 inputs:
-  monitor_ip:
+  monitor-ip:
     required: false
     default: 'localhost'
     description: 'taosadapter ip'
-  monitor_port:
+  monitor-port:
     required: false
     default: 6041
     description: 'taosadapter port'
@@ -18,4 +18,4 @@ runs:
       shell: bash
       run: |
         echo "🔄 Installing Grafana Plugin..."
-        ${GITHUB_ACTION_PATH}/../../scripts/install_grafana_plugin.sh "${{ inputs.monitor_ip }}" "${{ inputs.monitor_port }}"
+        ${GITHUB_ACTION_PATH}/../../scripts/install_grafana_plugin.sh "${{ inputs.monitor-ip }}" "${{ inputs.monitor-port }}"
