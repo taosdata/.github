@@ -73,10 +73,11 @@ install_kafka() {
     echo "Configuring Kafka..."
     mkdir -p /opt/kafka/logs
     cp /opt/kafka/config/server.properties /opt/kafka/config/server.properties.bak
-    sed -i 's|^log.dirs=.*|log.dirs=/opt/kafka/logs|' /opt/kafka/config/server.properties
-    sed -i 's|^zookeeper.connect=.*|zookeeper.connect=localhost:2181|' /opt/kafka/config/server.properties
-    sed -i 's|^listeners=.*|listeners=PLAINTEXT://:9092|' /opt/kafka/config/server.properties
-    sed -i 's|^advertised.listeners=.*|advertised.listeners=PLAINTEXT://localhost:9092|' /opt/kafka/config/server.properties
+    sed -i "s|^log.dirs=.*|log.dirs=/opt/kafka/logs|" /opt/kafka/config/server.properties
+    sed -i "s|^zookeeper.connect=.*|zookeeper.connect=localhost:2181|" /opt/kafka/config/server.properties
+    sed -i "s|^listeners=.*|listeners=PLAINTEXT://:9092|" /opt/kafka/config/server.properties
+    sed -i "s|^advertised.listeners=.*|advertised.listeners=PLAINTEXT://${serverIP}:9092|" /opt/kafka/config/server.properties
+    sed -i "s|^log.retention.hours=.*|log.retention.hours=1|" /opt/kafka/config/server.properties
 }
 
 create_service_files() {
@@ -145,8 +146,15 @@ start_service() {
     echo "Kafka service started successfully."
 }
 
+# Check if the correct number of arguments is provided
+if [ "$#" -ne 1 ]; then
+  usage
+fi
+
+# Get parameters
+serverIP="$1"
 # Run the functions
 check_java
-install_kafka
+install_kafka $serverIP
 create_service_files
 start_service
