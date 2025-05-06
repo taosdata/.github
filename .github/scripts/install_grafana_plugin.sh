@@ -14,15 +14,13 @@ if [ "$#" -lt 2 ]; then
     exit 1
 fi
 
-
-
 # Install curl
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 "$script_dir/install_via_apt.sh" curl
 
 # Install grafanaplugin and config
 cd /opt || exit
-bash -c "$(curl -fsSL \
+bash -c "$(curl --retry 10 --retry-delay 5 --retry-max-time 120 -fsSL \
     https://raw.githubusercontent.com/taosdata/grafanaplugin/master/install.sh)" -- \
     -a http://"$MONITOR_IP":"$MONITOR_PORT" \
     -u root \
