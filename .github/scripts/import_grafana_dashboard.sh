@@ -26,6 +26,14 @@ IFS=',' read -ra uid_array <<< "$DASHBOARD_UIDS"
 
 length=${#id_array[@]}
 
+for i in {1..12}; do
+    if curl -s -o /dev/null -u "admin:admin" "$GRAFANA_URL/api/health"; then
+        break
+    fi
+    echo "Waiting Grafana start... ($i/12)"
+    sleep 5
+done
+
 for (( i=0; i<length; i++ )); do
     curl --retry 10 --retry-delay 5 --retry-max-time 120 \
       -s "https://grafana.com/api/dashboards/${id_array[i]}/revisions/latest/download" \
