@@ -1,5 +1,5 @@
-name: 'Import Grafana Dashboard'
-description: 'Import Grafana Dashboard with Json'
+name: 'Import Process Exporter Dashboard'
+description: 'Import Process Exporter Dashboard with Json'
 inputs:
   grafana-url:
     description: 'Url of Grafana'
@@ -25,10 +25,10 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Import Grafana Dashboard with Json
+    - name: Import Process Exporter Dashboard with Json
       shell: bash
       run: |
-        ${GITHUB_ACTION_PATH}/../../scripts/import_grafana_dashboard.sh \
+        ${GITHUB_ACTION_PATH}/../../scripts/import_process_exporter_dashboard.sh \
           "${{ inputs.grafana-url }}" \
           "${{ inputs.prometheus-url }}" \
           "${{ inputs.username }}" \
