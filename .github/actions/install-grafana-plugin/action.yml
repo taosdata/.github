@@ -17,5 +17,5 @@ runs:
     - name: Install Grafana Plugin And Config Datasource
       shell: bash
       run: |
-        echo "🔄 Deploying taostest..."
+        echo "🔄 Installing Grafana Plugin..."
         ${GITHUB_ACTION_PATH}/../../scripts/install_grafana_plugin.sh "${{ inputs.monitor_ip }}" "${{ inputs.monitor_port }}"

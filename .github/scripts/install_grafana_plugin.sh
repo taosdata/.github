@@ -1,16 +1,20 @@
 #!/bin/bash
 
+set -eo pipefail
+
+# Input parameters
+MONITOR_IP="$1"
+MONITOR_PORT="$2"
+
 # Ensure the correct number of input parameters
 if [ "$#" -lt 2 ]; then
-    echo "Usage: $0 <monitor_ip> <monitor_port>"
+    echo "Usage: $0 <MONITOR_IP> <MONITOR_PORT>"
     echo "Example:"
     echo "  $0 localhost 6041"
     exit 1
 fi
 
-# Input parameters
-monitor_ip="$1"
-monitor_port="$2"
+
 
 # Install curl
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -20,7 +24,7 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd /opt || exit
 bash -c "$(curl -fsSL \
     https://raw.githubusercontent.com/taosdata/grafanaplugin/master/install.sh)" -- \
-    -a http://"$monitor_ip":"$monitor_port" \
+    -a http://"$MONITOR_IP":"$MONITOR_PORT" \
     -u root \
     -p taosdata
 
