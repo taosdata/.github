@@ -68,6 +68,15 @@ install_kafka() {
     else
         echo "Kafka is already installed."
     fi
+
+    # configure Kafka
+    echo "Configuring Kafka..."
+    mkdir -p /opt/kafka/logs
+    cp /opt/kafka/config/server.properties /opt/kafka/config/server.properties.bak
+    sed -i 's|^log.dirs=.*|log.dirs=/opt/kafka/logs|' /opt/kafka/config/server.properties
+    sed -i 's|^zookeeper.connect=.*|zookeeper.connect=localhost:2181|' /opt/kafka/config/server.properties
+    sed -i 's|^listeners=.*|listeners=PLAINTEXT://:9092|' /opt/kafka/config/server.properties
+    sed -i 's|^advertised.listeners=.*|advertised.listeners=PLAINTEXT://localhost:9092|' /opt/kafka/config/server.properties
 }
 
 create_service_files() {
