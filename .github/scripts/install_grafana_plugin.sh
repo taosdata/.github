@@ -20,6 +20,9 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Install grafanaplugin and config
 cd /opt || exit
+echo "MONITOR_IP: $MONITOR_IP"
+echo "MONITOR_PORT: $MONITOR_PORT"
+
 bash -c "$(curl --retry 10 --retry-delay 5 --retry-max-time 120 -fsSL \
     https://raw.githubusercontent.com/taosdata/grafanaplugin/master/install.sh)" -- \
     -a http://"$MONITOR_IP":"$MONITOR_PORT" \
