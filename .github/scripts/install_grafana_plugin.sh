@@ -29,4 +29,4 @@ bash -c "$(curl -fsSL \
     -p taosdata
 
 # Restart service
-systemctl restart grafana-server.service
+"$script_dir/restart_service.sh" grafana-server.service
