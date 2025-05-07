@@ -1,64 +1,50 @@
 #!/bin/bash
+
 set -eo pipefail
 
-# Grafana API configuration
-GRAFANA_URL="$1"                # Grafana URL as the first argument
-PROMETHEUS_URL="$2"             # Prometheus URL as the first argument
-USERNAME="$3"                   # Grafana username as the second argument
-PASSWORD="$4"                   # Grafana password as the third argument
-DATASOURCE_NAME="$5"            # Data source name as the fourth argument
+# Input parameters
+GRAFANA_URL="$1"
+DASHBOARD_IDS="$2"
+DASHBOARD_UIDS="$3"
 
-# Validate mandatory parameters
-if [[ $# -lt 5 ]]; then
-  echo "::error::Missing required parameters"
-  echo "Usage: $0 <GRAFANA_URL> <PROMETHEUS_URL> <USERNAME> <PASSWORD> <DATASOURCE_NAME>"
-  echo "Example:"
-  echo "$0 http://192.168.9.99:3000 http://192.168.9.98:9090 admin admin process_exporter_dashboard"
-  exit 1
-fi
 
-# Query existing data sources
-response=$(curl -s -u "$USERNAME:$PASSWORD" "$GRAFANA_URL/api/datasources")
-
-# Check if the data source exists
-if echo "$response" | jq -e ".[] | select(.name == \"$DATASOURCE_NAME\")" > /dev/null; then
-    echo "Data source '$DATASOURCE_NAME' already exists, skipping creation."
-else
-    echo "Data source '$DATASOURCE_NAME' does not exist, creating a new data source."
-
-    # Create a new data source
-    curl -X POST \
-      -u "$USERNAME:$PASSWORD" \
-      -H "Content-Type: application/json" \
-      -d '{
-            "name": "'"$DATASOURCE_NAME"'",
-            "type": "prometheus",
-            "url": "'"$PROMETHEUS_URL"'",
-            "access": "proxy",
-            "basicAuth": false,
-            "jsonData": {
-              "timeInterval": "10s"
-            }
-          }' \
-      "$GRAFANA_URL/api/datasources"
-
-    echo "Data source '$DATASOURCE_NAME' created successfully."
-fi
-
-wget -O tdengine_process_exporter.json https://platform.tdengine.net:8090/download/config/tdengine_process_exporter_template.json
-sed -i "s/to_replace/$DATASOURCE_NAME/g" tdengine_process_exporter.json
-
-# Import the dashboard
-import_response=$(curl -s -X POST \
-  -u "$USERNAME:$PASSWORD" \
-  -H "Content-Type: application/json" \
-  -d "{\"dashboard\": $(jq 'del(.id)' tdengine_process_exporter.json), \"overwrite\": true}" \
-  "$GRAFANA_URL/api/dashboards/db")
-
-# Check if the dashboard import was successful
-if echo "$import_response" | jq -e '.status == "success"' > /dev/null; then
-    echo "Dashboard imported successfully."
-else
-    echo "Failed to import the dashboard. Response: $import_response"
+# Ensure the correct number of input parameters
+if [ "$#" -lt 3 ]; then
+    echo "Usage: $0 <GRAFANA_URL> <DASHBOARD_IDS> <DASHBOARD_UIDS>"
+    echo "Example:"
+    echo "  $0 http://127.0.0.1:3000 18180,20631 td_ds_01,td_ds_02"
     exit 1
 fi
+
+# Install curl
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+"$script_dir/install_via_apt.sh" curl
+
+# Import Dashboards
+IFS=',' read -ra id_array <<< "$DASHBOARD_IDS"
+IFS=',' read -ra uid_array <<< "$DASHBOARD_UIDS"
+
+length=${#id_array[@]}
+
+for i in {1..12}; do
+    if curl -s -o /dev/null -u "admin:admin" "$GRAFANA_URL/api/health"; then
+        break
+    fi
+    echo "Waiting Grafana start... ($i/12)"
+    sleep 5
+done
+
+for (( i=0; i<length; i++ )); do
+    curl --retry 10 --retry-delay 5 --retry-max-time 120 \
+      -s "https://grafana.com/api/dashboards/${id_array[i]}/revisions/latest/download" \
+      -o tdengine-dashboard-"${id_array[i]}".json
+    sed -i 's/"datasource": ".*"/"datasource": "TDengine"/g' tdengine-dashboard-"${id_array[i]}".json
+    echo '{"dashboard": '"$(cat tdengine-dashboard-"${id_array[i]}".json)"', "overwrite": true}' > tdengine-formatted-"${id_array[i]}".json
+    jq --arg uid "${uid_array[i]}" '.dashboard.uid = $uid' tdengine-formatted-"${id_array[i]}".json > tmp.json
+    mv tmp.json tdengine-dashboard-"${id_array[i]}".json
+    curl --retry 10 --retry-delay 5 --retry-max-time 120 \
+      -X POST -H "Content-Type: application/json" \
+      -u "admin:admin" \
+      -d @tdengine-dashboard-"${id_array[i]}".json \
+      "${GRAFANA_URL}/api/dashboards/db"
+done
