@@ -18,7 +18,8 @@ pip_source="$3"            # Source of pip3
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 "$script_dir/install_via_apt.sh" python3-pip wget
 
-wget -N "$pub_dl_url"/wheels/taostest-0.1.5-py3-none-any.whl
+wget -O taostest-0.1.5-py3-none-any.whl "$pub_dl_url"/wheels/taostest-0.1.5-py3-none-any.whl
+pip3 uninstall taostest -y
 pip3 install taostest-0.1.5-py3-none-any.whl -i "$pip_source"
 
 # Set TEST_ROOT
