@@ -2,6 +2,8 @@
 if [ $# -ne 3 ]; then
     echo "::error::Missing required parameters"
     echo "Usage: $0 <json_file> <test_root> <exclude_components>"
+    echo "Example:"
+    echo "  $0 role_info.json /root/TestNG taosx,taoskeeper"
     exit 1
 fi
 
