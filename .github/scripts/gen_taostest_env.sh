@@ -82,7 +82,7 @@ hostname_info=(
 )
 hostname_info_str=$(IFS=,; echo "${hostname_info[*]}")
 
-Export results to environment variables
+# Export results to environment variables
 {
     echo "MQTT_HOSTS=$mqtt_json_array"
     echo "SINGLE_DNODE_HOSTS=$single_dnode_json_array"
