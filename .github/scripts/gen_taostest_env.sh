@@ -1,12 +1,15 @@
 #!/bin/bash
-if [ $# -ne 2 ]; then
+if [ $# -ne 3 ]; then
     echo "::error::Missing required parameters"
-    echo "Usage: $0 <json_file> <test_root>"
+    echo "Usage: $0 <json_file> <test_root> <exclude_components>"
+    echo "Example:"
+    echo "  $0 role_info.json /root/TestNG taosx,taoskeeper"
     exit 1
 fi
 
 JSON_FILE="$1"
 TEST_ROOT="$2"
+EXCLUDE_COMPONENTS="$3"
 
 generate_json_compact_array() {
     local role="$1"
@@ -17,6 +20,24 @@ generate_shell_literal_array() {
     local json_compact_array="$1"
     mapfile -t shell_array < <(echo "$json_compact_array" | jq -r '.[]')
     declare -p shell_array
+}
+
+filter_excluded_components() {
+    local json_file="$1"
+    if [ -n "$EXCLUDE_COMPONENTS" ]; then
+        echo "$json_file" | jq --arg exclude "$EXCLUDE_COMPONENTS" '
+            ($exclude | split(",")) as $exclude_list |
+            with_entries(
+                if .key as $k | $exclude_list | index($k) | not then
+                    .
+                else
+                    empty
+                end
+            )
+        '
+    else
+        echo "$json_file"
+    fi
 }
 
 mqtt_json_array=$(generate_json_compact_array "mqtt")
@@ -47,11 +68,19 @@ client_shell_array=("${shell_array[@]}")
 echo "$client_json_array"
 echo "${client_shell_array[0]}"
 
+kafka_json_array=$(generate_json_compact_array "kafka")
+eval "$(generate_shell_literal_array "$kafka_json_array")"
+kafka_shell_array=("${shell_array[@]}")
+echo "$kafka_json_array"
+echo "${kafka_shell_array[0]}"
+echo "${kafka_shell_array[1]}"
+
 hostname_info=(
     "${mqtt_shell_array[@]}"
     "${single_dnode_shell_array[@]}"
     "${client_shell_array[@]}"
     "${cluster_dnode_shell_array[@]}"
+    "${kafka_shell_array[@]}"
 )
 hostname_info_str=$(IFS=,; echo "${hostname_info[*]}")
 
@@ -62,16 +91,16 @@ hostname_info_str=$(IFS=,; echo "${hostname_info[*]}")
     echo "TAOS_BENCHMARK_HOSTS=$client_json_array"
     echo "CLUSTER_HOSTS=$cluster_dnode_json_array"
     echo "HOSTNAME_INFO=$hostname_info_str"
+    echo "KAFKA_HOSTS=$kafka_json_array"
 } >> "$GITHUB_OUTPUT"
 
 # # Get the length of the first array (assuming both arrays are of the same length)
 length=${#single_dnode_shell_array[@]}
-
 # Iterate over indices
 for ((i=0; i<length; i++)); do
     edge=${single_dnode_shell_array[$i]}
     mqtt=${mqtt_shell_array[$i]}
-    cat <<EOF > "$TEST_ROOT/env/ems-edge-$((i+1)).json"
+    full_json=$(cat <<EOF
 {
     "taosd": {
         "fqdn": ["$edge"],
@@ -103,13 +132,16 @@ for ((i=0; i<length; i++)); do
     }
 }
 EOF
+    )
+    filtered_json=$(filter_excluded_components "$full_json")
+    echo "$filtered_json" > "$TEST_ROOT/env/ems-edge-$((i+1)).json"
 done
 
 # Create JSON file for cluster node
 cluster_fqdn=$(printf ',"%s"' "${cluster_dnode_shell_array[@]}")
 cluster_fqdn="[${cluster_fqdn:1}]"
 
-cat <<EOF > "$TEST_ROOT/env/ems-center.json"
+center_json=$(cat <<EOF
 {
     "taosd": {
         "fqdn": ${cluster_fqdn},
@@ -137,8 +169,11 @@ cat <<EOF > "$TEST_ROOT/env/ems-center.json"
     }
 }
 EOF
+)
+filtered_json=$(filter_excluded_components "$center_json")
+echo "$filtered_json" > "$TEST_ROOT/env/ems-center.json"
 
-cat <<EOF > "$TEST_ROOT/env/ems-query.json"
+query_json=$(cat <<EOF
 {
     "taosd": {
         "fqdn": ["${cluster_dnode_shell_array[0]}"],
@@ -166,3 +201,6 @@ cat <<EOF > "$TEST_ROOT/env/ems-query.json"
     }
 }
 EOF
+)
+filtered_json=$(filter_excluded_components "$query_json")
+echo "$filtered_json" > "$TEST_ROOT/env/ems-query.json"
