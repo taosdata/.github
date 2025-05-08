@@ -1,23 +1,18 @@
 #!/bin/bash
 
-install_java() {
-    if ! command -v java &> /dev/null; then
-        echo "Java is not installed. Installing Java..."
-        apt-get update
-        apt-get install -y openjdk-11-jdk
-    else
-        echo "Java is already installed."
-    fi
-}
-
 # Function to check if Java is installed
 check_java() {
-    if ! command -v java &> /dev/null; then
-        echo "Java is not installed. Please install Java (e.g., OpenJDK 11) and try again."
-        install_java
-        if [ $? -ne 0 ]; then
-            echo "Failed to install Java. Exiting."
-            exit 1
+    if command -v java &> /dev/null; then
+        java_version=$(java -version 2>&1 | awk -F '"' '/version/ {print $2}')
+        major_version=$(echo $java_version | cut -d '.' -f 1)
+
+        if [ "$major_version" -lt 11 ]; then
+            echo "Java version is less than 11. Install Java."
+            wget -O setup_env.sh https://raw.githubusercontent.com/taosdata/TDengine/main/packaging/setup_env.sh
+            chmod +x setup_env.sh
+            ./setup_env.sh install_java
+        else
+            echo "Java version $java_version is installed."
         fi
     fi
 }
