@@ -16,7 +16,7 @@ runs:
         script: |
           const teamLabelMap = {
             'platform': 'team platform',
-            'application-aloud': 'team application',
+            'application-cloud': 'team application',
             'application-tdasset': 'team application',
             'engine-query': 'team engine',
             'engine-storage': 'team engine',
