@@ -53,7 +53,7 @@ runs:
         OUTPUT_FILE="/opt/longbow_recording_fuzzy.csv"
         if [ -f "$OUTPUT_FILE" ]; then
             echo "mqtt csv already exists, skipping download."
-            return 0
+            exit 1
         fi
 
         if ! wget -O "${OUTPUT_FILE}.tar.gz" "$CSV_DL_URL"; then
@@ -62,5 +62,7 @@ runs:
         fi
 
         echo "Successfully downloaded mqtt csv."
+        ls -al /opt/*
+        du -sh /opt/*
 
         cd /opt &&  tar -xvf /opt/longbow_recording_fuzzy.csv.tar.gz
