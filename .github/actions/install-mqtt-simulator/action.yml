@@ -5,6 +5,9 @@ inputs:
   pub_dl_url:
     required: true
     description: 'A secrets'
+  azure_blob_url:
+    required: true
+    description: 'A secrets'
 runs:
   using: 'composite'
   steps:
@@ -49,7 +52,7 @@ runs:
           echo "Error: Failed to download mqtt_pub" >&2
           exit 1
         fi
-        CSV_DL_URL="https://tdenginetestdata.blob.core.windows.net/test-data/longbow_recording_fuzzy.csv.tar.gz"
+        CSV_DL_URL="${{ inputs.azure_blob_url }}/test-data/longbow_recording_fuzzy.csv.tar.gz"
         OUTPUT_FILE="/opt/longbow_recording_fuzzy.csv"
         if [ -f "$OUTPUT_FILE" ]; then
             echo "mqtt csv already exists, skipping download."
