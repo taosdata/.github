@@ -49,10 +49,12 @@ runs:
           label=ems-center-1
         else
           label="${{ inputs.labels }}"
+        fi
         if [[ "${{ inputs.labels }}" == "ems-mqtt-node" ]];then
           label=ems-mqtt-1
         else
           label="${{ inputs.labels }}"
+        fi
         case "${{ inputs.operation_type }}" in
           add)
             JSON_DATA=$(echo "$label" | jq -R 'split(",")' | jq -c '{labels: .}')
