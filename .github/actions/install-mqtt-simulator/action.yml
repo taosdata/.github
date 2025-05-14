@@ -52,8 +52,8 @@ runs:
           echo "Error: Failed to download mqtt_pub" >&2
           exit 1
         fi
-        CSV_DL_URL="${{ inputs.azure_blob_url }}/test-data/longbow_recording_fuzzy.csv.tar.gz"
-        OUTPUT_FILE="/opt/longbow_recording_fuzzy.csv"
+        CSV_DL_URL="${{ inputs.azure_blob_url }}/test-data/battery_storage_data.csv.tar.gz"
+        OUTPUT_FILE="/opt/battery_storage_data.csv"
         if [ -f "$OUTPUT_FILE" ]; then
             echo "mqtt csv already exists, skipping download."
             exit 0
@@ -68,4 +68,4 @@ runs:
         ls -al /opt/*
         du -sh /opt/*
 
-        cd /opt &&  tar -xvf /opt/longbow_recording_fuzzy.csv.tar.gz
+        cd /opt &&  tar -xvf /opt/battery_storage_data.csv.tar.gz
