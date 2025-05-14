@@ -45,13 +45,13 @@ runs:
 
         RUNNER_ID=$(echo "$response" | jq -r ".runners[] | select(.name == \"${{ inputs.runner_name }}\") | .id")
         echo "runner id: $RUNNER_ID"
-        if [[ "${{ inputs.labels }}" == "ems-center-node" ]];then
-          label=ems-center-1
+        if [[ "${{ inputs.labels }}" == "ems-mqtt-node" ]];then
+          label=ems-mqtt-1
         else
           label="${{ inputs.labels }}"
         fi
-        if [[ "${{ inputs.labels }}" == "ems-mqtt-node" ]];then
-          label=ems-mqtt-1
+        if [[ "${{ inputs.labels }}" == "ems-center-node" ]];then
+          label=ems-center-1
         else
           label="${{ inputs.labels }}"
         fi
