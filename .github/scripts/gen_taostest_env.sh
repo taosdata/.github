@@ -13,7 +13,6 @@ EXCLUDE_COMPONENTS="$3"
 
 generate_json_compact_array() {
     local role="$1"
-    jq -c --arg role "$role" '[.[$role][].hostname]' "$JSON_FILE"
     jq -c --arg role "$role" '
         if has($role) and (.[$role] | length) > 0 then
             [.[$role][].hostname]
