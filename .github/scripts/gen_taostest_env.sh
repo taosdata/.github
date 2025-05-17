@@ -23,9 +23,34 @@ generate_json_compact_array() {
     ' "$JSON_FILE"
 }
 
+# generate_shell_literal_array() {
+#     local json_compact_array="$1"
+#     mapfile -t shell_array < <(echo "$json_compact_array" | jq -r '.[]')
+#     declare -p shell_array
+# }
 generate_shell_literal_array() {
     local json_compact_array="$1"
-    mapfile -t shell_array < <(echo "$json_compact_array" | jq -r '.[]')
+    local shell_array=()
+
+    if [[ -z "$json_compact_array" ]] || ! jq -e 'type == "array"' <<< "$json_compact_array" &>/dev/null; then
+        declare -p shell_array
+        return 1
+    fi
+
+    mapfile -t shell_array < <(
+        jq -r --arg sep $'\x1F' '
+            if length > 0 then
+                map(
+                    gsub("[\"'\''\\\\]"; "\\\\&") |
+                    "\"" + . + "\""
+                ) | join($sep)
+            else
+                empty
+            end
+        ' <<< "$json_compact_array" |
+        tr '\x1F' '\n'
+    )
+
     declare -p shell_array
 }
 
