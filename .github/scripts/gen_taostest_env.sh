@@ -13,12 +13,21 @@ EXCLUDE_COMPONENTS="$3"
 
 generate_json_compact_array() {
     local role="$1"
-    jq -c --arg role "$role" '[.[$role][].hostname]' "$JSON_FILE"
+    jq -c --arg role "$role" '
+        if has($role) and (.[$role] | length) > 0 then
+            [.[$role][].hostname]
+        else
+            []
+        end
+    ' "$JSON_FILE"
 }
 
 generate_shell_literal_array() {
     local json_compact_array="$1"
-    mapfile -t shell_array < <(echo "$json_compact_array" | jq -r '.[]')
+    local shell_array=()
+    if [[ -n "$json_compact_array" ]]; then
+        mapfile -t shell_array < <(echo "$json_compact_array" | jq -r '.[]')
+    fi
     declare -p shell_array
 }
 
@@ -46,6 +55,13 @@ mqtt_shell_array=("${shell_array[@]}")
 echo "$mqtt_json_array"
 echo "${mqtt_shell_array[0]}"
 echo "${mqtt_shell_array[1]}"
+
+flashmq_json_array=$(generate_json_compact_array "flashmq")
+eval "$(generate_shell_literal_array "$flashmq_json_array")"
+flashmq_shell_array=("${shell_array[@]}")
+echo "$flashmq_json_array"
+echo "${flashmq_shell_array[0]}"
+echo "${flashmq_shell_array[1]}"
 
 single_dnode_json_array=$(generate_json_compact_array "edge")
 eval "$(generate_shell_literal_array "$single_dnode_json_array")"
@@ -77,6 +93,7 @@ echo "${kafka_shell_array[1]}"
 
 hostname_info=(
     "${mqtt_shell_array[@]}"
+    "${flashmq_shell_array[@]}"
     "${single_dnode_shell_array[@]}"
     "${client_shell_array[@]}"
     "${cluster_dnode_shell_array[@]}"
@@ -87,6 +104,7 @@ hostname_info_str=$(IFS=,; echo "${hostname_info[*]}")
 # Export results to environment variables
 {
     echo "MQTT_HOSTS=$mqtt_json_array"
+    echo "FLASHMQ_HOSTS=$flashmq_json_array"
     echo "SINGLE_DNODE_HOSTS=$single_dnode_json_array"
     echo "TAOS_BENCHMARK_HOSTS=$client_json_array"
     echo "CLUSTER_HOSTS=$cluster_dnode_json_array"
@@ -100,6 +118,7 @@ length=${#single_dnode_shell_array[@]}
 for ((i=0; i<length; i++)); do
     edge=${single_dnode_shell_array[$i]}
     mqtt=${mqtt_shell_array[$i]}
+    flashmq=${flashmq_shell_array[$i]}
     full_json=$(cat <<EOF
 {
     "taosd": {
@@ -108,6 +127,10 @@ for ((i=0; i<length; i++)); do
     },
     "mqtt-client": {
         "fqdn": ["$mqtt"],
+        "spec": {}
+    },
+    "flashmq": {
+        "fqdn": ["$flashmq"],
         "spec": {}
     },
     "taosadapter": {
