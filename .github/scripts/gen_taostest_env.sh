@@ -32,6 +32,23 @@ generate_shell_literal_array() {
     declare -p shell_array
 }
 
+filter_excluded_components() {
+    local json_file="$1"
+    if [ -n "$EXCLUDE_COMPONENTS" ]; then
+        echo "$json_file" | jq --arg exclude "$EXCLUDE_COMPONENTS" '
+            ($exclude | split(",")) as $exclude_list |
+            with_entries(
+                if .key as $k | $exclude_list | index($k) | not then
+                    .
+                else
+                    empty
+                end
+            )
+        '
+    else
+        echo "$json_file"
+    fi
+}
 
 mqtt_json_array=$(generate_json_compact_array "mqtt")
 eval "$(generate_shell_literal_array "$mqtt_json_array")"
