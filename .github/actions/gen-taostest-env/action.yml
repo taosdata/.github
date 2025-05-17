@@ -25,6 +25,7 @@ runs:
           "${{ inputs.test_root }}" \
           "${{ inputs.exclude_components }}"
         echo "MQTT_HOSTS=$(cat $GITHUB_OUTPUT | grep MQTT_HOSTS | cut -d'=' -f2-)" >> $GITHUB_ENV
+        echo "FLASHMQ_HOSTS=$(cat $GITHUB_OUTPUT | grep FLASHMQ_HOSTS | cut -d'=' -f2-)" >> $GITHUB_ENV
         echo "SINGLE_DNODE_HOSTS=$(cat $GITHUB_OUTPUT | grep SINGLE_DNODE_HOSTS | cut -d'=' -f2-)" >> $GITHUB_ENV
         echo "TAOS_BENCHMARK_HOSTS=$(cat $GITHUB_OUTPUT | grep TAOS_BENCHMARK_HOSTS | cut -d'=' -f2-)" >> $GITHUB_ENV
         echo "CLUSTER_HOSTS=$(cat $GITHUB_OUTPUT | grep CLUSTER_HOSTS | cut -d'=' -f2-)" >> $GITHUB_ENV

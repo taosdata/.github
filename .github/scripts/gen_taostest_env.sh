@@ -14,6 +14,13 @@ EXCLUDE_COMPONENTS="$3"
 generate_json_compact_array() {
     local role="$1"
     jq -c --arg role "$role" '[.[$role][].hostname]' "$JSON_FILE"
+    jq -c --arg role "$role" '
+        if has($role) and (.[$role] | length) > 0 then
+            [.[$role][].hostname]
+        else
+            []
+        end
+    ' "$JSON_FILE"
 }
 
 generate_shell_literal_array() {
@@ -120,7 +127,7 @@ for ((i=0; i<length; i++)); do
         "fqdn": ["$mqtt"],
         "spec": {}
     },
-    "flashmq-client": {
+    "flashmq": {
         "fqdn": ["$flashmq"],
         "spec": {}
     },
