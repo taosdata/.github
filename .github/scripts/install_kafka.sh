@@ -121,6 +121,7 @@ EOF
 start_service() {
     systemctl stop kafka
     systemctl stop zookeeper
+    rm -rf /opt/kafka/logs/*
 
     echo "Starting Zookeeper service..."
     systemctl start zookeeper
