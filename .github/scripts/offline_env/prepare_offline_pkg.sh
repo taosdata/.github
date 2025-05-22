@@ -336,6 +336,8 @@ function build_pkgs() {
 function check_python_pkgs() {
     # Python packages verification
     if [[ -z "$PYTHON_PACKAGES" ]]; then
+        cp -r "$HOME"/"$offline_env_dir"/py_venv/.[!.]* "$HOME"
+        source "$HOME/.venv$PYTHON_VERSION"/bin/activate
         failed_python_pkgs=()
         for pkg in $formated_python_packages;
         do
@@ -447,8 +449,6 @@ function run_test() {
     install_offline_pkgs
     install_binary_tools
     check_system_pkgs
-    cp -r "$HOME"/"$offline_env_dir"/py_venv/.[!.]* "$HOME"
-    source "$HOME/.venv$PYTHON_VERSION"/bin/activate
     check_python_pkgs
 }
 
