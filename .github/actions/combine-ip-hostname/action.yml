@@ -27,4 +27,6 @@ runs:
             reduce inputs as $item ({};
               .[$item.role] += [$item | del(.role)]
             )' > "${{ inputs.input-dir }}/role_info.json"
+        jq '.[] |= sort_by(.hostname | capture("(?<num>\\d+)$") | .num // "0" | tonumber)' "${{ inputs.input-dir }}/role_info.json" > "${{ inputs.input-dir }}/tmp.json"
+        mv "${{ inputs.input-dir }}/tmp.json"  "${{ inputs.input-dir }}/role_info.json"
         echo "Generated file: ${{ inputs.input-dir }}/role_info.json"
