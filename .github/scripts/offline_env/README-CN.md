@@ -29,18 +29,20 @@ git clone https://github.com/taosdata/.github.git
 cd .github/.github/scripts/offline_env
 docker run -itd \
             -v ./offline_pkgs:/opt/offline-env \
-            -e PARENT_DIR=/opt/offline-env \
+            -v ./prepare_offline_pkg.sh:/prepare_offline_pkg.sh \
+            -v ./install.sh:/install.sh \
             -e PARENT_DIR=/opt/offline-env \
             --name offline_pkgs_builder \
-            ubuntu:22.04
+            centos:7
 docker exec -ti offline_pkgs_builder \
             sh -c \
-            "/prepare_offline_pkg.sh \
+            "chmod +x /prepare_offline_pkg.sh && \
+            /prepare_offline_pkg.sh \
             --build \
-            --system-packages=vim,ntp \
-            --python-version=3.10 \
-            --python-packages=fabric2,requests \
-            --pkg-label=1.0.202505081658"
+            --system-packages=gdb,valgrind,bpftrace,perf \
+            --python-version="" \
+            --python-packages="" \
+            --pkg-label=deliver-20250522"
 ```
 
 
@@ -49,19 +51,19 @@ docker exec -ti offline_pkgs_builder \
 ```bash
 docker run -itd \
             -v ./offline_pkgs:/opt/offline-env \
-            -e PARENT_DIR=/opt/offline-env \
+            -v ./prepare_offline_pkg.sh:/prepare_offline_pkg.sh \
             -e PARENT_DIR=/opt/offline-env \
             --name offline_env_test \
-            ubuntu:22.04
+            centos:7
 
 docker exec -ti offline_env_test \
              sh -c \
              "/prepare_offline_pkg.sh \
              --test \
-             --system-packages=vim,ntp \
-             --python-version=3.10 \
-             --python-packages=fabric2,requests \
-             --pkg-label=1.0.202505081658"
+             --system-packages=gdb,valgrind,bpftrace,perf \
+             --python-version="" \
+             --python-packages="" \
+             --pkg-label=deliver-20250522"
 ```
 
 ### 1.2 宿主机运行

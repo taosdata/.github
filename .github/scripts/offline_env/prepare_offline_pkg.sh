@@ -10,6 +10,7 @@ SYSTEM_PACKAGES=""
 PYTHON_VERSION=""
 PYTHON_PACKAGES=""
 PKG_LABEL=""
+BINARY_TOOLS=("bpftrace")
 
 function show_usage() {
     echo "Usage:"
@@ -65,12 +66,12 @@ done
 # Parameter Validation Module
 # ==============================================
 function validate_params() {
-    local missing_required=()
+    # local missing_required=()
     local package_error=""
 
     # Check required parameters (required for all modes)
-    [[ -z "$PYTHON_VERSION" ]] && missing_required+=("PYTHON_VERSION")
-    [[ -z "$PKG_LABEL" ]] && missing_required+=("PKG_LABEL")
+    # [[ -z "$PYTHON_VERSION" ]] && missing_required+=("PYTHON_VERSION")
+    # [[ -z "$PKG_LABEL" ]] && missing_required+=("PKG_LABEL")
 
     # Check package logic: at least one exists
     if [[ -z "$SYSTEM_PACKAGES" && -z "$PYTHON_PACKAGES" ]]; then
@@ -79,9 +80,9 @@ function validate_params() {
 
     # Combined error message
     local error_msg=""
-    if [ ${#missing_required[@]} -gt 0 ]; then
-        error_msg+="Required parameter is missing: ${missing_required[*]}. "
-    fi
+    # if [ ${#missing_required[@]} -gt 0 ]; then
+    #     error_msg+="Required parameter is missing: ${missing_required[*]}. "
+    # fi
     [[ -n "$package_error" ]] && error_msg+="$package_error"
 
     # Error handle
@@ -151,8 +152,12 @@ function init() {
     # Force clean and create dir
     if [ "$MODE" == "build" ];then
         rm -rf "$offline_env_path"
-        mkdir -p "$system_packages_dir"
-        mkdir -p "$py_venv_dir"
+        if [[ -z "$SYSTEM_PACKAGES" ]]; then
+            mkdir -p "$system_packages_dir"
+        fi
+        if [[ -z "$PYTHON_PACKAGES" ]]; then
+            mkdir -p "$py_venv_dir"
+        fi
     fi
 }
 
@@ -190,10 +195,22 @@ function install_system_packages() {
             $PKG_MGR install -q -y yum-utils wget
             for pkg in $formated_system_packages;
             do
-                pkg_name=$(yum provides "$pkg" 2>/dev/null | grep -E "^(|[0-9]+:)[^/]*${pkg}-" | head -1 | awk '{print $1}')
-                format_name=$(echo "$pkg_name" | sed -E 's/^[0-9]+://; s/\.[^.]+$//')
-                yellow_echo "Downloading offline pkgs......"
-                repotrack -p "$system_packages_dir" "$format_name"
+                if [[ "$pkg" == "bpftrace" ]]; then
+                    yellow_echo "Handling bpftrace specially for CentOS/RHEL..."
+                    BPFTRACE_URL="https://github.com/bpftrace/bpftrace/releases/download/v0.23.2/bpftrace"
+                    mkdir -p "$offline_env_path/binary_tools"
+                    if ! wget -q "$BPFTRACE_URL" -O "$offline_env_path/binary_tools/bpftrace"; then
+                        red_echo "Failed to download bpftrace binary"
+                        exit 1
+                    fi
+                    chmod +x "$offline_env_path/binary_tools/bpftrace"
+                    continue
+                else
+                    pkg_name=$(yum provides "$pkg" 2>/dev/null | grep -E "^(|[0-9]+:)[^/]*${pkg}-" | head -1 | awk '{print $1}')
+                    format_name=$(echo "$pkg_name" | sed -E 's/^[0-9]+://; s/\.[^.]+$//')
+                    yellow_echo "Downloading offline pkgs......"
+                    repotrack -p "$system_packages_dir" "$format_name"
+                fi
             done
             # # Why not use the following two methods?
             # * yumdownloader or downloadonly will not download already installed dependencies.
@@ -302,6 +319,7 @@ function install_python_packages() {
 
 function summary() {
     cd "$parent_dir" || exit
+    cp -f "$script_dir"/install.sh "$offline_env_dir"
     tar zcf "$offline_env_dir.tar.gz" "$offline_env_dir"
     mv "$offline_env_dir.tar.gz" "$offline_env_path"
     green_echo "Offline env completed, please check $offline_env_path/$offline_env_dir.tar.gz"
@@ -317,27 +335,57 @@ function build_pkgs() {
 
 function check_python_pkgs() {
     # Python packages verification
-    failed_python_pkgs=()
-    for pkg in $formated_python_packages;
-    do
-        if ! pip show "$pkg" &>/dev/null;then
-            failed_python_pkgs+=("$pkg")
-        fi
-    done
+    if [[ -z "$PYTHON_PACKAGES" ]]; then
+        failed_python_pkgs=()
+        for pkg in $formated_python_packages;
+        do
+            if ! pip show "$pkg" &>/dev/null;then
+                failed_python_pkgs+=("$pkg")
+            fi
+        done
 
-    if [ ${#failed_python_pkgs[@]} -gt 0 ]; then
-        result=$(printf "%s," "${failed_python_pkgs[@]}" | sed 's/,$//')
-        red_echo "Failed verification for python package: $result"
-        exit 1
-    else
-        green_echo "All python packages verified successfully"
+        if [ ${#failed_python_pkgs[@]} -gt 0 ]; then
+            result=$(printf "%s," "${failed_python_pkgs[@]}" | sed 's/,$//')
+            red_echo "Failed verification for python package: $result"
+            exit 1
+        else
+            green_echo "All python packages verified successfully"
+        fi
     fi
 }
 
 function install_offline_pkgs() {
     yellow_echo "Installing offline pkgs"
     if [ -f /etc/redhat-release ]; then
-        rpm -ivh --nodeps --force "$HOME"/"$offline_env_dir"/system_packages/*.rpm >/dev/null 2>&1
+        rpm -Uvh --replacepkgs --nodeps "$HOME"/"$offline_env_dir"/system_packages/*.rpm >/dev/null 2>&1
+#         local_repo_dir=/var/local-repo
+#         repodata_dir="$local_repo_dir"/repodata
+#         mkdir -p "$local_repo_dir"
+#         mkdir -p "$repodata_dir"
+#         cp -f "$HOME"/"$offline_env_dir"/system_packages/*.rpm "$local_repo_dir"
+#         tee /etc/yum.repos.d/local.repo <<EOF
+# [local]
+# name=Local Repository
+# baseurl=file:///var/local-repo
+# enabled=1
+# gpgcheck=0
+# EOF
+#         tee $repodata_dir/repomd.xml <<EOF
+# <?xml version="1.0" encoding="UTF-8"?>
+# <repomd xmlns="http://linux.duke.edu/metadata/repo">
+#   <revision>$(date +%s)</revision>
+# </repomd>
+# EOF
+
+#         yum clean all
+#         for pkg in $formated_system_packages;
+#         do
+#             if printf '%s\n' "${BINARY_TOOLS[@]}" | grep -q -x "$pkg"; then
+#                 continue
+#             else
+#                 yum install -y "$pkg"
+#             fi
+#         done
     elif [ -f /etc/debian_version ]; then
         DEBIAN_FRONTEND=noninteractive dpkg -i "$HOME"/"$offline_env_dir"/system_packages/*.deb >/dev/null 2>&1
     else
@@ -345,22 +393,46 @@ function install_offline_pkgs() {
     fi
 }
 
+function install_binary_tools() {
+    if [ -d "$HOME/$offline_env_dir/binary_tools" ];then
+        yellow_echo "Installing binary_tools ..."
+        binary_dir=/usr/bin
+        for tool in "$HOME/$offline_env_dir/binary_tools"/*; do
+            tool_name=$(basename "$tool")
+            if [ -f "$binary_dir/$tool_name" ];then
+                mv "$binary_dir/$tool_name" "$binary_dir/$tool_name.bak"
+            fi
+            cp -rf "$tool" "$binary_dir"
+        done
+    fi
+}
+
 function check_system_pkgs() {
     # System packages verification
-    failed_system_pkgs=()
-    for pkg in $formated_system_packages;
-    do
-        if ! $PKG_CONFIRM "$pkg" &>/dev/null;then
-            failed_system_pkgs+=("$pkg")
-        fi
-    done
+    if [[ -z "$SYSTEM_PACKAGES" ]]; then
+        failed_system_pkgs=()
+        for pkg in $formated_system_packages;
+        do
+            if printf '%s\n' "${BINARY_TOOLS[@]}" | grep -q -x "$pkg"; then
+                if ! command -v "$pkg" >/dev/null 2>&1; then
+                    failed_system_pkgs+=("$pkg")
+                    red_echo "Failed verification for system package: $pkg"
+                fi
+            else
+                if ! $PKG_CONFIRM "$pkg" &>/dev/null;then
+                    failed_system_pkgs+=("$pkg")
+                    red_echo "Failed verification for system package: $pkg"
+                fi
+            fi
+        done
 
-    if [ ${#failed_system_pkgs[@]} -gt 0 ]; then
-        result=$(printf "%s," "${failed_system_pkgs[@]}" | sed 's/,$//')
-        red_echo "Failed verification for system package: $result"
-        exit 1
-    else
-        green_echo "All system packages verified successfully"
+        if [ ${#failed_system_pkgs[@]} -gt 0 ]; then
+            result=$(printf "%s," "${failed_system_pkgs[@]}" | sed 's/,$//')
+            red_echo "Failed verification for system package: $result"
+            exit 1
+        else
+            green_echo "All system packages verified successfully"
+        fi
     fi
 }
 
@@ -373,6 +445,7 @@ function run_test() {
     cd "$offline_env_path" || exit
     tar -xf "$offline_env_dir.tar.gz" -C $HOME
     install_offline_pkgs
+    install_binary_tools
     check_system_pkgs
     cp -r "$HOME"/"$offline_env_dir"/py_venv/.[!.]* "$HOME"
     source "$HOME/.venv$PYTHON_VERSION"/bin/activate
