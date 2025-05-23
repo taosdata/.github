@@ -10,6 +10,25 @@ yellow_echo() { echo -e "${YELLOW}$*${RESET}"; }
 
 script_path=$(dirname "$(readlink -f "$0")")
 binary_dir=/usr/bin
+EXPECTED_OS_RELEASE="$script_path"/os-release
+CURRENT_OS_RELEASE="/etc/os-release"
+
+compare_field() {
+    local field=$1
+    local expected_val
+    expected_val=$(grep "^$field=" "$EXPECTED_OS_RELEASE" | cut -d= -f2 | tr -d '"')
+    local current_val
+    current_val=$(grep "^$field=" "$CURRENT_OS_RELEASE" | cut -d= -f2 | tr -d '"')
+
+    if [ "$expected_val" != "$current_val" ]; then
+        echo "Unmatched $field in os-release file: ./os-release='$expected_val', /etc/os-release='$current_val'" >&2
+        return 1
+    fi
+    return 0
+}
+
+compare_field "ID" || exit 1
+compare_field "VERSION_ID" || exit 1
 
 function install_venv() {
     if [ -d "$script_path/py_venv" ];then
@@ -35,12 +54,18 @@ function install_binary_tools() {
 }
 
 function install_system_packages() {
-    yellow_echo "Installing offline pkgs"
+    yellow_echo "Installing offline pkgs ..."
     if [ -f /etc/redhat-release ]; then
-        rpm -Uvh --replacepkgs --nodeps "$script_path"/py_venv/system_packages/*.rpm >/dev/null 2>&1
+        compare_field "ID" || exit 1
+        compare_field "VERSION_ID" || exit 1
+        for i in "$script_path/system_packages/"*.rpm;
+        do
+            rpm -ivh --nodeps "$i"  >/dev/null 2>&1
+        done
+        # rpm -Uvh --replacepkgs --nodeps "$script_path/system_packages/"*.rpm >/dev/null 2>&1
         # yum localinstall -y "$script_path"/py_venv/system_packages/*.rpm >/dev/null 2>&1
     elif [ -f /etc/debian_version ]; then
-        DEBIAN_FRONTEND=noninteractive dpkg -i "$script_path"/py_venv/system_packages/*.deb >/dev/null 2>&1
+        DEBIAN_FRONTEND=noninteractive dpkg -i "$script_path/system_packages/"*.deb >/dev/null 2>&1
     else
         red_echo "Unsupported Linux distribution.. Please install the packages manually."
     fi
@@ -51,7 +76,10 @@ function main() {
         install_venv
         install_binary_tools
         install_system_packages
+        green_echo "Install finished, please check your env"
     else
         red_echo "Cannot detect OS and set OS_ID and OS_VERSION to unkown"
     fi
 }
+
+main

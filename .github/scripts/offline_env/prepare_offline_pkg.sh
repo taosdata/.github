@@ -46,13 +46,13 @@ while [[ $# -gt 0 ]]; do
             show_usage
             ;;
         *)
-            if [[ -z "$SYSTEM_PACKAGES" ]]; then
+            if [[ -n "$SYSTEM_PACKAGES" ]]; then
                 SYSTEM_PACKAGES="$1"
-            elif [[ -z "$PYTHON_VERSION" ]]; then
+            elif [[ -n "$PYTHON_VERSION" ]]; then
                 PYTHON_VERSION="$1"
-            elif [[ -z "$PYTHON_PACKAGES" ]]; then
+            elif [[ -n "$PYTHON_PACKAGES" ]]; then
                 PYTHON_PACKAGES="$1"
-            elif [[ -z "$PKG_LABEL" ]]; then
+            elif [[ -n "$PKG_LABEL" ]]; then
                 PKG_LABEL="$1"
             else
                 echo "[WARNING] Excess parameters detected: $1"
@@ -142,7 +142,7 @@ function init() {
         parent_dir=$PARENT_DIR
     fi
     mkdir -p "$parent_dir"
-    offline_env_dir="offline-pkg-$OS_ID-$OS_VERSION-$PKG_LABEL"
+    offline_env_dir="offline-pkgs-$PKG_LABEL-$OS_ID-$OS_VERSION-$(arch)"
     offline_env_path="$parent_dir/$offline_env_dir"
     system_packages_dir="$offline_env_path/system_packages"
     tar_file="$system_packages_dir/system_packages.tar"
@@ -152,10 +152,10 @@ function init() {
     # Force clean and create dir
     if [ "$MODE" == "build" ];then
         rm -rf "$offline_env_path"
-        if [[ -z "$SYSTEM_PACKAGES" ]]; then
+        if [[ -n "$SYSTEM_PACKAGES" ]]; then
             mkdir -p "$system_packages_dir"
         fi
-        if [[ -z "$PYTHON_PACKAGES" ]]; then
+        if [[ -n "$PYTHON_PACKAGES" ]]; then
             mkdir -p "$py_venv_dir"
         fi
     fi
@@ -320,6 +320,7 @@ function install_python_packages() {
 function summary() {
     cd "$parent_dir" || exit
     cp -f "$script_dir"/install.sh "$offline_env_dir"
+    cp /etc/os-release "$offline_env_path"/os-release
     tar zcf "$offline_env_dir.tar.gz" "$offline_env_dir"
     mv "$offline_env_dir.tar.gz" "$offline_env_path"
     green_echo "Offline env completed, please check $offline_env_path/$offline_env_dir.tar.gz"
@@ -335,7 +336,7 @@ function build_pkgs() {
 
 function check_python_pkgs() {
     # Python packages verification
-    if [[ -z "$PYTHON_PACKAGES" ]]; then
+    if [[ -n "$PYTHON_PACKAGES" ]]; then
         cp -r "$HOME"/"$offline_env_dir"/py_venv/.[!.]* "$HOME"
         source "$HOME/.venv$PYTHON_VERSION"/bin/activate
         failed_python_pkgs=()
@@ -359,7 +360,11 @@ function check_python_pkgs() {
 function install_offline_pkgs() {
     yellow_echo "Installing offline pkgs"
     if [ -f /etc/redhat-release ]; then
-        rpm -Uvh --replacepkgs --nodeps "$HOME"/"$offline_env_dir"/system_packages/*.rpm >/dev/null 2>&1
+        for i in "$HOME/$offline_env_dir/system_packages/"*.rpm;
+        do
+            rpm -ivh --nodeps "$i"  >/dev/null 2>&1
+        done
+        # rpm -Uvh --replacepkgs --nodeps "$HOME"/"$offline_env_dir"/system_packages/*.rpm >/dev/null 2>&1
 #         local_repo_dir=/var/local-repo
 #         repodata_dir="$local_repo_dir"/repodata
 #         mkdir -p "$local_repo_dir"
@@ -411,7 +416,7 @@ function install_binary_tools() {
 
 function check_system_pkgs() {
     # System packages verification
-    if [[ -z "$SYSTEM_PACKAGES" ]]; then
+    if [[ -n "$SYSTEM_PACKAGES" ]]; then
         failed_system_pkgs=()
         for pkg in $formated_system_packages;
         do

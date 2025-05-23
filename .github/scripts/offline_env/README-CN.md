@@ -42,7 +42,7 @@ docker exec -ti offline_pkgs_builder \
             --system-packages=gdb,valgrind,bpftrace,perf \
             --python-version="" \
             --python-packages="" \
-            --pkg-label=deliver-20250522"
+            --pkg-label=delivery-20250522"
 ```
 
 
@@ -63,7 +63,7 @@ docker exec -ti offline_env_test \
              --system-packages=gdb,valgrind,bpftrace,perf \
              --python-version="" \
              --python-packages="" \
-             --pkg-label=deliver-20250522"
+             --pkg-label=delivery-20250522"
 ```
 
 ### 1.2 宿主机运行
