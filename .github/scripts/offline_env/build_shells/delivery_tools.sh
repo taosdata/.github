@@ -120,3 +120,72 @@ docker exec -ti offline_env_test \
              --python-version="" \
              --python-packages="" \
              --pkg-label=delivery-20250522"
+
+
+# kylin sp2
+docker run -itd \
+            -v ./offline_pkgs:/opt/offline-env \
+            -v ./prepare_offline_pkg.sh:/prepare_offline_pkg.sh \
+            -v ./install.sh:/install.sh \
+            -e PARENT_DIR=/opt/offline-env \
+            --name offline_pkgs_builder \
+            macrosan/kylin:v10-sp2
+docker exec -ti offline_pkgs_builder \
+            sh -c \
+            "chmod +x /prepare_offline_pkg.sh && \
+            /prepare_offline_pkg.sh \
+            --build \
+            --system-packages=valgrind,bpftrace,perf \
+            --python-version="" \
+            --python-packages="" \
+            --pkg-label=delivery-20250522"
+
+docker run -itd \
+            -v ./offline_pkgs:/opt/offline-env \
+            -v ./prepare_offline_pkg.sh:/prepare_offline_pkg.sh \
+            -e PARENT_DIR=/opt/offline-env \
+            --name offline_env_test \
+            macrosan/kylin:v10-sp2
+
+docker exec -ti offline_env_test \
+             sh -c \
+             "/prepare_offline_pkg.sh \
+             --test \
+             --system-packages=valgrind,bpftrace,perf \
+             --python-version="" \
+             --python-packages="" \
+             --pkg-label=delivery-20250522"
+
+# kylin sp2
+docker run -itd \
+            -v ./offline_pkgs:/opt/offline-env \
+            -v ./prepare_offline_pkg.sh:/prepare_offline_pkg.sh \
+            -v ./install.sh:/install.sh \
+            -e PARENT_DIR=/opt/offline-env \
+            --name offline_pkgs_builder \
+            macrosan/kylin:v10-sp3-2403
+docker exec -ti offline_pkgs_builder \
+            sh -c \
+            "chmod +x /prepare_offline_pkg.sh && \
+            /prepare_offline_pkg.sh \
+            --build \
+            --system-packages=valgrind,bpftrace,perf \
+            --python-version="" \
+            --python-packages="" \
+            --pkg-label=delivery-20250522"
+
+docker run -itd \
+            -v ./offline_pkgs:/opt/offline-env \
+            -v ./prepare_offline_pkg.sh:/prepare_offline_pkg.sh \
+            -e PARENT_DIR=/opt/offline-env \
+            --name offline_env_test \
+            macrosan/kylin:v10-sp3-2403
+
+docker exec -ti offline_env_test \
+             sh -c \
+             "/prepare_offline_pkg.sh \
+             --test \
+             --system-packages=valgrind,bpftrace,perf \
+             --python-version="" \
+             --python-packages="" \
+             --pkg-label=delivery-20250522"

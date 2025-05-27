@@ -55,7 +55,7 @@ function install_binary_tools() {
 
 function install_system_packages() {
     yellow_echo "Installing offline pkgs ..."
-    if [ -f /etc/redhat-release ]; then
+    if [ -f /etc/redhat-release ] || [ -f /etc/kylin-release ]; then
         compare_field "ID" || exit 1
         compare_field "VERSION_ID" || exit 1
         for i in "$script_path/system_packages/"*.rpm;

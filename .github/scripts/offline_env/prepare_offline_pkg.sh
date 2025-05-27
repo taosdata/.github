@@ -103,6 +103,7 @@ green_echo() { echo -e "${GREEN}$*${RESET}"; }
 yellow_echo() { echo -e "${YELLOW}$*${RESET}"; }
 
 function init() {
+    SUB_VERSION=""
     if [ -f /etc/os-release ]; then
         OS_ID=$(source /etc/os-release; echo $ID)
         case $OS_ID in
@@ -112,9 +113,12 @@ function init() {
                 PKG_MGR="apt"
                 PKG_CONFIRM="dpkg -l"
                 ;;
-            centos|rhel|rocky)
+            centos|rhel|rocky|kylin)
                 OS_ID=$(grep -E '^ID=' /etc/os-release | cut -d= -f2 | tr -d '"')
                 OS_VERSION=$(grep -E '^VERSION_ID=' /etc/os-release | cut -d= -f2 | tr -d '"')
+                if [ "$OS_ID" = "kylin" ];then
+                    SUB_VERSION="$(cat /etc/.productinfo | awk '/SP2/ {split($0,a,"/"); gsub(/[()]/,"",a[2]); print "SP2-"a[3]} /SP3/ {split($0,a,"/"); gsub(/[()]/,"",a[2]); print "SP3-"a[3]}' | paste -sd '_')-"
+                fi
                 PKG_MGR="yum"
                 PKG_CONFIRM="rpm -q"
                 ;;
@@ -131,9 +135,6 @@ function init() {
         OS_VERSION=""
     fi
 
-    PACKAGE_NAME="package_${OS_ID}${OS_VERSION}_$(date +%Y%m%d).tar.gz"
-    echo "$PACKAGE_NAME"
-
     formated_system_packages=$(echo "$SYSTEM_PACKAGES" | tr ',' ' ')
     formated_python_packages=$(echo "$PYTHON_PACKAGES" | tr ',' ' ')
     if [[ -z "$PARENT_DIR" ]]; then
@@ -142,7 +143,7 @@ function init() {
         parent_dir=$PARENT_DIR
     fi
     mkdir -p "$parent_dir"
-    offline_env_dir="offline-pkgs-$PKG_LABEL-$OS_ID-$OS_VERSION-$(arch)"
+    offline_env_dir="offline-pkgs-$PKG_LABEL-$OS_ID-$OS_VERSION-${SUB_VERSION}$(arch)"
     offline_env_path="$parent_dir/$offline_env_dir"
     system_packages_dir="$offline_env_path/system_packages"
     tar_file="$system_packages_dir/system_packages.tar"
@@ -187,15 +188,18 @@ function config_yum() {
 function install_system_packages() {
     if [ -n "$SYSTEM_PACKAGES" ]; then
         yellow_echo "Downloading system packages: $SYSTEM_PACKAGES"
-        if [ -f /etc/redhat-release ]; then
+        if [ -f /etc/redhat-release ] || [ -f /etc/kylin-release ]; then
             # TODO Confirm
-            config_yum
+            source /etc/os-release
+            if [ "$ID" = "centos" ] && [ "$VERSION_ID" = "7" ];then
+                config_yum
+            fi
             yellow_echo "$PKG_MGR updating"
             $PKG_MGR update -q -y
             $PKG_MGR install -q -y yum-utils wget
             for pkg in $formated_system_packages;
             do
-                if [[ "$pkg" == "bpftrace" ]]; then
+                if [[ "$pkg" == "bpftrace" ]] && [ "$ID" = "centos" ]; then
                     yellow_echo "Handling bpftrace specially for CentOS/RHEL..."
                     BPFTRACE_URL="https://github.com/bpftrace/bpftrace/releases/download/v0.23.2/bpftrace"
                     mkdir -p "$offline_env_path/binary_tools"
@@ -206,10 +210,15 @@ function install_system_packages() {
                     chmod +x "$offline_env_path/binary_tools/bpftrace"
                     continue
                 else
+                    $PKG_MGR install -q -y dnf-plugins-core
                     pkg_name=$(yum provides "$pkg" 2>/dev/null | grep -E "^(|[0-9]+:)[^/]*${pkg}-" | head -1 | awk '{print $1}')
                     format_name=$(echo "$pkg_name" | sed -E 's/^[0-9]+://; s/\.[^.]+$//')
                     yellow_echo "Downloading offline pkgs......"
-                    repotrack -p "$system_packages_dir" "$format_name"
+                    if [ -f /etc/kylin-release ];then
+                        repotrack --destdir "$system_packages_dir" "$format_name"
+                    else
+                        repotrack -p "$system_packages_dir" "$format_name"
+                    fi
                 fi
             done
             # # Why not use the following two methods?
@@ -359,7 +368,7 @@ function check_python_pkgs() {
 
 function install_offline_pkgs() {
     yellow_echo "Installing offline pkgs"
-    if [ -f /etc/redhat-release ]; then
+    if [ -f /etc/redhat-release ] || [ -f /etc/kylin-release ]; then
         for i in "$HOME/$offline_env_dir/system_packages/"*.rpm;
         do
             rpm -ivh --nodeps "$i"  >/dev/null 2>&1
@@ -458,6 +467,7 @@ function run_test() {
 }
 
 init
+
 case "$MODE" in
     "build")
         yellow_echo "[INFO] Start Package Builder"
