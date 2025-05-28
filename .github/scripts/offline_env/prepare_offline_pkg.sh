@@ -11,6 +11,7 @@ PYTHON_VERSION=""
 PYTHON_PACKAGES=""
 PKG_LABEL=""
 BINARY_TOOLS=("bpftrace")
+TDGPT=""
 
 function show_usage() {
     echo "Usage:"
@@ -42,6 +43,10 @@ while [[ $# -gt 0 ]]; do
             PKG_LABEL="${1#*=}"
             shift
             ;;
+        --tdgpt=*)
+            TDGPT="${1#*=}"
+            shift
+            ;;
         -h|--help)
             show_usage
             ;;
@@ -54,6 +59,8 @@ while [[ $# -gt 0 ]]; do
                 PYTHON_PACKAGES="$1"
             elif [[ -n "$PKG_LABEL" ]]; then
                 PKG_LABEL="$1"
+            elif [[ -n "$TDGPT" ]]; then
+                TDGPT="$1"
             else
                 echo "[WARNING] Excess parameters detected: $1"
             fi
@@ -231,7 +238,7 @@ function install_system_packages() {
             # apt-get install --download-only -y $formated_system_packages -o Dir::Cache::archives="$system_packages_dir"
             yellow_echo "$PKG_MGR updating"
             $PKG_MGR update -qq -y
-            $PKG_MGR install -qq -y apt-offline wget curl openssh-client apt-rdepends
+            $PKG_MGR install -qq -y apt-offline wget curl openssh-client apt-rdepends build-essential
             apt-rdepends $formated_system_packages | grep -v "^ " > raw_deps.txt
             # echo $(cat raw_deps.txt) | xargs -n 5 apt-cache policy | awk '
             #     /^[^ ]/ { pkg=$0 }
@@ -309,17 +316,31 @@ function install_python_packages() {
             exit 1
         fi
 
+        if [ "$TDGPT" == "true" ];then
+            python_venv_dir="/var/lib/taos/taosanode/venv"
+        else
+            python_venv_dir="$HOME/.venv$PYTHON_VERSION"
+        fi
+        mkdir -p "$python_venv_dir"
+
+
         yellow_echo "Installing Python $PYTHON_VERSION using uv..."
         uv python install "$PYTHON_VERSION"
-        uv venv --python "$PYTHON_VERSION" "$HOME/.venv$PYTHON_VERSION"
+        uv venv --python "$PYTHON_VERSION" "$python_venv_dir"
 
         yellow_echo "Installing Python packages..."
-        source "$HOME/.venv$PYTHON_VERSION"/bin/activate
-        uv pip install $formated_python_packages -i https://pypi.tuna.tsinghua.edu.cn/simple
+        source "$python_venv_dir"/bin/activate
+        IFS=',' read -ra pkg_array <<< "$PYTHON_PACKAGES"
+        for pkg in "${pkg_array[@]}"
+        do
+            echo "installing: $pkg"
+            uv pip install $pkg
+        done
+        # uv pip install $formated_python_packages -i https://pypi.tuna.tsinghua.edu.cn/simple
         uv pip install --upgrade pip
 
         yellow_echo "Copying the installed environment to $py_venv_dir..."
-        cp -r "$HOME/.venv$PYTHON_VERSION" "$py_venv_dir"
+        cp -r "$python_venv_dir" "$py_venv_dir"
         cp -r "$HOME/.local" "$py_venv_dir"
     else
         yellow_echo "No Python packages to install."
