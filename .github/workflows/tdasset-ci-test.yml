@@ -116,7 +116,7 @@ jobs:
             cp -r TDasset/tda-server/target/quarkus-app/lib /app/lib
             cp -r TDasset/tda-server/target/quarkus-app/app /app/app
             cp -r TDasset/tda-server/target/quarkus-app/quarkus /app/quarkus
-            cp TDasset/tda-server/target/quarkus-app/quarkus-run.jar /pp/quarkus-run.jar
+            cp TDasset/tda-server/target/quarkus-app/quarkus-run.jar /app/quarkus-run.jar
             cp /data1/env/start.sh /app/start.sh
             cp -r /data1/sentence-transformer/ /app/
         - name: Deploy TDasset
@@ -126,7 +126,7 @@ jobs:
             export TDA_LOG_PATH=/app/logs
             export ALI_API_KEY=sk-f5bd847e50f042fabfad1f82a825f0b4
             chmod +x start.sh
-            ./start.sh
+            nohup ./start.sh > /dev/null 2>&1 &
             echo "::endgroup::"
         - name: Run UI Tests
           run: |
