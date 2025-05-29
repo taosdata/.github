@@ -1,0 +1,148 @@
+name: TDasset CI Test
+on:
+
+  workflow_call:
+    inputs:
+      triggered_by:
+        description: 'Triggered by'
+        required: true
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-TDasset-ci-test
+
+jobs:
+
+    build_and_test:
+      runs-on: 
+        group: CI
+        labels: [self-hosted, linux,x64,TDasset,ci]
+      steps:
+        - name: Generate GitHub App Token
+          id: app-token
+          uses: tibdex/github-app-token@v1
+          with:
+            app_id: ${{ vars.TAOSDATA_BOT_ID }}
+            private_key: ${{ secrets.TAOSDATA_BOT_KEY }}
+
+        - name: Print environment
+          run: |
+            echo $JAVA_HOME
+        - name: Checkout code TDasset-ui frontend
+          uses: actions/checkout@v4
+          if: ${{ inputs.triggered_by == 'frontend'}}
+          with:
+            repository: 'taosdata/TDasset-ui'
+            path: 'TDasset-ui'
+            token: ${{ steps.app-token.outputs.token }}
+            ref: ${{ github.event.pull_request.head.ref}} 
+        - name: Checkout code TDasset frontend
+          uses: actions/checkout@v4
+          if: ${{ inputs.triggered_by == 'frontend'}}
+          with:
+            repository: 'taosdata/TDasset'
+            path: 'TDasset'
+            token: ${{ steps.app-token.outputs.token }}
+            ref: 'main'    
+        - name: Checkout code TDasset backend
+          uses: actions/checkout@v4
+          if: ${{ inputs.triggered_by == 'backend'}}
+          with:
+            repository: 'taosdata/TDasset'
+            path: 'TDasset'
+            token: ${{ steps.app-token.outputs.token }}
+            ref: ${{ github.event.pull_request.head.ref}} 
+        - name: Checkout code TDasset-ui backend
+          uses: actions/checkout@v4
+          if: ${{ inputs.triggered_by == 'backend'}}
+          with:
+            repository: 'taosdata/TDasset-ui'
+            path: 'TDasset-ui'
+            token: ${{ steps.app-token.outputs.token }}
+            ref: 'main'
+        - name: Checkout code taos-ui
+          uses: actions/checkout@v4
+          with:
+            repository: 'taosdata/taos-ui'
+            path: 'taos-ui'
+            token: ${{ steps.app-token.outputs.token }}
+            ref: 'main'
+
+        - name: Setup taos-ui
+          run: |
+            cd taos-ui
+            pnpm i --no-frozen-lockfile
+            pnpm link taos-ui
+
+        - name: Install TDasset-ui dependencies
+          run: |
+            cd TDasset-ui
+            pnpm i --no-frozen-lockfile
+
+        - name: Build TDasset-ui
+          run: |
+            # set environment variables
+            export DISABLE_OPENCOLLECTIVE=1
+            export IMAGE_INLINE_SIZE_LIMIT=0
+            export NODE_OPTIONS="--max-old-space-size=8192"
+            # build TDasset-ui
+            cd TDasset-ui
+            pnpm run build
+
+        - name: Build tda-server
+          run: |
+            # copy build files to TDasset
+            cp -r TDasset-ui/dist/* TDasset/tda-server/src/main/resources/META-INF/resources/
+            echo "::group::Building backend"
+            cd TDasset/tda-server && rm -rf data-test/*
+            echo "Deleted test index and git data."
+            mvn -T 10 package \
+                -Dskip.tests=true \
+                -Dquarkus.profile=prod \
+                -Drevision=v1.0.0
+            echo "::endgroup::"
+        - name: Build tda-generator
+          run: |
+            echo "::group::Building tda-generator"
+            cd TDasset/tda-generator
+            mvn -T 10 clean package
+            echo "::endgroup::"
+        - name: Copy tda-generator , tda-server, ai chat-server
+          run: |
+            rm -rf /app/*
+            cp TDasset/tda-generator/target/tda-generator-1.0-SNAPSHOT-generator.jar /app/tda-generator.jar 
+            cp -r TDasset/ai/chat-server/src/* /app/
+            cp -r TDasset/tda-server/target/quarkus-app/lib /app/lib
+            cp -r TDasset/tda-server/target/quarkus-app/app /app/app
+            cp -r TDasset/tda-server/target/quarkus-app/quarkus /app/quarkus
+            cp TDasset/tda-server/target/quarkus-app/quarkus-run.jar /app/quarkus-run.jar
+            cp /data1/env/start.sh /app/start.sh
+            cp -r /data1/sentence-transformer/ /app/
+        - name: Deploy TDasset
+          run: |
+            echo "::group::Deploying TDasset"
+            cd /app
+            export TDA_LOG_PATH=/app/logs
+            export ALI_API_KEY=sk-f5bd847e50f042fabfad1f82a825f0b4
+            chmod +x start.sh
+            nohup ./start.sh > /dev/null 2>&1 &
+            echo "::endgroup::"
+        - name: Run UI Tests
+          run: |
+            sleep 60
+            cd TDasset-ui/tests
+            # install playwright
+            npm install playwright@latest
+            # npx playwright install chromium
+            # set env
+            export FRONT_PAGE_URL=http://localhost:6042
+            export CONSOLE_BASE_URL=http://localhost:6042
+            # run tests
+            npx playwright test parallel
+
+
+
+
+
+
+        
