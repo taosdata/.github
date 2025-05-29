@@ -129,6 +129,7 @@ jobs:
             echo "::endgroup::"
         - name: Run UI Tests
           run: |
+            sleep 60
             cd TDasset-ui/tests
             # install playwright
             npm install playwright@latest
