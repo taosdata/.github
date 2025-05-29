@@ -74,17 +74,17 @@ jobs:
             path: 'taos-ui'
             token: ${{ steps.app-token.outputs.token }}
             ref: 'main'
-        - name: Cache pnpm dependencies
-          uses: actions/cache@v4
-          id: pnpm-cache
-          with:
-            path: |
-              ~/.pnpm-store
-              ${{ github.workspace }}/taos-ui/node_modules
-              ${{ github.workspace }}/TDasset-ui/node_modules
-            key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-            restore-keys: |
-              ${{ runner.os }}-pnpm-
+        # - name: Cache pnpm dependencies
+        #   uses: actions/cache@v4
+        #   id: pnpm-cache
+        #   with:
+        #     path: |
+        #       ~/.pnpm-store
+        #       ${{ github.workspace }}/taos-ui/node_modules
+        #       ${{ github.workspace }}/TDasset-ui/node_modules
+        #     key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+        #     restore-keys: |
+        #       ${{ runner.os }}-pnpm-
         - name: Setup taos-ui
           run: |
             cd taos-ui
@@ -116,7 +116,7 @@ jobs:
         - name: Build tda-server
           run: |
             # copy build files to TDasset
-            cp -r TDasset-ui/dist/* /TDasset/tda-server/src/main/resources/META-INF/resources/
+            cp -r TDasset-ui/dist/* TDasset/tda-server/src/main/resources/META-INF/resources/
             echo "::group::Building backend"
             cd TDasset/tda-server && rm -rf data-test/*
             echo "Deleted test index and git data."
@@ -148,7 +148,17 @@ jobs:
             echo "::endgroup::"
         - name: Run UI Tests
           run: |
-            cd TDasset-ui
+            cd TDasset-ui/tests
+            # install playwright
+            npm install playwright@latest
+            npx playwright install chromium
+            # set env
+            export FRONT_PAGE_URL=http://localhost:6042
+            export CONSOLE_BASE_URL=http://localhost:6042
+            # run tests
+            npx playwright test parallel
+
+
 
 
 
