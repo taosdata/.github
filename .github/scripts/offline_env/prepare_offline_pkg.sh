@@ -334,7 +334,7 @@ function install_python_packages() {
         for pkg in "${pkg_array[@]}"
         do
             echo "installing: $pkg"
-            uv pip install $pkg
+            # uv pip install $pkg
         done
         # uv pip install $formated_python_packages -i https://pypi.tuna.tsinghua.edu.cn/simple
         uv pip install --upgrade pip

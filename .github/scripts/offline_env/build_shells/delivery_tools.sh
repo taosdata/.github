@@ -156,7 +156,7 @@ docker exec -ti offline_env_test \
              --python-packages="" \
              --pkg-label=delivery-20250522"
 
-# kylin sp2
+# kylin sp3
 docker run -itd \
             -v ./offline_pkgs:/opt/offline-env \
             -v ./prepare_offline_pkg.sh:/prepare_offline_pkg.sh \
@@ -189,3 +189,27 @@ docker exec -ti offline_env_test \
              --python-version="" \
              --python-packages="" \
              --pkg-label=delivery-20250522"
+
+# ubuntu 22.04 + tdgpt
+docker run -itd \
+            -v ./offline_pkgs:/opt/offline-env \
+            -v ./prepare_offline_pkg.sh:/prepare_offline_pkg.sh \
+            -v ./install.sh:/install.sh \
+            -e PARENT_DIR=/opt/offline-env \
+            --name offline_pkgs_builder \
+            ubuntu:22.04
+docker exec -ti offline_pkgs_builder bash -c 'echo "deb http://mirrors.aliyun.com/ubuntu/ jammy main" > /etc/apt/sources.list'
+docker exec -ti offline_pkgs_builder apt update -y
+
+
+docker exec -ti offline_pkgs_builder \
+            sh -c \
+            "chmod +x /prepare_offline_pkg.sh && \
+            /prepare_offline_pkg.sh \
+            --build \
+            --system-packages=build-essential  \
+            --python-version=3.10 \
+            --python-packages=\"numpy==1.26.4,pandas==1.5.0,scikit-learn,outlier_utils,statsmodels,pyculiarity,pmdarima,flask,matplotlib,uwsgi,torch --index-url https://download.pytorch.org/whl/cpu,--upgrade keras,requests,taospy,transformers==4.40.0,accelerate\" \
+            --pkg-label=delivery-20250528 \
+            --tdgpt=true"
+
