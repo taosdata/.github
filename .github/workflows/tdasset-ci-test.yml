@@ -106,12 +106,9 @@ jobs:
             export DISABLE_OPENCOLLECTIVE=1
             export IMAGE_INLINE_SIZE_LIMIT=0
             export NODE_OPTIONS="--max-old-space-size=8192"
-
             # build TDasset-ui
             cd TDasset-ui
             pnpm run build
-
-            
 
         - name: Build tda-server
           run: |
@@ -135,7 +132,7 @@ jobs:
           run: |
             rm -rf /data1/app/*
             cp TDasset/tda-generator/target/tda-generator-1.0-SNAPSHOT-generator.jar /data1/app/tda-generator.jar 
-            cp TDasset/ai/chat-server/src/* /data1/app/
+            cp -r TDasset/ai/chat-server/src/ /data1/app/
             cp -r TDasset/tda-server/target/quarkus-app/app /data1/app/app
             cp -r TDasset/tda-server/target/quarkus-app/quarkus /data1/app/quarkus
             cp TDasset/tda-server/target/quarkus-app/quarkus-run.jar /data1/app/quarkus-run.jar
