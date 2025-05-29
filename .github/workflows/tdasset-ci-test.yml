@@ -35,7 +35,7 @@ jobs:
         - name: Print environment
           run: |
             echo $JAVA_HOME
-        - name: Checkout code TDasset-ui
+        - name: Checkout code TDasset-ui frontend
           uses: actions/checkout@v4
           if: ${{ inputs.triggered_by == 'frontend'}}
           with:
@@ -45,13 +45,13 @@ jobs:
             ref: ${{ github.event.pull_request.head.ref}} 
         - name: Checkout code TDasset frontend
           uses: actions/checkout@v4
-          if: ${{ inputs.triggered_by == 'backend'}}
+          if: ${{ inputs.triggered_by == 'frontend'}}
           with:
             repository: 'taosdata/TDasset'
             path: 'TDasset'
             token: ${{ steps.app-token.outputs.token }}
             ref: 'main'    
-        - name: Checkout code TDasset
+        - name: Checkout code TDasset backend
           uses: actions/checkout@v4
           if: ${{ inputs.triggered_by == 'backend'}}
           with:
