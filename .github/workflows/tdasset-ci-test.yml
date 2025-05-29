@@ -68,31 +68,17 @@ jobs:
             path: 'taos-ui'
             token: ${{ steps.app-token.outputs.token }}
             ref: 'main'
-        # - name: Cache pnpm dependencies
-        #   uses: actions/cache@v4
-        #   id: pnpm-cache
-        #   with:
-        #     path: |
-        #       ~/.pnpm-store
-        #       ${{ github.workspace }}/taos-ui/node_modules
-        #       ${{ github.workspace }}/TDasset-ui/node_modules
-        #     key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-        #     restore-keys: |
-        #       ${{ runner.os }}-pnpm-
+
         - name: Setup taos-ui
           run: |
             cd taos-ui
-            # if [ "${{ steps.pnpm-cache.outputs.cache-hit }}" != 'true' ]; then
             pnpm i --no-frozen-lockfile
-            # fi
             pnpm link taos-ui
 
         - name: Install TDasset-ui dependencies
           run: |
             cd TDasset-ui
-            # if [ "${{ steps.pnpm-cache.outputs.cache-hit }}" != 'true' ]; then
             pnpm i --no-frozen-lockfile
-            # fi
 
         - name: Build TDasset-ui
           run: |
