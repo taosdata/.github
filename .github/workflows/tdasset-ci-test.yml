@@ -10,7 +10,6 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-TDasset-ci-test
-  cancel-in-progress: true
 
 jobs:
 
