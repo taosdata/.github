@@ -110,18 +110,21 @@ jobs:
             echo "::endgroup::"
         - name: Copy tda-generator , tda-server, ai chat-server
           run: |
-            rm -rf /data1/app/*
-            cp TDasset/tda-generator/target/tda-generator-1.0-SNAPSHOT-generator.jar /data1/app/tda-generator.jar 
-            cp -r TDasset/ai/chat-server/src/* /data1/app/
-            cp -r TDasset/tda-server/target/quarkus-app/app /data1/app/app
-            cp -r TDasset/tda-server/target/quarkus-app/quarkus /data1/app/quarkus
-            cp TDasset/tda-server/target/quarkus-app/quarkus-run.jar /data1/app/quarkus-run.jar
-            cp TDasset/build/start.sh /data1/app/start.sh
-            cp -r /data1/sentence-transformer/ /data1/app/
+            rm -rf /app/*
+            cp TDasset/tda-generator/target/tda-generator-1.0-SNAPSHOT-generator.jar /app/tda-generator.jar 
+            cp -r TDasset/ai/chat-server/src/* /app/
+            cp -r TDasset/tda-server/target/quarkus-app/lib /app/lib
+            cp -r TDasset/tda-server/target/quarkus-app/app /app/app
+            cp -r TDasset/tda-server/target/quarkus-app/quarkus /app/quarkus
+            cp TDasset/tda-server/target/quarkus-app/quarkus-run.jar /pp/quarkus-run.jar
+            cp /data1/env/start.sh /app/start.sh
+            cp -r /data1/sentence-transformer/ /app/
         - name: Deploy TDasset
           run: |
             echo "::group::Deploying TDasset"
-            cd /data1/app
+            cd /app
+            export TDA_LOG_PATH=/app/logs
+            export ALI_API_KEY=sk-f5bd847e50f042fabfad1f82a825f0b4
             chmod +x start.sh
             ./start.sh
             echo "::endgroup::"
