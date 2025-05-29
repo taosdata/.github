@@ -7,12 +7,13 @@ on:
   pull_request:
     branches:
       - main
-  
-  workflow_dispatch:
+  workflow_call:
     inputs:
-        repo: 
-          description: 'Repository to build'
-          required: false
+      triggered_by:
+        description: 'Triggered by'
+        required: true
+        type: string
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-TDasset-backend-build
   cancel-in-progress: true
@@ -24,21 +25,34 @@ jobs:
         group: CI
         labels: [self-hosted, linux,x64,TDasset,ci]
       steps:
+        - name: Generate GitHub App Token
+          id: app-token
+          uses: tibdex/github-app-token@v1
+          with:
+            app_id: ${{ vars.TAOSDATA_BOT_ID }}
+            private_key: ${{ secrets.TAOSDATA_BOT_KEY }}
+
         - name: Print environment
           run: |
             echo $JAVA_HOME
         - name: Checkout code TDasset
           uses: actions/checkout@v4
           with:
+            repository: 'taosdata/TDasset'
             path: 'TDasset'
+            token: ${{ steps.app-token.outputs.token }}
         - name: Checkout code TDasset-ui
           uses: actions/checkout@v4
           with:
+            repository: 'taosdata/TDasset-ui'
             path: 'TDasset-ui'
+            token: ${{ steps.app-token.outputs.token }}
         - name: Checkout code taos-ui
           uses: actions/checkout@v4
           with:
+            repository: 'taosdata/taos-ui'
             path: 'taos-ui'
+            token: ${{ steps.app-token.outputs.token }}
         # - name: Cache pnpm dependencies
         #   uses: actions/cache@v4
         #   id: pnpm-cache
