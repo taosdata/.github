@@ -10,6 +10,9 @@ yellow_echo() { echo -e "${YELLOW}$*${RESET}"; }
 
 script_path=$(dirname "$(readlink -f "$0")")
 binary_dir=/usr/bin
+taos_anode_dir=/var/lib/taos/taosanode
+python_venv_dir="${taos_anode_dir}/venv"
+venv_label=2
 EXPECTED_OS_RELEASE="$script_path"/os-release
 CURRENT_OS_RELEASE="/etc/os-release"
 
@@ -36,7 +39,14 @@ function install_venv() {
         cp -r "$script_path"/py_venv/.[!.]* "$HOME"
         venv_dir=$(find . -type d -name ".venv*" -print -quit)
         venv_name=$(basename "$venv_dir")
-        green_echo "You can activate pyvenv via:\n\tsource $HOME/$venv_name/bin/activate"
+        if [ -d "$script_path/py_venv/venv" ];then
+            mkdir -p "$taos_anode_dir"
+            cp -r "$script_path/py_venv/venv" "$taos_anode_dir"
+            venv_label=0
+        else
+            venv_label=1
+        fi
+
     fi
 }
 
@@ -77,6 +87,13 @@ function main() {
         install_binary_tools
         install_system_packages
         green_echo "Install finished, please check your env"
+        if [ $venv_label -eq 0 ];then
+            green_echo "You can activate pyvenv via:\n\tsource $python_venv_dir/bin/activate"
+        elif [ $venv_label -eq 1 ];then
+            green_echo "You can activate pyvenv via:\n\tsource $HOME/$venv_name/bin/activate"
+        else
+            green_echo "No pyvenv activate"
+        fi
     else
         red_echo "Cannot detect OS and set OS_ID and OS_VERSION to unkown"
     fi
