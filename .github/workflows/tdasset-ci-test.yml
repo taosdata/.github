@@ -133,12 +133,14 @@ jobs:
             echo "::endgroup::"
         - name: Copy tda-generator , tda-server, ai chat-server
           run: |
+            rm -rf /data1/app/*
             cp TDasset/tda-generator/target/tda-generator-1.0-SNAPSHOT-generator.jar /data1/app/tda-generator.jar 
-            cp -r TDasset/ai/chat-server/src/ /data1/app/
+            cp -r TDasset/ai/chat-server/src/* /data1/app/
             cp -r TDasset/tda-server/target/quarkus-app/app /data1/app/app
             cp -r TDasset/tda-server/target/quarkus-app/quarkus /data1/app/quarkus
             cp TDasset/tda-server/target/quarkus-app/quarkus-run.jar /data1/app/quarkus-run.jar
             cp TDasset/build/start.sh /data1/app/start.sh
+            cp -r /data1/sentence-transformer/ /data1/app/
         - name: Deploy TDasset
           run: |
             echo "::group::Deploying TDasset"
@@ -151,7 +153,7 @@ jobs:
             cd TDasset-ui/tests
             # install playwright
             npm install playwright@latest
-            npx playwright install chromium
+            # npx playwright install chromium
             # set env
             export FRONT_PAGE_URL=http://localhost:6042
             export CONSOLE_BASE_URL=http://localhost:6042
