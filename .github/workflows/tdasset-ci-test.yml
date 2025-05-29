@@ -41,14 +41,14 @@ jobs:
             repository: 'taosdata/TDasset-ui'
             path: 'TDasset-ui'
             token: ${{ steps.app-token.outputs.token }}
-            ref: ${{ github.event.pull_request.head.ref || 'main' }} 
+            ref: ${{ github.event_name == 'pull_request' && format('refs/pull/{0}/head', github.event.pull_request.number) || 'main' }} 
         - name: Checkout code TDasset
           uses: actions/checkout@v4
           with:
             repository: 'taosdata/TDasset'
             path: 'TDasset'
             token: ${{ steps.app-token.outputs.token }}
-            ref: ${{ github.event.pull_request.head.ref || 'main' }} 
+            ref: ${{ github.event_name == 'pull_request' && format('refs/pull/{0}/head', github.event.pull_request.number) || 'main' }} 
 
         - name: Checkout code taos-ui
           uses: actions/checkout@v4
@@ -56,7 +56,7 @@ jobs:
             repository: 'taosdata/taos-ui'
             path: 'taos-ui'
             token: ${{ steps.app-token.outputs.token }}
-            ref: ${{ github.event.pull_request.head.ref || 'main' }} 
+            ref: ${{ github.event_name == 'pull_request' && format('refs/pull/{0}/head', github.event.pull_request.number) || 'main' }} 
         # - name: Cache pnpm dependencies
         #   uses: actions/cache@v4
         #   id: pnpm-cache
