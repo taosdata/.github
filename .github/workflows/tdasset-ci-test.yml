@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - main
-      - cyjia-tdasset
   pull_request:
     branches:
       - main
@@ -15,7 +14,7 @@ on:
         type: string
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-TDasset-backend-build
+  group: ${{ github.workflow }}-${{ github.ref }}-TDasset-ci-test
   cancel-in-progress: true
 
 jobs:
