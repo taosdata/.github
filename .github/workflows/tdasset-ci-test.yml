@@ -99,6 +99,7 @@ jobs:
             if [ "${{ steps.pnpm-cache.outputs.cache-hit }}" != 'true' ]; then
                 pnpm i --no-frozen-lockfile
             fi
+
         - name: Build TDasset-ui
           run: |
             # set environment variables
@@ -110,11 +111,12 @@ jobs:
             cd TDasset-ui
             pnpm run build
 
-            # copy build files to TDasset
-            cp -r ./dist/* ../TDasset/tda-server/src/main/resources/META-INF/resources/
+            
 
         - name: Build tda-server
           run: |
+            # copy build files to TDasset
+            cp -r TDasset-ui/dist/* /TDasset/tda-server/src/main/resources/META-INF/resources/
             echo "::group::Building backend"
             cd TDasset/tda-server && rm -rf data-test/*
             echo "Deleted test index and git data."
