@@ -111,7 +111,7 @@ jobs:
             pnpm run build
 
             # copy build files to TDasset
-            cp -r ./dist/* ../tda-server/src/main/resources/META-INF/resources/
+            cp -r ./dist/* ../TDasset/tda-server/src/main/resources/META-INF/resources/
 
         - name: Build tda-server
           run: |
@@ -137,6 +137,16 @@ jobs:
             cp tda-server/target/quarkus-app/quarkus /data1/app/quarkus
             cp tda-server/target/quarkus-app/quarkus-run.jar /data1/app/quarkus-run.jar
             cp build/start.sh /data1/app/start.sh
+        - name: Deploy TDasset
+          run: |
+            echo "::group::Deploying TDasset"
+            cd /data1/app
+            chmod +x start.sh
+            ./start.sh
+            echo "::endgroup::"
+        - name: Run UI Tests
+          run: |
+            cd TDasset-ui
 
 
 
