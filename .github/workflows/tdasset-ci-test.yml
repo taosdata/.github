@@ -7,7 +7,7 @@ on:
   pull_request:
     branches:
       - main
-#   workflow_call:
+  workflow_call:
 #     inputs:
 #       triggered_by:
 #         description: 'Triggered by'
