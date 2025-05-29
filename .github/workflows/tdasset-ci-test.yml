@@ -8,11 +8,11 @@ on:
     branches:
       - main
   workflow_call:
-    inputs:
-      triggered_by:
-        description: 'Triggered by'
-        required: true
-        type: string
+    # inputs:
+    #   triggered_by:
+    #     description: 'Triggered by'
+    #     required: true
+    #     type: string
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-TDasset-backend-build
