@@ -74,69 +74,69 @@ jobs:
             path: 'taos-ui'
             token: ${{ steps.app-token.outputs.token }}
             ref: 'main'
-        # - name: Cache pnpm dependencies
-        #   uses: actions/cache@v4
-        #   id: pnpm-cache
-        #   with:
-        #     path: |
-        #       ~/.pnpm-store
-        #       ${{ github.workspace }}/taos-ui/node_modules
-        #       ${{ github.workspace }}/TDasset-ui/node_modules
-        #     key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-        #     restore-keys: |
-        #       ${{ runner.os }}-pnpm-
-        # - name: Setup taos-ui
-        #   run: |
-        #     cd taos-ui
-        #     if [ "${{ steps.pnpm-cache.outputs.cache-hit }}" != 'true' ]; then
-        #         pnpm i --no-frozen-lockfile
-        #     fi
-        #     pnpm link taos-ui
+        - name: Cache pnpm dependencies
+          uses: actions/cache@v4
+          id: pnpm-cache
+          with:
+            path: |
+              ~/.pnpm-store
+              ${{ github.workspace }}/taos-ui/node_modules
+              ${{ github.workspace }}/TDasset-ui/node_modules
+            key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+            restore-keys: |
+              ${{ runner.os }}-pnpm-
+        - name: Setup taos-ui
+          run: |
+            cd taos-ui
+            if [ "${{ steps.pnpm-cache.outputs.cache-hit }}" != 'true' ]; then
+                pnpm i --no-frozen-lockfile
+            fi
+            pnpm link taos-ui
 
-        # - name: Install TDasset-ui dependencies
-        #   run: |
-        #     cd TDasset-ui
-        #     if [ "${{ steps.pnpm-cache.outputs.cache-hit }}" != 'true' ]; then
-        #         pnpm i --no-frozen-lockfile
-        #     fi
-        # - name: Build TDasset-ui
-        #   run: |
-        #     # set environment variables
-        #     export DISABLE_OPENCOLLECTIVE=1
-        #     export IMAGE_INLINE_SIZE_LIMIT=0
-        #     export NODE_OPTIONS="--max-old-space-size=8192"
+        - name: Install TDasset-ui dependencies
+          run: |
+            cd TDasset-ui
+            if [ "${{ steps.pnpm-cache.outputs.cache-hit }}" != 'true' ]; then
+                pnpm i --no-frozen-lockfile
+            fi
+        - name: Build TDasset-ui
+          run: |
+            # set environment variables
+            export DISABLE_OPENCOLLECTIVE=1
+            export IMAGE_INLINE_SIZE_LIMIT=0
+            export NODE_OPTIONS="--max-old-space-size=8192"
 
-        #     # build TDasset-ui
-        #     cd TDasset-ui
-        #     pnpm run build
+            # build TDasset-ui
+            cd TDasset-ui
+            pnpm run build
 
-        #     # copy build files to TDasset
-        #     cp -r ./dist/* ../tda-server/src/main/resources/META-INF/resources/
+            # copy build files to TDasset
+            cp -r ./dist/* ../tda-server/src/main/resources/META-INF/resources/
 
-        # - name: Build tda-server
-        #   run: |
-        #     echo "::group::Building backend"
-        #     cd tda-server && rm -rf data-test/*
-        #     echo "Deleted test index and git data."
-        #     mvn -T 10 package \
-        #         -Dskip.tests=true \
-        #         -Dquarkus.profile=prod \
-        #         -Drevision=${{ env.TDASSET_BACKEND_VERSION }}
-        #     echo "::endgroup::"
-        # - name: Build tda-generator
-        #   run: |
-        #     echo "::group::Building tda-generator"
-        #     cd tda-generator
-        #     mvn -T 10 clean package
-        #     echo "::endgroup::"
-        # - name: Copy tda-generator , tda-server, ai chat-server
-        #   run: |
-        #     cp tda-generator/target/tda-generator-1.0-SNAPSHOT-generator.jar /data1/app/tda-generator.jar 
-        #     cp ai/chat-server/src/ /data1/app/
-        #     cp tda-server/target/quarkus-app/app /data1/app/app
-        #     cp tda-server/target/quarkus-app/quarkus /data1/app/quarkus
-        #     cp tda-server/target/quarkus-app/quarkus-run.jar /data1/app/quarkus-run.jar
-        #     cp build/start.sh /data1/app/start.sh
+        - name: Build tda-server
+          run: |
+            echo "::group::Building backend"
+            cd tda-server && rm -rf data-test/*
+            echo "Deleted test index and git data."
+            mvn -T 10 package \
+                -Dskip.tests=true \
+                -Dquarkus.profile=prod \
+                -Drevision=v1.0.0
+            echo "::endgroup::"
+        - name: Build tda-generator
+          run: |
+            echo "::group::Building tda-generator"
+            cd tda-generator
+            mvn -T 10 clean package
+            echo "::endgroup::"
+        - name: Copy tda-generator , tda-server, ai chat-server
+          run: |
+            cp tda-generator/target/tda-generator-1.0-SNAPSHOT-generator.jar /data1/app/tda-generator.jar 
+            cp ai/chat-server/src/ /data1/app/
+            cp tda-server/target/quarkus-app/app /data1/app/app
+            cp tda-server/target/quarkus-app/quarkus /data1/app/quarkus
+            cp tda-server/target/quarkus-app/quarkus-run.jar /data1/app/quarkus-run.jar
+            cp build/start.sh /data1/app/start.sh
 
 
 
