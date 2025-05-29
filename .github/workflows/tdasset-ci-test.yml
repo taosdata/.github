@@ -35,13 +35,6 @@ jobs:
         - name: Print environment
           run: |
             echo $JAVA_HOME
-        - name: Checkout code TDasset
-          uses: actions/checkout@v4
-          with:
-            repository: 'taosdata/TDasset'
-            path: 'TDasset'
-            token: ${{ steps.app-token.outputs.token }}
-            ref: ${{github.event.pull_request.head.ref}}
         - name: Checkout code TDasset-ui
           uses: actions/checkout@v4
           with:
@@ -49,6 +42,14 @@ jobs:
             path: 'TDasset-ui'
             token: ${{ steps.app-token.outputs.token }}
             ref: ${{github.event.pull_request.head.ref}}
+        - name: Checkout code TDasset
+          uses: actions/checkout@v4
+          with:
+            repository: 'taosdata/TDasset'
+            path: 'TDasset'
+            token: ${{ steps.app-token.outputs.token }}
+            ref: ${{github.event.pull_request.head.ref}}
+
         - name: Checkout code taos-ui
           uses: actions/checkout@v4
           with:
