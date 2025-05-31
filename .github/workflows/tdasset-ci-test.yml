@@ -117,7 +117,7 @@ jobs:
             cp -r TDasset/tda-server/target/quarkus-app/quarkus /app/quarkus
             cp TDasset/tda-server/target/quarkus-app/quarkus-run.jar /app/quarkus-run.jar
             cp /data1/env/start.sh /app/start.sh
-            cp -r /data1/sentence-transformer/ /app/
+            cp -r /data1/huggingface/ /app/
         - name: Deploy TDasset
           run: |
             echo "::group::Deploying TDasset"
