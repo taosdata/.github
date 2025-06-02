@@ -129,11 +129,13 @@ jobs:
             echo "::endgroup::"
         - name: Run UI Tests
           run: |
-            sleep 60
+            sleep 30
+            node -V
+            npm -V
             cd TDasset-ui/tests
             # install playwright
             npm install playwright@latest
-            # npx playwright install chromium
+            npx playwright install chromium
             # set env
             export FRONT_PAGE_URL=http://localhost:6042
             export CONSOLE_BASE_URL=http://localhost:6042
