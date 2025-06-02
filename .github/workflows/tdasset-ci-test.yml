@@ -130,8 +130,8 @@ jobs:
         - name: Run UI Tests
           run: |
             sleep 30
-            node -V
-            npm -V
+            node -v
+            npm -v
             cd TDasset-ui/tests
             # install playwright
             npm install playwright@latest
@@ -140,7 +140,7 @@ jobs:
             export FRONT_PAGE_URL=http://localhost:6042
             export CONSOLE_BASE_URL=http://localhost:6042
             # run tests
-            npx playwright test parallel
+            npx playwright test parallel --workers=1 --reporter=list
 
 
 
