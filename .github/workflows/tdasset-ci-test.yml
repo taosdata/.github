@@ -144,7 +144,7 @@ jobs:
             export FRONT_PAGE_URL=http://localhost:6042
             export CONSOLE_BASE_URL=http://localhost:6042
             # run tests
-            npx playwright test parallel --workers=1 --reporter=list
+            npx playwright test parallel --workers=2 --reporter=list
 
 
 
