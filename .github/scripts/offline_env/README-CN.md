@@ -21,6 +21,8 @@
 | python-version        | python 版本              | 3.10              |
 | python-packages       | python 包                | fabric2,requests  |
 | pkg-label             | tar包识别标签             | v1.0.20250510     |
+| tdgpt                 | TDgpt 离线包             | true/false     |
+
 
 1. 启动构建容器；
 
@@ -33,16 +35,16 @@ docker run -itd \
             -v ./install.sh:/install.sh \
             -e PARENT_DIR=/opt/offline-env \
             --name offline_pkgs_builder \
-            centos:7
+            ubuntu:22.04
 docker exec -ti offline_pkgs_builder \
             sh -c \
             "chmod +x /prepare_offline_pkg.sh && \
-            /prepare_offline_pkg.sh \
+            bash -x /prepare_offline_pkg.sh \
             --build \
-            --system-packages=gdb,valgrind,bpftrace,perf \
-            --python-version="" \
-            --python-packages="" \
-            --pkg-label=delivery-20250522"
+            --system-packages=gdb \
+            --python-version="3.10" \
+            --python-packages="ansible" \
+            --pkg-label=delivery-20250528"
 ```
 
 
@@ -54,7 +56,7 @@ docker run -itd \
             -v ./prepare_offline_pkg.sh:/prepare_offline_pkg.sh \
             -e PARENT_DIR=/opt/offline-env \
             --name offline_env_test \
-            centos:7
+            ubuntu:22.04
 
 docker exec -ti offline_env_test \
              sh -c \

@@ -190,6 +190,27 @@ docker exec -ti offline_env_test \
              --python-packages="" \
              --pkg-label=delivery-20250522"
 
+# ubuntu 20.04 + tdgpt
+docker run -itd \
+            -v ./offline_pkgs:/opt/offline-env \
+            -v ./prepare_offline_pkg.sh:/prepare_offline_pkg.sh \
+            -v ./install.sh:/install.sh \
+            -e PARENT_DIR=/opt/offline-env \
+            --name offline_pkgs_builder \
+            ubuntu:20.04
+
+docker exec -ti offline_pkgs_builder \
+            sh -c \
+            "chmod +x /prepare_offline_pkg.sh && \
+            /prepare_offline_pkg.sh \
+            --build \
+            --system-packages=build-essential  \
+            --python-version=3.10 \
+            --python-packages=\"numpy==1.26.4,pandas==1.5.0,scikit-learn,outlier_utils,statsmodels,pyculiarity,pmdarima,flask,matplotlib,uwsgi,torch --index-url https://download.pytorch.org/whl/cpu,--upgrade keras,requests,taospy,transformers==4.40.0,accelerate\" \
+            --pkg-label=TDgpt-20250530 \
+            --tdgpt=true"
+
+
 # ubuntu 22.04 + tdgpt
 docker run -itd \
             -v ./offline_pkgs:/opt/offline-env \
@@ -211,8 +232,28 @@ docker exec -ti offline_pkgs_builder \
             --build \
             --system-packages=build-essential  \
             --python-version=3.10 \
-            --python-packages=\"numpy==2.2.6,pandas==1.5.0,scikit-learn,outlier_utils,statsmodels,pyculiarity,pmdarima,flask,matplotlib,uwsgi,torch --index-url https://download.pytorch.org/whl/cpu,--upgrade keras,requests,taospy,transformers==4.40.0,accelerate\" \
-            --pkg-label=TDgpt-20250529 \
+            --python-packages=\"numpy==1.26.4,pandas==1.5.0,scikit-learn,outlier_utils,statsmodels,pyculiarity,pmdarima,flask,matplotlib,uwsgi,torch --index-url https://download.pytorch.org/whl/cpu,--upgrade keras,requests,taospy,transformers==4.40.0,accelerate\" \
+            --pkg-label=TDgpt-20250530 \
+            --tdgpt=true"
+
+# ubuntu 24.04 + tdgpt
+docker run -itd \
+            -v ./offline_pkgs:/opt/offline-env \
+            -v ./prepare_offline_pkg.sh:/prepare_offline_pkg.sh \
+            -v ./install.sh:/install.sh \
+            -e PARENT_DIR=/opt/offline-env \
+            --name offline_pkgs_builder \
+            ubuntu:24.04
+
+docker exec -ti offline_pkgs_builder \
+            sh -c \
+            "chmod +x /prepare_offline_pkg.sh && \
+            /prepare_offline_pkg.sh \
+            --build \
+            --system-packages=build-essential  \
+            --python-version=3.10 \
+            --python-packages=\"numpy==1.26.4,pandas==1.5.0,scikit-learn,outlier_utils,statsmodels,pyculiarity,pmdarima,flask,matplotlib,uwsgi,torch --index-url https://download.pytorch.org/whl/cpu,--upgrade keras,requests,taospy,transformers==4.40.0,accelerate\" \
+            --pkg-label=TDgpt-20250530 \
             --tdgpt=true"
 
 
@@ -230,8 +271,49 @@ docker exec -ti offline_pkgs_builder \
             "chmod +x /prepare_offline_pkg.sh && \
             /prepare_offline_pkg.sh \
             --build \
-            --system-packages=gcc gcc-c++ make automake libtool \
+            --system-packages=gcc,gcc-c++ \
             --python-version=3.10 \
-            --python-packages=\"numpy==2.2.6,pandas==1.5.0,scikit-learn,outlier_utils,statsmodels,pyculiarity,pmdarima,flask,matplotlib,uwsgi,torch --index-url https://download.pytorch.org/whl/cpu,--upgrade keras,requests,taospy,transformers==4.40.0,accelerate\" \
+            --python-packages=\"numpy==1.26.4,pandas==1.5.0,scikit-learn,outlier_utils,statsmodels,pyculiarity,pmdarima,flask,matplotlib,uwsgi,torch==2.3.1+cpu --index-url https://download.pytorch.org/whl/cpu,--upgrade keras,requests,taospy,transformers==4.40.0,accelerate\" \
+            --pkg-label=TDgpt-20250529 \
+            --tdgpt=true"
+
+
+# kylin sp2 + tdgpt
+docker run -itd \
+            -v ./offline_pkgs:/opt/offline-env \
+            -v ./prepare_offline_pkg.sh:/prepare_offline_pkg.sh \
+            -v ./install.sh:/install.sh \
+            -e PARENT_DIR=/opt/offline-env \
+            --name offline_pkgs_builder \
+            macrosan/kylin:v10-sp2
+
+docker exec -ti offline_pkgs_builder \
+            sh -c \
+            "chmod +x /prepare_offline_pkg.sh && \
+            /prepare_offline_pkg.sh \
+            --build \
+            --system-packages=gcc,gcc-c++ \
+            --python-version=3.10 \
+            --python-packages=\"numpy==1.26.4,pandas==1.5.0,scikit-learn,outlier_utils,statsmodels,pyculiarity,pmdarima,flask,matplotlib,uwsgi,torch==2.3.1+cpu --index-url https://download.pytorch.org/whl/cpu,--upgrade keras,requests,taospy,transformers==4.40.0,accelerate\" \
+            --pkg-label=TDgpt-20250529 \
+            --tdgpt=true"
+
+# kylin sp3 + tdgpt
+docker run -itd \
+            -v ./offline_pkgs:/opt/offline-env \
+            -v ./prepare_offline_pkg.sh:/prepare_offline_pkg.sh \
+            -v ./install.sh:/install.sh \
+            -e PARENT_DIR=/opt/offline-env \
+            --name offline_pkgs_builder \
+            macrosan/kylin:v10-sp3-2403
+
+docker exec -ti offline_pkgs_builder \
+            sh -c \
+            "chmod +x /prepare_offline_pkg.sh && \
+            /prepare_offline_pkg.sh \
+            --build \
+            --system-packages=gcc,gcc-c++ \
+            --python-version=3.10 \
+            --python-packages=\"numpy==1.26.4,pandas==1.5.0,scikit-learn,outlier_utils,statsmodels,pyculiarity,pmdarima,flask,matplotlib,uwsgi,torch==2.3.1+cpu --index-url https://download.pytorch.org/whl/cpu,--upgrade keras,requests,taospy,transformers==4.40.0,accelerate\" \
             --pkg-label=TDgpt-20250529 \
             --tdgpt=true"

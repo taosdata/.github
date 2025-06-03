@@ -203,7 +203,10 @@ function install_system_packages() {
             fi
             yellow_echo "$PKG_MGR updating"
             $PKG_MGR update -q -y
-            $PKG_MGR install -q -y yum-utils wget build-essential
+            if [ "$ID" = "centos" ] && [ "$VERSION_ID" = "7" ];then
+                $PKG_MGR install -q -y yum-utils
+            fi
+            $PKG_MGR install -q -y wget gcc gcc-c++
             for pkg in $formated_system_packages;
             do
                 if [[ "$pkg" == "bpftrace" ]] && [ "$ID" = "centos" ]; then
@@ -304,9 +307,13 @@ function install_python_packages() {
 
         # Install uv with setup_env.sh
         if ! command -v uv &> /dev/null; then
-            curl -o "$script_dir"/setup_env.sh https://raw.githubusercontent.com/taosdata/TDengine/main/packaging/setup_env.sh
-            chmod +x "$script_dir"/setup_env.sh
-            "$script_dir"/setup_env.sh install_uv
+            if [ -f /etc/kylin-release ]; then
+                curl -LsSf https://astral.sh/uv/install.sh | sh
+            else
+                curl -o "$script_dir"/setup_env.sh https://raw.githubusercontent.com/taosdata/TDengine/main/packaging/setup_env.sh
+                chmod +x "$script_dir"/setup_env.sh
+                "$script_dir"/setup_env.sh install_uv
+            fi
         fi
 
         if [ -f "$HOME/.local/bin/env" ]; then
@@ -334,9 +341,16 @@ function install_python_packages() {
         for pkg in "${pkg_array[@]}"
         do
             echo "installing: $pkg"
-            uv pip install $pkg
+            if [[ $pkg == *"--index-url"* ]]; then
+                uv pip install $pkg
+            else
+                uv pip install $pkg -i https://pypi.tuna.tsinghua.edu.cn/simple
+            fi
         done
         # uv pip install $formated_python_packages -i https://pypi.tuna.tsinghua.edu.cn/simple
+        if [ "$TDGPT" == "true" ];then
+            uv pip install numpy==1.26.4 -i https://pypi.tuna.tsinghua.edu.cn/simple
+        fi
         uv pip install --upgrade pip
 
         yellow_echo "Copying the installed environment to $py_venv_dir..."
