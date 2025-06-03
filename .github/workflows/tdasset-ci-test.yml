@@ -7,7 +7,9 @@ on:
         description: 'Triggered by'
         required: true
         type: string
-
+  push:
+    branches:
+      - cyjia-tdasset
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-TDasset-ci-test
 
@@ -132,7 +134,9 @@ jobs:
             sleep 30
             node -v
             npm -v
-            cd TDasset-ui/tests
+            cd TDasset-ui
+            pnpm uninstall playwright
+            cd tests
             # install playwright
             npm install playwright@latest
             npx playwright install chromium
