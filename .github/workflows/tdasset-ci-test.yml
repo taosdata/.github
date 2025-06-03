@@ -135,7 +135,6 @@ jobs:
             node -v
             npm -v
             cd TDasset-ui
-            pnpm uninstall playwright
             cd tests
             # install playwright
             npm install playwright@latest
