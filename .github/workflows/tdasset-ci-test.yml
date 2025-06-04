@@ -1,6 +1,6 @@
 name: TDasset CI Test
-on:
 
+on:
   workflow_call:
     inputs:
       triggered_by:
@@ -12,11 +12,11 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-TDasset-ci-test
 
 jobs:
-
     build_and_test:
       runs-on: 
         group: CI
-        labels: [self-hosted, linux,x64,TDasset,ci]
+        labels: [self-hosted, Linux, X64, TDasset, ci]
+
       steps:
         - name: Generate GitHub App Token
           id: app-token
@@ -25,9 +25,6 @@ jobs:
             app_id: ${{ vars.TAOSDATA_BOT_ID }}
             private_key: ${{ secrets.TAOSDATA_BOT_KEY }}
 
-        - name: Print environment
-          run: |
-            echo $JAVA_HOME
         - name: Checkout code TDasset-ui frontend
           uses: actions/checkout@v4
           if: ${{ inputs.triggered_by == 'frontend'}}
@@ -36,6 +33,7 @@ jobs:
             path: 'TDasset-ui'
             token: ${{ steps.app-token.outputs.token }}
             ref: ${{ github.event.pull_request.head.ref}} 
+
         - name: Checkout code TDasset frontend
           uses: actions/checkout@v4
           if: ${{ inputs.triggered_by == 'frontend'}}
@@ -44,6 +42,7 @@ jobs:
             path: 'TDasset'
             token: ${{ steps.app-token.outputs.token }}
             ref: 'main'    
+
         - name: Checkout code TDasset backend
           uses: actions/checkout@v4
           if: ${{ inputs.triggered_by == 'backend'}}
@@ -52,6 +51,7 @@ jobs:
             path: 'TDasset'
             token: ${{ steps.app-token.outputs.token }}
             ref: ${{ github.event.pull_request.head.ref}} 
+
         - name: Checkout code TDasset-ui backend
           uses: actions/checkout@v4
           if: ${{ inputs.triggered_by == 'backend'}}
@@ -60,6 +60,7 @@ jobs:
             path: 'TDasset-ui'
             token: ${{ steps.app-token.outputs.token }}
             ref: 'main'
+
         - name: Checkout code taos-ui
           uses: actions/checkout@v4
           with:
@@ -101,23 +102,26 @@ jobs:
                 -Dquarkus.profile=prod \
                 -Drevision=v1.0.0
             echo "::endgroup::"
+
         - name: Build tda-generator
           run: |
             echo "::group::Building tda-generator"
             cd TDasset/tda-generator
             mvn -T 10 clean package
             echo "::endgroup::"
+
         - name: Copy tda-generator , tda-server, ai chat-server
           run: |
             rm -rf /app/*
             cp TDasset/tda-generator/target/tda-generator-1.0-SNAPSHOT-generator.jar /app/tda-generator.jar 
-            cp -r TDasset/ai/chat-server/src/* /app/
-            cp -r TDasset/tda-server/target/quarkus-app/lib /app/lib
-            cp -r TDasset/tda-server/target/quarkus-app/app /app/app
-            cp -r TDasset/tda-server/target/quarkus-app/quarkus /app/quarkus
-            cp TDasset/tda-server/target/quarkus-app/quarkus-run.jar /app/quarkus-run.jar
-            cp /data1/env/start.sh /app/start.sh
-            cp -r /data1/huggingface/ /app/
+            cp -r TDasset/ai/chat-server/src/*                                       /app/
+            cp -r TDasset/tda-server/target/quarkus-app/lib                          /app/
+            cp -r TDasset/tda-server/target/quarkus-app/app                          /app/
+            cp -r TDasset/tda-server/target/quarkus-app/quarkus                      /app/
+            cp TDasset/tda-server/target/quarkus-app/quarkus-run.jar                 /app/
+            cp /data1/env/start.sh                                                   /app/
+            cp -r /data1/huggingface/                                                /app/
+
         - name: Deploy TDasset
           run: |
             echo "::group::Deploying TDasset"
@@ -127,24 +131,22 @@ jobs:
             chmod +x start.sh
             nohup ./start.sh > /dev/null 2>&1 &
             echo "::endgroup::"
+
         - name: Run UI Tests
           run: |
-            sleep 30
-            node -V
-            npm -V
-            cd TDasset-ui/tests
-            # install playwright
-            npm install playwright@latest
-            npx playwright install chromium
+            for i in {1..30}; do
+              if curl -sSf http://localhost:6042 > /dev/null; then
+                echo "Service on port 6042 is up."
+                break
+              fi
+              echo "Waiting for service on port 6042..."
+              sleep 1
+            done
+
+            cd TDasset-ui
+
             # set env
             export FRONT_PAGE_URL=http://localhost:6042
             export CONSOLE_BASE_URL=http://localhost:6042
-            # run tests
-            npx playwright test parallel --workers=1 --reporter=list
-
-
-
-
-
-
-        
+            pnpm exec playwright install
+            pnpm exec playwright test e2e --workers=4 --reporter=html,list
