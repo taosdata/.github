@@ -134,16 +134,13 @@ jobs:
           run: |
             sleep 30
             node -v
-            npm -v
             cd TDasset-ui
-            npx test:e2e:install
-            npx playwright install
             # set env
             export FRONT_PAGE_URL=http://localhost:6042
             export CONSOLE_BASE_URL=http://localhost:6042
-            # run tests
-            npx playwright test --list
-            npx playwright test::e2e --workers=2 --reporter=list
+            pnpm exec playwright install
+            pnpm exec playwright test e2e --workers=4 --reporter=html,list
+
 
 
 
