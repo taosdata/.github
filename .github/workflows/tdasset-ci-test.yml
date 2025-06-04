@@ -30,6 +30,7 @@ jobs:
         - name: Print environment
           run: |
             echo $JAVA_HOME
+            echo $NVM
         - name: Checkout code TDasset-ui frontend
           uses: actions/checkout@v4
           if: ${{ inputs.triggered_by == 'frontend'}}
