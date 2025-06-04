@@ -136,7 +136,7 @@ jobs:
             node -v
             npm -v
             cd TDasset-ui
-            pnpm install playwright
+            npx test:e2e:install
             npx playwright install
             # set env
             export FRONT_PAGE_URL=http://localhost:6042
