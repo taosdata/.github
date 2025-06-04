@@ -61,6 +61,7 @@ class TestPreparer:
         self.utils.set_env_var('SOURCE_BRANCH', self.source_branch, os.getenv('GITHUB_ENV', ''))
         self.utils.set_env_var('TARGET_BRANCH', self.target_branch, os.getenv('GITHUB_ENV', ''))
         self.utils.set_env_var('PR_NUMBER', self.pr_number, os.getenv('GITHUB_ENV', ''))
+        print(f"Source branch: {self.source_branch}, Target branch: {self.target_branch}, PR number: {self.pr_number}")
 
     def prepare_repositories(self):
         """Prepare both TDengine or TDinternal repository"""
