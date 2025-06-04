@@ -43,6 +43,15 @@ class TestPreparer:
             self.source_branch = pr.get('head', {}).get('ref', '')
             self.target_branch = pr.get('base', {}).get('ref', '')
             self.pr_number = str(pr.get('number', ''))
+            
+            # push 触发时，pull_request 为空
+            if not self.source_branch:
+                # 取 ref，例如 'refs/heads/xxx'
+                ref = self.event.get('ref', '')
+                if ref.startswith('refs/heads/'):
+                    branch = ref.replace('refs/heads/', '')
+                    self.source_branch = branch
+                    self.target_branch = branch
         else:
             # From inputs
             self.source_branch = self.inputs.get('specified_source_branch', '')
