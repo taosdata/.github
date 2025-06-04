@@ -40,8 +40,7 @@ class TestRunner:
         ]
         mac_cmds = [
             "date",
-            "pip3 install -r requirements.txt",
-            f"cd {self.wkc}/test && pytest --clean cases/01-DataTypes",
+            f"cd {self.wkc}/test && pip3 install -r requirements.txt && pytest --clean -N 3 -C 3 cases/01-DataTypes",
             "date"
         ]
         if self.platform == 'linux':
