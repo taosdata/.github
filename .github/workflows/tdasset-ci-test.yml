@@ -128,6 +128,7 @@ jobs:
           run: |
             sleep 15
             cd TDasset-ui
+
             # set env
             export FRONT_PAGE_URL=http://localhost:6042
             export CONSOLE_BASE_URL=http://localhost:6042
