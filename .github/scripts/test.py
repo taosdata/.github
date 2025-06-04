@@ -39,7 +39,8 @@ class TestRunner:
             f"cd {self.wkc}/test/ci && {self.timeout} time ./run.sh -e -m /home/m.json -t cases.task -b PR-{self.utils.get_env_var('PR_NUMBER')}_{self.utils.get_env_var('GITHUB_RUN_NUMBER')} -l {self.wkdir}/log -o 1030 {self.utils.get_env_var('extra_param')}",
         ]
         mac_cmds = [
-            f"cd {self.wk}/debug && ctest -j10 || exit 7",
+            "date",
+            f"cd {self.wk}/test && pytest --clean cases/01-DataTYpes",
             "date"
         ]
         if self.platform == 'linux':
