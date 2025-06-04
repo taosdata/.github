@@ -76,7 +76,7 @@ class TestPreparer:
             f"cd {repo_path} && git clean -f",
             f"cd {repo_path} && git remote prune origin",
             f"cd {repo_path} && git fetch",
-            f"cd {repo_path} && git checkout {branch}"
+            f"cd {repo_path} && git checkout newtest_mac"
         ]
         self.utils.run_commands(cmds)
 
