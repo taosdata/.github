@@ -131,8 +131,10 @@ jobs:
         - name: Run UI Tests
           run: |
             sleep 30
+
             node -v
             cd TDasset-ui
+
             # set env
             export FRONT_PAGE_URL=http://localhost:6042
             export CONSOLE_BASE_URL=http://localhost:6042
