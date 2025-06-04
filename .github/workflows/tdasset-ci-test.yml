@@ -25,10 +25,6 @@ jobs:
             app_id: ${{ vars.TAOSDATA_BOT_ID }}
             private_key: ${{ secrets.TAOSDATA_BOT_KEY }}
 
-        - name: Print environment
-          run: |
-            echo $JAVA_HOME
-            echo $NVM
         - name: Checkout code TDasset-ui frontend
           uses: actions/checkout@v4
           if: ${{ inputs.triggered_by == 'frontend'}}
@@ -130,8 +126,7 @@ jobs:
             echo "::endgroup::"
         - name: Run UI Tests
           run: |
-            sleep 30
-            node -v
+            sleep 15
             cd TDasset-ui
             # set env
             export FRONT_PAGE_URL=http://localhost:6042
