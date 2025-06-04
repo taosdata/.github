@@ -71,12 +71,13 @@ class TestPreparer:
         if not repo_path.exists():
             raise FileNotFoundError(f"Repository path not found: {repo_path}")
 
+        print(f"Preparing repository at {repo_path} for branch {branch}...")
         cmds = [
             f"cd {repo_path} && git reset --hard",
             f"cd {repo_path} && git clean -f",
             f"cd {repo_path} && git remote prune origin",
             f"cd {repo_path} && git fetch",
-            f"cd {repo_path} && git checkout newtest_mac"
+            f"cd {repo_path} && git checkout {branch}"
         ]
         self.utils.run_commands(cmds)
 
