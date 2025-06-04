@@ -110,7 +110,7 @@ jobs:
       - name: Build docker
         run: python3 build.py
         env:
-          BUILD_TYPE: 'docker'
+          BUILD_TYPE: ${{ matrix.platform == 'macos' && 'repo' || 'docker' }}
 
       - name: Check assert testing
         if: ${{ env.IS_TDINTERNAL == 'false' && env.TARGET_BRANCH != '3.1' }}
