@@ -40,7 +40,10 @@ class TestRunner:
         ]
         mac_cmds = [
             "date",
-            f"cd {self.wkc}/test && pip3 install -r requirements.txt && pytest --clean -N 3 -C 3 cases/01-DataTypes",
+            f"cd {self.wkc}/test && python3.9 -m venv .venv",
+            f"cd {self.wkc}/test && source .venv/bin/activate && pip install --upgrade pip",
+            f"cd {self.wkc}/test && source .venv/bin/activate && pip install -r requirements.txt",
+            f"cd {self.wkc}/test && source .venv/bin/activate && TAOS_BIN_PATH={self.wk}/debug/build/bin WORK_DIR=`pwd`/yourtest DYLD_LIBRARY_PATH={self.wk}/debug/build/lib pytest --clean -N 3 -C 3 cases/01-DataTypes/test_datatype_bigint.py",
             "date"
         ]
         if self.platform == 'linux':
