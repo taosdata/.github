@@ -7,9 +7,7 @@ on:
         description: 'Triggered by'
         required: true
         type: string
-  push:
-    branches:
-      - cyjia-tdasset
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-TDasset-ci-test
 
