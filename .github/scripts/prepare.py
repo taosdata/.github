@@ -42,8 +42,7 @@ class TestPreparer:
             pr = self.event.get('pull_request', {})
             self.source_branch = pr.get('head', {}).get('ref', '')
             self.target_branch = pr.get('base', {}).get('ref', '')
-            self.pr_number = str(pr.get('number', ''))
-            
+            self.pr_number = str(pr.get('number', ''))     
         else:
             # From inputs
             self.source_branch = self.inputs.get('specified_source_branch', '')
@@ -90,9 +89,11 @@ class TestPreparer:
         print("is enterprise: ", self.enterprise)
         if self.enterprise:
             print("Updating codes for TDinternal...")
+            self._update_lastest_merge_from_pr(self.wk, self.pr_number)
             self._update_latest_from_target_branch(self.wkc)
         else:
             print("Updating codes for community...")
+            self._update_lastest_merge_from_pr(self.wkc, self.pr_number)
             self._update_latest_from_target_branch(self.wk)
 
     def _update_latest_from_target_branch(self, repo_path):
