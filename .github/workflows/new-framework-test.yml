@@ -1,4 +1,4 @@
-name: Run tests with new framework
+name: New Framework Tests
 
 on:
   workflow_call:
@@ -8,10 +8,10 @@ on:
         required: true
         type: boolean
       specified_source_branch:
-          description: 'Enter the source branch name of TDengine'
-          required: false
-          default: 'unavailable'
-          type: string
+        description: 'Enter the source branch name of TDengine'
+        required: false
+        default: 'unavailable'
+        type: string
       specified_target_branch:
         description: 'Enter the target branch name of TDengine'
         required: false
@@ -57,8 +57,9 @@ jobs:
 
   run-tests:
     strategy:
+      fail-fast: false
       matrix:
-        platform: [linux]
+        platform: [linux, macos]
         include:
           - platform: linux
             runner_group: CI
@@ -84,6 +85,7 @@ jobs:
       WKC: '/var/lib/jenkins/workspace/TDinternal/community'
       IS_TDINTERNAL: ${{ inputs.tdinternal }}
       CURRENT_PLATFORM: ${{ matrix.platform }}
+      TARGET_BRANCH: ${{ inputs.specified_target_branch }}
 
     defaults:
       run:
@@ -113,20 +115,29 @@ jobs:
           BUILD_TYPE: ${{ matrix.platform == 'macos' && 'repo' || 'docker' }}
 
       - name: Check assert testing
-        if: ${{ env.IS_TDINTERNAL == 'false' && env.TARGET_BRANCH != '3.1'  && matrix.platform == 'linux' }}
+        if: >
+          env.IS_TDINTERNAL == 'false' &&
+          env.TARGET_BRANCH != '3.1' &&
+          matrix.platform == 'linux'
         run: python3 test.py
         env:
           WKDIR: ${{ env.WKDIR }}
           TEST_TYPE: 'assert'
   
       - name: Check void function testing
-        if: ${{ env.IS_TDINTERNAL == 'false' && env.TARGET_BRANCH != '3.1' && matrix.platform == 'linux' }}
+        if: >
+          env.IS_TDINTERNAL == 'false' &&
+          env.TARGET_BRANCH != '3.1' &&
+          matrix.platform == 'linux'
         run: python3 test.py
         env:
           TEST_TYPE: 'void'
 
       - name: Run function returns with a null pointer scan testing
-        if: ${{ env.IS_TDINTERNAL == 'false' && env.TARGET_BRANCH != '3.1'&& matrix.platform == 'linux' }}
+        if: >
+          env.IS_TDINTERNAL == 'false' &&
+          env.TARGET_BRANCH != '3.1' &&
+          matrix.platform == 'linux'
         run: python3 test.py
         env:
           TEST_TYPE: 'function_returns'
