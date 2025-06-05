@@ -149,4 +149,4 @@ jobs:
             export FRONT_PAGE_URL=http://localhost:6042
             export CONSOLE_BASE_URL=http://localhost:6042
             pnpm exec playwright install
-            pnpm exec playwright test e2e --workers=4 --reporter=html,list
+            pnpm exec playwright test e2e --workers=1 --reporter=html,list
