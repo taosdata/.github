@@ -44,14 +44,6 @@ class TestPreparer:
             self.target_branch = pr.get('base', {}).get('ref', '')
             self.pr_number = str(pr.get('number', ''))
             
-            # push 触发时，pull_request 为空
-            if not self.source_branch:
-                # 取 ref，例如 'refs/heads/xxx'
-                ref = self.event.get('ref', '')
-                if ref.startswith('refs/heads/'):
-                    branch = ref.replace('refs/heads/', '')
-                    self.source_branch = branch
-                    self.target_branch = branch
         else:
             # From inputs
             self.source_branch = self.inputs.get('specified_source_branch', '')
@@ -61,7 +53,6 @@ class TestPreparer:
         self.utils.set_env_var('SOURCE_BRANCH', self.source_branch, os.getenv('GITHUB_ENV', ''))
         self.utils.set_env_var('TARGET_BRANCH', self.target_branch, os.getenv('GITHUB_ENV', ''))
         self.utils.set_env_var('PR_NUMBER', self.pr_number, os.getenv('GITHUB_ENV', ''))
-        print(f"Source branch: {self.source_branch}, Target branch: {self.target_branch}, PR number: {self.pr_number}")
 
     def prepare_repositories(self):
         """Prepare both TDengine or TDinternal repository"""
@@ -81,7 +72,6 @@ class TestPreparer:
         if not repo_path.exists():
             raise FileNotFoundError(f"Repository path not found: {repo_path}")
 
-        print(f"Preparing repository at {repo_path} for branch {branch}...")
         cmds = [
             f"cd {repo_path} && git reset --hard",
             f"cd {repo_path} && git clean -f",
@@ -100,13 +90,9 @@ class TestPreparer:
         print("is enterprise: ", self.enterprise)
         if self.enterprise:
             print("Updating codes for TDinternal...")
-            if self.pr_number:
-                self._update_lastest_merge_from_pr(self.wk, self.pr_number)
             self._update_latest_from_target_branch(self.wkc)
         else:
             print("Updating codes for community...")
-            if self.pr_number:
-                self._update_lastest_merge_from_pr(self.wkc, self.pr_number)
             self._update_latest_from_target_branch(self.wk)
 
     def _update_latest_from_target_branch(self, repo_path):
