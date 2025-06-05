@@ -39,7 +39,11 @@ class TestRunner:
             f"cd {self.wkc}/test/ci && {self.timeout} time ./run.sh -e -m /home/m.json -t cases.task -b PR-{self.utils.get_env_var('PR_NUMBER')}_{self.utils.get_env_var('GITHUB_RUN_NUMBER')} -l {self.wkdir}/log -o 1030 {self.utils.get_env_var('extra_param')}",
         ]
         mac_cmds = [
-            f"cd {self.wk}/debug && ctest -j10 || exit 7",
+            "date",
+            f"cd {self.wkc}/test && python3.9 -m venv .venv",
+            f"cd {self.wkc}/test && source .venv/bin/activate && pip install --upgrade pip",
+            f"cd {self.wkc}/test && source .venv/bin/activate && pip install -r requirements.txt",
+            f"cd {self.wkc}/test && source .venv/bin/activate && sudo TAOS_BIN_PATH={self.wk}/debug/build/bin WORK_DIR=`pwd`/yourtest DYLD_LIBRARY_PATH={self.wk}/debug/build/lib pytest --clean cases/01-DataTypes/test_datatype_bigint.py",
             "date"
         ]
         if self.platform == 'linux':

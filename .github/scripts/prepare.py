@@ -42,7 +42,7 @@ class TestPreparer:
             pr = self.event.get('pull_request', {})
             self.source_branch = pr.get('head', {}).get('ref', '')
             self.target_branch = pr.get('base', {}).get('ref', '')
-            self.pr_number = str(pr.get('number', ''))
+            self.pr_number = str(pr.get('number', ''))     
         else:
             # From inputs
             self.source_branch = self.inputs.get('specified_source_branch', '')
