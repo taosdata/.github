@@ -59,9 +59,9 @@ class TestPreparer:
         if (self.inputs.get('specified_source_branch') == 'unavailable' and
         self.inputs.get('specified_target_branch') == 'unavailable' and
         self.inputs.get('specified_pr_number') == 'unavailable'):
-            # self._prepare_repo(self.wk, self.target_branch)
+            self._prepare_repo(self.wk, self.target_branch)
             # verification needed
-            self._prepare_repo(self.wk, 'main')
+            # self._prepare_repo(self.wk, 'main')
         else:
             self._prepare_repo(self.wk, self.source_branch)
         self._prepare_repo(self.wkc, self.target_branch)
