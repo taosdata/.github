@@ -26,7 +26,7 @@ outputs:
   issues-count:
     description: 'Number of issues found'
     value: ${{ steps.release_notes.outputs.issues_count }}
-  release-notes:
+  notes:
     description: 'Release notes generated from Jira issues'
     value: ${{ steps.release_notes.outputs.notes }}
 
@@ -55,4 +55,3 @@ runs:
         VERSION: ${{ inputs.version }}
         JQL: ${{ inputs.jql }}
         PROJECT_NAME: ${{ inputs.project_name }}
-        GITHUB_OUTPUT: ${{ github.output }}
