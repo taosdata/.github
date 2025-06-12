@@ -47,7 +47,7 @@ runs:
     - name: Run Python script
       id: release_notes
       shell: bash
-      run: python ${{ github.action_path }}/../scripts/release_notes.py
+      run: python ${{ github.action_path }}/../../scripts/release_notes.py
       env:
         JIRA_URL: ${{ inputs.jira-url }}
         JIRA_USER: ${{ inputs.jira-user }}
