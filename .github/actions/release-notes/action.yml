@@ -1,0 +1,54 @@
+name: 'Release notes contents'
+description: 'Generate release notes contents including jira issues by Python'
+
+inputs:
+  jira-url:
+    description: 'Your Jira instance URL'
+    required: true
+  jira-user:
+    description: 'Username for Jira API'
+    required: true
+  jira-token:
+    description: 'API token for Jira'
+    required: true
+  jql:
+    description: 'JQL query template to use for fetching issues'
+    required: true
+  version:
+    description: 'Version used for filtering issues'
+    required: true
+  project_name:
+    description: 'The release notes for the project'
+    required: false
+    default: 'tdasset_en'
+
+outputs:
+  notes:
+    description: 'Release notes generated from Jira issues'
+    value: ${{ steps.release_notes.outputs.notes }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        pip install jira==3.5.2 pyyaml
+
+    - name: Run Python script
+      id: release_notes
+      shell: bash
+      run: python ${{ github.action_path }}/../../scripts/release_notes.py
+      env:
+        JIRA_URL: ${{ inputs.jira-url }}
+        JIRA_USER: ${{ inputs.jira-user }}
+        JIRA_TOKEN: ${{ inputs.jira-token }}
+        VERSION: ${{ inputs.version }}
+        JQL: ${{ inputs.jql }}
+        PROJECT_NAME: ${{ inputs.project_name }}
