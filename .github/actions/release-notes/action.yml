@@ -23,9 +23,6 @@ inputs:
     default: 'tdasset_en'
 
 outputs:
-  issues-count:
-    description: 'Number of issues found'
-    value: ${{ steps.release_notes.outputs.issues_count }}
   notes:
     description: 'Release notes generated from Jira issues'
     value: ${{ steps.release_notes.outputs.notes }}

@@ -33,15 +33,15 @@ If it is the first installation, please follow the 1-4 steps. **Then if you inst
 3. Run the following command to start the container, where the red log directory " logs " is any available empty directory locally, and the red port 6042 can be replaced with any unused port locally. Please pay special attention to the other red parts.
     a. Execute TDasset under the operating system of ARM CPU, please try the following shell command:
         ```
-        docker rm tda --force && docker run -d --platform linux/arm64 -p 6042:6042 -v logs:/app/logs --name tda image.pre.cloud.taosdata.com/tda/tda:ver-{version}
+        docker rm tda --force && docker run -d --platform linux/arm64 -p 6042:6042 -v logs:/app/logs --name tda image.pre.cloud.taosdata.com/tda/tda:{version}
         ```
     b. Execute TDasset under a non-ARM CPU operating system, please try the following shell command:
         ```
-        docker rm tda --force && docker run -d --platform linux/amd64 -p 6042:6042 -v logs:/app/logs --name tda image.pre.cloud.taosdata.com/tda/tda:ver-{version}
+        docker rm tda --force && docker run -d --platform linux/amd64 -p 6042:6042 -v logs:/app/logs --name tda image.pre.cloud.taosdata.com/tda/tda:{version}
         ```
     c. If you use the local data folder "data ", please add the "-v ./data:/app/data" section, which will overwrite the default test data of TDasset.
         ```
-        docker rm tda --force && docker run -d --platform linux/arm64 -p 6042:6042 -v logs:/app/logs -v data:/app/data --name tda image.pre.cloud.taosdata.com/tda/tda:ver-{version}
+        docker rm tda --force && docker run -d --platform linux/arm64 -p 6042:6042 -v logs:/app/logs -v data:/app/data --name tda image.pre.cloud.taosdata.com/tda/tda:{version}
         ```
 4. In the browser, access TDasset through the following address. The red part can be replaced with the exposed port set in the previous step.
     [http://localhost:**6042**](http://localhost:6042)"""
