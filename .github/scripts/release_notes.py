@@ -96,6 +96,7 @@ def get_release_note(all_issues, project_name, version: str) -> str:
     except Exception as e:
         logger.error(f"Get release note template contents failed: {e}")
         sys.exit(1)
+    logger.info(f"Release notes: {notes} generated successfully for version {version}")
     return notes
 
 def main():
