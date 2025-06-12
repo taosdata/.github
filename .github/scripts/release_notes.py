@@ -117,7 +117,7 @@ def main():
     # set GitHub Actions output
     with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
         # release notes
-        f.write("release-notes<<EOF\n")
+        f.write("notes<<EOF\n")
         f.write(release_notes)
         f.write("\nEOF\n")
 

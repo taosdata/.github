@@ -28,7 +28,7 @@ outputs:
     value: ${{ steps.release_notes.outputs.issues_count }}
   release-notes:
     description: 'Release notes generated from Jira issues'
-    value: ${{ steps.release_notes.outputs.release_notes }}
+    value: ${{ steps.release_notes.outputs.notes }}
 
 runs:
   using: 'composite'
