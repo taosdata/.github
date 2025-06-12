@@ -48,10 +48,10 @@ class TestBuild:
             'which taoskeeper'
         ]
         mac_cmds = [
-            'date'
-            f'cd {self.wk} && rm -rf debug && mkdir debug && cd {self.wk}/debug'
-            'echo $PATH'
-            'echo "PATH=/opt/homebrew/bin:$PATH" >> $GITHUB_ENV'
+            'date',
+            f'cd {self.wk} && rm -rf debug && mkdir debug && cd {self.wk}/debug',
+            'echo $PATH',
+            'echo "PATH=/opt/homebrew/bin:$PATH" >> $GITHUB_ENV',
             f'cd {self.wk}/debug && cmake .. -DBUILD_TEST=true -DBUILD_HTTPS=false  -DCMAKE_BUILD_TYPE=Release && make -j10'
         ]
         if self.platform == 'linux':

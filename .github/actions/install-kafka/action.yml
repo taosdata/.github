@@ -1,0 +1,16 @@
+name: Install kafka
+description: Install kafka and start the service
+inputs:
+  serverIP:
+    required: true
+    description: 'The IP address of the server where Kafka will be installed'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install kafka
+      shell: bash
+      run: |
+        script_path=$(find $GITHUB_WORKSPACE/../../ -name install_kafka.sh 2>/dev/null | head -n 1)
+        chmod +x $script_path
+        $script_path "${{ inputs.serverIP }}"

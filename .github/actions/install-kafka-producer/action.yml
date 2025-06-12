@@ -1,0 +1,27 @@
+name: Install kafka producer
+description: Install kafka producer
+
+inputs:
+  pub_dl_url:
+    required: true
+    description: 'A secrets'
+  file_dir:
+    required: true
+    description: 'file directory'
+  file_name:
+    required: true
+    description: 'file name'
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Download kafka producer
+      shell: bash
+      run: |
+        wget -N ${{ inputs.pub_dl_url }}/${{ inputs.file_dir }}/${{ inputs.file_name }}
+        if [ $? -ne 0 ]; then
+          echo "Error: Failed to download kafka producer" >&2
+          exit 1
+        fi

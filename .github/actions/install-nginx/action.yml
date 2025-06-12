@@ -1,0 +1,26 @@
+name: Install Nginx
+description: Install Nginx And Start Service
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Update package list
+      shell: bash
+      run: |
+        sudo apt-get update
+
+    - name: Install Nginx
+      shell: bash
+      run: |
+        sudo apt-get install -y nginx
+
+    - name: Start Nginx Service
+      shell: bash
+      run: |
+        sudo systemctl start nginx
+        sudo systemctl enable nginx
+
+    - name: Verify Nginx Installation
+      shell: bash
+      run: |
+        nginx -v

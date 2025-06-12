@@ -7,6 +7,10 @@ inputs:
   test_root:
     description: 'Parent directory for the TestNG repository'
     required: true
+  exclude_components:
+    description: 'components need to be excluded'
+    required: false
+    default: ""
 runs:
   using: 'composite'
   steps:
@@ -18,9 +22,12 @@ runs:
         echo "-----------------"
         ${GITHUB_ACTION_PATH}/../../scripts/gen_taostest_env.sh \
           "${{ inputs.json_file }}" \
-          "${{ inputs.test_root }}"
+          "${{ inputs.test_root }}" \
+          "${{ inputs.exclude_components }}"
         echo "MQTT_HOSTS=$(cat $GITHUB_OUTPUT | grep MQTT_HOSTS | cut -d'=' -f2-)" >> $GITHUB_ENV
+        echo "FLASHMQ_HOSTS=$(cat $GITHUB_OUTPUT | grep FLASHMQ_HOSTS | cut -d'=' -f2-)" >> $GITHUB_ENV
         echo "SINGLE_DNODE_HOSTS=$(cat $GITHUB_OUTPUT | grep SINGLE_DNODE_HOSTS | cut -d'=' -f2-)" >> $GITHUB_ENV
         echo "TAOS_BENCHMARK_HOSTS=$(cat $GITHUB_OUTPUT | grep TAOS_BENCHMARK_HOSTS | cut -d'=' -f2-)" >> $GITHUB_ENV
         echo "CLUSTER_HOSTS=$(cat $GITHUB_OUTPUT | grep CLUSTER_HOSTS | cut -d'=' -f2-)" >> $GITHUB_ENV
         echo "HOSTNAME_INFO=$(cat $GITHUB_OUTPUT | grep HOSTNAME_INFO | cut -d'=' -f2-)" >> $GITHUB_ENV
+        echo "KAFKA_HOSTS=$(cat $GITHUB_OUTPUT | grep KAFKA_HOSTS | cut -d'=' -f2-)" >> $GITHUB_ENV
