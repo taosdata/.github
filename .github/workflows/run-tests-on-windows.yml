@@ -35,6 +35,7 @@ jobs:
       WIN_INTERNAL_ROOT: "C:\\workspace\\0\\TDinternal"
       WIN_COMMUNITY_ROOT: "C:\\workspace\\0\\TDinternal\\community"
       WIN_SYSTEM_TEST_ROOT: "C:\\workspace\\0\\TDinternal\\community\\tests\\system-test"
+      WIN_ARMY_TEST_ROOT: "C:\\workspace\\0\\TDinternal\\community\\tests\\army"
       WIN_VS_PATH: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat"
       WIN_CPU_TYPE: "x64"
       IS_TDINTERNAL: ${{ inputs.tdinternal }}
@@ -226,6 +227,16 @@ jobs:
           if %ERRORLEVEL% == 8 (
              echo "Test script returned error code 8"
              exit 1
+          )
+          time /t
+          cd %WIN_ARMY_TEST_ROOT%
+          echo "testing ..."
+          xcopy /e/y/i/f "%WIN_SYSTEM_TEST_ROOT%\\test-win.py" .
+          python3 test-win.py ci
+          del /f /q test-win.py
+          if %ERRORLEVEL% == 8 (
+            echo "Test script returned error code 8"
+            exit 1
           )
           time /t
         shell: cmd
