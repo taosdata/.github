@@ -156,7 +156,8 @@ jobs:
           date
           rm -rf ${{ env.WKC }}/debug
           cd ${{ env.WKC }}/tests/parallel_test
-          time ./container_build.sh -w ${{ env.WKDIR }} -e
+          # set taosadapter tag as target branch
+          time ./container_build.sh -w ${{ env.WKDIR }} -e -b ${{ env.TARGET_BRANCH }}
       - name: Get parameters for testing
         id: get_param
         run: |
