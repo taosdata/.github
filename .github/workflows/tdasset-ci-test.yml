@@ -140,7 +140,8 @@ jobs:
             post_to_feishu "$PR_INFO"
 
         - name: Trigger frontend build workflow
-          if: ${{ success() && github.event_name == 'schedule' }}
+          # if: ${{ success() && github.event_name == 'schedule' }}
+          if: ${{ github.event_name == 'pull_request' }}
           uses: benc-uk/workflow-dispatch@v1
           with:
             workflow: frontend-build.yml
