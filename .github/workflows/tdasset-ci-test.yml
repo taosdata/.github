@@ -144,6 +144,7 @@ jobs:
           uses: benc-uk/workflow-dispatch@v1
           with:
             workflow: frontend-build.yml
+            repo: taosdata/TDasset
             token: ${{ secrets.WORKFLOW_PAT }}
 
         - name: Upload Artifacts
