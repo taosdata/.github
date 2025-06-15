@@ -116,7 +116,7 @@ jobs:
             # set env
             pnpm run test:e2e:install
             # NODE_ENV=ci.local pnpm run test:e2e
-            NOTE_ENV=ci.local pnpm exec playwright test e2e --workers=1 --reporter=html,list
+            pnpm exec playwright test e2e --workers=1 --reporter=html,list
 
         - name: Send Feishu Message to Platform Alert Group
           if: ${{ failure() && github.event_name == 'schedule'}}
