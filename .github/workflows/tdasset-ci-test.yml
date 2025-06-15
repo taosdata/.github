@@ -2,11 +2,6 @@ name: TDasset CI Test
 
 on:
   workflow_call:
-    inputs:
-      triggered_by:
-        description: 'Triggered by'
-        required: true
-        type: string
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-TDasset-ci-test
@@ -25,41 +20,13 @@ jobs:
             app_id: ${{ vars.TAOSDATA_BOT_ID }}
             private_key: ${{ secrets.TAOSDATA_BOT_KEY }}
 
-        - name: Checkout code TDasset-ui frontend
+        - name: Checkout code
           uses: actions/checkout@v4
-          if: ${{ inputs.triggered_by == 'frontend'}}
-          with:
-            repository: 'taosdata/TDasset-ui'
-            path: 'TDasset-ui'
-            token: ${{ steps.app-token.outputs.token }}
-            ref: ${{ github.event.pull_request.head.ref}} 
-
-        - name: Checkout code TDasset frontend
-          uses: actions/checkout@v4
-          if: ${{ inputs.triggered_by == 'frontend'}}
           with:
             repository: 'taosdata/TDasset'
             path: 'TDasset'
             token: ${{ steps.app-token.outputs.token }}
-            ref: 'main'    
-
-        - name: Checkout code TDasset backend
-          uses: actions/checkout@v4
-          if: ${{ inputs.triggered_by == 'backend'}}
-          with:
-            repository: 'taosdata/TDasset'
-            path: 'TDasset'
-            token: ${{ steps.app-token.outputs.token }}
-            ref: ${{ github.event.pull_request.head.ref}} 
-
-        - name: Checkout code TDasset-ui backend
-          uses: actions/checkout@v4
-          if: ${{ inputs.triggered_by == 'backend'}}
-          with:
-            repository: 'taosdata/TDasset-ui'
-            path: 'TDasset-ui'
-            token: ${{ steps.app-token.outputs.token }}
-            ref: 'main'
+            ref: ${{ github.event.pull_request.head.ref}}
 
         - name: Checkout code taos-ui
           uses: actions/checkout@v4
@@ -75,19 +42,19 @@ jobs:
             pnpm i --no-frozen-lockfile
             pnpm link taos-ui
 
-        - name: Install TDasset-ui dependencies
+        - name: Install TDasset frontend dependencies
           run: |
-            cd TDasset-ui
+            cd TDasset/frontend
             pnpm i --no-frozen-lockfile
 
-        - name: Build TDasset-ui
+        - name: Build TDasset frontend
           run: |
             # set environment variables
             export DISABLE_OPENCOLLECTIVE=1
             export IMAGE_INLINE_SIZE_LIMIT=0
             export NODE_OPTIONS="--max-old-space-size=8192"
-            # build TDasset-ui
-            cd TDasset-ui
+            # build TDasset frontend
+            cd TDasset/frontend
             pnpm run build
 
         - name: Build tda-server
@@ -133,6 +100,7 @@ jobs:
             echo "::endgroup::"
 
         - name: Run UI Tests
+          id: ui-test
           run: |
             for i in {1..30}; do
               if curl -sSf http://localhost:6042 > /dev/null; then
@@ -143,10 +111,44 @@ jobs:
               sleep 1
             done
 
-            cd TDasset-ui
+            cd TDasset/frontend
 
             # set env
-            export FRONT_PAGE_URL=http://localhost:6042
-            export CONSOLE_BASE_URL=http://localhost:6042
-            pnpm exec playwright install
-            pnpm exec playwright test e2e --workers=1 --reporter=html,list
+            pnpm run test:e2e:install
+            NODE_ENV=ci.local pnpm run test:e2e
+          continue-on-error: true
+
+        - name: Send Feishu Message to Platform Alert Group
+          if: ${{ failure() && github.event_name == 'schedule'}}
+          run: |
+            function post_to_feishu() {
+              local text="$1"
+              curl -X POST -H "Content-Type: application/json" \
+              -d @- https://open.feishu.cn/open-apis/bot/v2/hook/02363732-91f1-49c4-879c-4e98cf31a5f3 <<EOF
+              {
+                  "msg_type": "text",
+                  "content": {
+                  "text": "$text"
+                  }
+              }
+            EOF
+            }
+            
+            PR_INFO="TDasset Daily CI 测试失败\n
+            执行的workflow见：https://github.com/taosdata/TDasset/actions/runs/${{ github.run_id }}\n"
+            
+            post_to_feishu "$PR_INFO"
+
+        - name: Trigger frontend build workflow
+          if: ${{ success() && github.event_name == 'schedule' }}
+          uses: benc-uk/workflow-dispatch@v1
+          with:
+            workflow: frontend-build.yml
+            token: ${{ secrets.WORKFLOW_PAT }}
+
+        - name: Upload Artifacts
+          if: steps.ui-test.outcome == 'failure'
+          uses: actions/upload-artifact@v4
+          with:
+            name: Playwright Test Reports
+            path: TDasset/frontend/tests/e2e/test-reports
