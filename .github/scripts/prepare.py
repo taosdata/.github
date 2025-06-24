@@ -102,7 +102,7 @@ class TestPreparer:
 
     def _update_latest_from_target_branch(self, repo_path):
         """Update latest code from target branch and log"""
-        repo_log_name = 'tdinternal' if 'TDinternal' in str(repo_path) else 'community'
+        repo_log_name = 'community' if 'community' in str(repo_path) else 'tdinternal'
         # 拉取最新代码
         cmds = [
             f"cd {repo_path} && git remote prune origin",
@@ -116,7 +116,7 @@ class TestPreparer:
 
     def _update_lastest_merge_from_pr(self, repo_path, pr_number, job_name=''):
         """Update latest codes and merge from PR, and log"""
-        repo_log_name = 'tdinternal' if 'TDinternal' in str(repo_path) else 'community'
+        repo_log_name = 'community' if 'community' in str(repo_path) else 'tdinternal'
         # 拉取最新代码
         cmds = [
             f"cd {repo_path} && git pull >/dev/null"
