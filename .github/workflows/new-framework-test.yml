@@ -94,10 +94,6 @@ jobs:
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v4
-        with:
-          repository: 'taosdata/.github'
-          ref: 'main'
-          fetch-depth: 0
 
       - name: Prepare the environment
         run: python3 prepare.py
