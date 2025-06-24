@@ -8,6 +8,7 @@ class TestBuild:
         self.utils = Utils()
         self.wkdir = self.utils.get_env_var('WKDIR')
         self.build_type = self.utils.get_env_var('BUILD_TYPE')
+        self.target_branch = self.utils.get_env_var('TARGET_BRANCH')
         self.wk = self.utils.path(os.path.join(self.wkdir, 'TDinternal'))
         self.wkc = self.utils.path(os.path.join(self.wk, 'community'))
         self.platform = platform.system().lower()
@@ -20,7 +21,7 @@ class TestBuild:
         cmds = [
             'date',
             f'rm -rf {self.wkc}/debug',
-            f'cd {self.wkc}/test/ci && time ./container_build.sh -w {self.wkdir} -e -b ${{ env.TARGET_BRANCH }}'
+            f'cd {self.wkc}/test/ci && time ./container_build.sh -w {self.wkdir} -e -b {self.target_branch}'
         ]
         self.utils.run_commands(cmds)
 
