@@ -91,11 +91,13 @@ class TestPreparer:
         print("is enterprise: ", self.enterprise)
         if self.enterprise:
             print("Updating codes for TDinternal...")
-            self._update_lastest_merge_from_pr(self.wk, self.pr_number)
+            job_name = 'TDinternalCI'
+            self._update_lastest_merge_from_pr(self.wk, self.pr_number, job_name)
             self._update_latest_from_target_branch(self.wkc)
         else:
             print("Updating codes for community...")
-            self._update_lastest_merge_from_pr(self.wkc, self.pr_number)
+            job_name = 'NewTest'
+            self._update_lastest_merge_from_pr(self.wkc, self.pr_number, job_name)
             self._update_latest_from_target_branch(self.wk)
 
     def _update_latest_from_target_branch(self, repo_path):
@@ -112,14 +114,9 @@ class TestPreparer:
         with open(f"{self.wkdir}/jenkins.log", "a") as f:
             f.write(f"{repo_log_name} log: {log}\n")
 
-    def _update_lastest_merge_from_pr(self, repo_path, pr_number):
+    def _update_lastest_merge_from_pr(self, repo_path, pr_number, job_name=''):
         """Update latest codes and merge from PR, and log"""
-        if 'TDinternal' in str(repo_path):
-            repo_log_name = 'tdinternal'
-            job_name = 'TDinternalCI' # the same to jenkins job name
-        else:
-            repo_log_name = 'community'
-            job_name = 'NewTest'
+        repo_log_name = 'tdinternal' if 'TDinternal' in str(repo_path) else 'community'
         # 拉取最新代码
         cmds = [
             f"cd {repo_path} && git pull >/dev/null"
