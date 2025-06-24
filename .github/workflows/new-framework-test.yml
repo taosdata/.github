@@ -96,7 +96,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: 'taosdata/.github'
-          ref: ${{ github.ref_name }}
+          ref: ${{ github.workflow_ref }}
 
       - name: Prepare the environment
         run: python3 prepare.py
