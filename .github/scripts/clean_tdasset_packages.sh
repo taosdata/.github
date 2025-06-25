@@ -31,7 +31,7 @@ while [[ $# -gt 0 ]]; do
             shift
             shift
             ;;
-        -g -- group_id)
+        -g --group_id)
             GROUP_ID="$2"
             shift
             shift
