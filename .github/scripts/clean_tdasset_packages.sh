@@ -161,14 +161,14 @@ if [ "$PACKAGE_TYPE" == "maven" ]; then
                 continue
             fi
             
-            # 2. check whether it's a version that is updated within the last 10 days
+            # 2. check whether it's a version that is updated within the last keep days
             if [ $version_timestamp -ge $cutoff_timestamp ]; then
                 echo "- Keeping recent version: $version_name (ID: $version_id, update date: $version_date)"
                 skipped_count=$((skipped_count + 1))
                 continue
             fi
             
-            # 3. handle development and daily build edition before 10 days
+            # 3. handle development and daily build edition before keep days
             if [[ "$version_name" =~ [0-9]+\.[0-9]+\.[0-9]+-[0-9]{8} ]]; then
                 echo "- Deleting old daily build: $version_name (ID: $version_id, update date: $version_date)"
             elif [[ "$version_name" =~ [0-9]+\.[0-9]+\.[0-9]+-build ]]; then
@@ -256,7 +256,7 @@ elif [ "$PACKAGE_TYPE" == "npm" ]; then
             
             # 2. check daily build version
             if [[ "$version_name" =~ ^[0-9]+\.[0-9]+\.[0-9]+-[0-9]{8}$ ]]; then
-                # within 10 days
+                # within keep days
                 if [ $version_timestamp -ge $cutoff_timestamp ]; then
                     echo "- Keeping recent daily build: $version_name (ID: $version_id, update date: $version_date)"
                     skipped_count=$((skipped_count + 1))
