@@ -13,6 +13,10 @@ on:
         required: true
         type: string
         default: '10'
+      auth_token:
+        description: "GitHub PAT with write access to the repository"
+        required: true
+        type: string
 
 jobs:
   clean-frontend-packages:
@@ -38,7 +42,7 @@ jobs:
               -n "$PACKAGE_NAME" \
               -s "$PACKAGE_SCOPE" \
               -d ${{ inputs.keep_days }} \
-              -a ${{ secrets.WORKFLOW_WRITE_PAT }}
+              -a ${{ inputs.auth_token }}
 
   clean-backend-packages:
     runs-on: ubuntu-latest
@@ -59,7 +63,7 @@ jobs:
               -n "$BACKEND_PACKAGE_NAME" \
               -s "$PACKAGE_SCOPE" \
               -d ${{ inputs.keep_days }} \
-              -a ${{ secrets.WORKFLOW_WRITE_PAT }}
+              -a ${{ inputs.auth_token }}
 
           STANDALONE_PACKAGE_NAME="tdasset-standalone"
 
@@ -69,7 +73,7 @@ jobs:
               -n "$STANDALONE_PACKAGE_NAME" \
               -s "$PACKAGE_SCOPE" \
               -d ${{ inputs.keep_days }} \
-              -a ${{ secrets.WORKFLOW_WRITE_PAT }}
+              -a ${{ inputs.auth_token }}
 
           LIB_PACKAGE_NAME="tdasset-lib"
 
@@ -79,4 +83,4 @@ jobs:
               -n "$LIB_PACKAGE_NAME" \
               -s "$PACKAGE_SCOPE" \
               -d ${{ inputs.keep_days }} \
-              -a ${{ secrets.WORKFLOW_WRITE_PAT }}
+              -a ${{ inputs.auth_token }}
