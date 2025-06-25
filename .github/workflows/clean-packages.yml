@@ -44,10 +44,10 @@ jobs:
           PACKAGE_TYPE="${{ inputs.package_type }}"
           GROUP_ID="${{ inputs.group_id }}"
           KEEP_DAYS="${{ inputs.keep_days }}"
-          chmod +x ./.github/scripts/clean_tdasset_packages.sh
+          chmod +x ./.github/scripts/clean_packages.sh
 
           echo "Cleaning Package: @${PACKAGE_SCOPE}/${PACKAGE_NAME}"
-          ./.github/scripts/clean_tdasset_packages.sh \
+          ./.github/scripts/clean_packages.sh \
               -t "$PACKAGE_TYPE" \
               -g "$GROUP_ID" \
               -n "$PACKAGE_NAME" \
