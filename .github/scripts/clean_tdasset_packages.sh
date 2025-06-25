@@ -5,6 +5,7 @@
 show_help() {
     echo "Usage: $0 -t <package_type> -n <package_name> -d <keep_days> -s <package_scope> -a <auth_token>"
     echo "  -t, --type        Package type (maven or npm)"
+    echo "  -g, --group_id    Group ID for Maven packages (default: com.taosdata.tdasset)"
     echo "  -n, --name        Package name"
     echo "  -d, --days        Days to keep packages (default: 10)"
     echo "  -s, --scope       Package scope (for npm packages, default: taosdata)"
@@ -15,6 +16,7 @@ show_help() {
 
 # initialize variables
 PACKAGE_TYPE=""
+GROUP_ID=""
 PACKAGE_NAME=""
 KEEP_DAYS=10
 PACKAGE_SCOPE="taosdata"
@@ -26,6 +28,11 @@ while [[ $# -gt 0 ]]; do
     case $key in
         -t|--type)
             PACKAGE_TYPE="$2"
+            shift
+            shift
+            ;;
+        -g -- group_id)
+            GROUP_ID="$2"
             shift
             shift
             ;;
@@ -65,6 +72,11 @@ if [ -z "$PACKAGE_TYPE" ] || [ -z "$PACKAGE_NAME" ] || [ -z "$AUTH_TOKEN" ]; the
     show_help
 fi
 
+if [ "$PACKAGE_TYPE" == "maven" ] && [ "$GROUP_ID" == "" ]; then
+    echo "Error: Please input the group id for maven package."
+    exit 1
+fi
+
 # get common keep days
 cutoff_date=$(date -d "$KEEP_DAYS days ago" +%Y-%m-%dT%H:%M:%SZ)
 echo "Using cutoff date: $cutoff_date"
@@ -92,7 +104,6 @@ echo "=================================================="
 
 # check package type
 if [ "$PACKAGE_TYPE" == "maven" ]; then
-    GROUP_ID="com.taosdata.tdasset"
     PACKAGE_ID="${GROUP_ID}.${PACKAGE_NAME}"
     # Maven package
     while $has_more_pages; do

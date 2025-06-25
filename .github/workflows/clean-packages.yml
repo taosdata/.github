@@ -64,6 +64,7 @@ jobs:
           echo "Cleaning Maven Package: ${BACKEND_PACKAGE_NAME}"
           ./.github/scripts/clean_tdasset_packages.sh \
               -t "maven" \
+              -g "com.taosdata.tdasset" \
               -n "$BACKEND_PACKAGE_NAME" \
               -s "$PACKAGE_SCOPE" \
               -d ${{ inputs.keep_days }} \
@@ -74,6 +75,7 @@ jobs:
           echo "Cleaning Maven Package: ${STANDALONE_PACKAGE_NAME}"
           ./.github/scripts/clean_tdasset_packages.sh \
               -t "maven" \
+              -g "com.taosdata.tdasset" \
               -n "$STANDALONE_PACKAGE_NAME" \
               -s "$PACKAGE_SCOPE" \
               -d ${{ inputs.keep_days }} \
@@ -84,6 +86,7 @@ jobs:
           echo "Cleaning Maven Package: ${LIB_PACKAGE_NAME}"
           ./.github/scripts/clean_tdasset_packages.sh \
               -t "maven" \
+              -g "com.taosdata.tdasset"
               -n "$LIB_PACKAGE_NAME" \
               -s "$PACKAGE_SCOPE" \
               -d ${{ inputs.keep_days }} \
