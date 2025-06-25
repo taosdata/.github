@@ -37,12 +37,10 @@ jobs:
 
           echo "Cleaning NPM Package: @${PACKAGE_SCOPE}/${PACKAGE_NAME}"
           ./.github/scripts/clean_tdasset_packages.sh \
-              -t npm \
+              -t "npm" \
               -n "$PACKAGE_NAME" \
               -s "$PACKAGE_SCOPE" \
-            #   -d "${{ inputs.keep_days }}" \
-            #   -a "${{ inputs.auth_token }}"
-              -d 10 \
+              -d "10" \
               -a ${{ secrets.WORKFLOW_WRITE_PAT }}
 
   clean-backend-packages:
@@ -60,34 +58,28 @@ jobs:
 
           echo "Cleaning Maven Package: ${BACKEND_PACKAGE_NAME}"
           ./.github/scripts/clean_tdasset_packages.sh \
-              -t maven \
+              -t "maven" \
               -n "$BACKEND_PACKAGE_NAME" \
               -s "$PACKAGE_SCOPE" \
-            #   -d "${{ inputs.keep_days }}" \
-            #   -a "${{ inputs.auth_token }}"
-              -d 10 \
+              -d "10" \
               -a ${{ secrets.WORKFLOW_WRITE_PAT }}
 
           STANDALONE_PACKAGE_NAME="tdasset-standalone"
 
           echo "Cleaning Maven Package: ${STANDALONE_PACKAGE_NAME}"
           ./.github/scripts/clean_tdasset_packages.sh \
-              -t maven \
+              -t "maven" \
               -n "$STANDALONE_PACKAGE_NAME" \
               -s "$PACKAGE_SCOPE" \
-            #   -d "${{ inputs.keep_days }}" \
-            #   -a "${{ inputs.auth_token }}"
-              -d 10 \
+              -d "10" \
               -a ${{ secrets.WORKFLOW_WRITE_PAT }}
 
           LIB_PACKAGE_NAME="tdasset-lib"
 
           echo "Cleaning Maven Package: ${LIB_PACKAGE_NAME}"
           ./.github/scripts/clean_tdasset_packages.sh \
-              -t maven \
+              -t "maven" \
               -n "$LIB_PACKAGE_NAME" \
               -s "$PACKAGE_SCOPE" \
-            #   -d "${{ inputs.keep_days }}" \
-            #   -a "${{ inputs.auth_token }}"
-              -d 10 \
+              -d "10" \
               -a ${{ secrets.WORKFLOW_WRITE_PAT }}
