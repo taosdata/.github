@@ -33,6 +33,7 @@ jobs:
         run: |
           PACKAGE_SCOPE="taosdata"
           PACKAGE_NAME="tdasset-frontend"
+          chmod +x ./.github/scripts/clean_tdasset_packages.sh
 
           echo "Cleaning NPM Package: @${PACKAGE_SCOPE}/${PACKAGE_NAME}"
           ./.github/scripts/clean_tdasset_packages.sh \
@@ -55,6 +56,7 @@ jobs:
         run: |
           PACKAGE_SCOPE="taosdata"
           BACKEND_PACKAGE_NAME="tdasset-backend"
+          chmod +x ./.github/scripts/clean_tdasset_packages.sh
 
           echo "Cleaning Maven Package: ${BACKEND_PACKAGE_NAME}"
           ./.github/scripts/clean_tdasset_packages.sh \
