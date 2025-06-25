@@ -3,7 +3,7 @@ name: Clean TDasset Packages
 on:
   workflow_call:
     inputs:
-      paackage_type:
+      package_type:
         description: "npm or maven, or all"
         required: true
         type: string
@@ -13,15 +13,15 @@ on:
         required: true
         type: string
         default: '10'
-      auth_token:
-        description: "GitHub PAT with write access to the repository"
+    secrets:
+      WORKFLOW_WRITE_PAT:
+        description: "GitHub PAT with packages write permission"
         required: true
-        type: string
 
 jobs:
   clean-frontend-packages:
     runs-on: ubuntu-latest
-    if: ${{ inputs.paackage_type == 'npm' || inputs.paackage_type == 'all' }}
+    if: ${{ inputs.package_type == 'npm' || inputs.package_type == 'all' }}
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v4
@@ -42,14 +42,18 @@ jobs:
               -n "$PACKAGE_NAME" \
               -s "$PACKAGE_SCOPE" \
               -d ${{ inputs.keep_days }} \
-              -a ${{ inputs.auth_token }}
+              -a ${{ secrets.WORKFLOW_WRITE_PAT }}
 
   clean-backend-packages:
     runs-on: ubuntu-latest
-    if: ${{ inputs.paackage_type == 'maven' || inputs.paackage_type == 'all' }}
+    if: ${{ inputs.package_type == 'maven' || inputs.package_type == 'all' }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+        with:
+          repository: 'taosdata/.github'
+          ref: 'ci/tdasset'
+          fetch-depth: 0
 
       - name: Clean backend packages
         run: |
@@ -63,7 +67,7 @@ jobs:
               -n "$BACKEND_PACKAGE_NAME" \
               -s "$PACKAGE_SCOPE" \
               -d ${{ inputs.keep_days }} \
-              -a ${{ inputs.auth_token }}
+              -a ${{ secrets.WORKFLOW_WRITE_PAT }}
 
           STANDALONE_PACKAGE_NAME="tdasset-standalone"
 
@@ -73,7 +77,7 @@ jobs:
               -n "$STANDALONE_PACKAGE_NAME" \
               -s "$PACKAGE_SCOPE" \
               -d ${{ inputs.keep_days }} \
-              -a ${{ inputs.auth_token }}
+              -a ${{ secrets.WORKFLOW_WRITE_PAT }}
 
           LIB_PACKAGE_NAME="tdasset-lib"
 
@@ -83,4 +87,4 @@ jobs:
               -n "$LIB_PACKAGE_NAME" \
               -s "$PACKAGE_SCOPE" \
               -d ${{ inputs.keep_days }} \
-              -a ${{ inputs.auth_token }}
+              -a ${{ secrets.WORKFLOW_WRITE_PAT }}
