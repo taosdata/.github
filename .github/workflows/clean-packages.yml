@@ -1,0 +1,55 @@
+name: Clean Packages
+
+on:
+  workflow_call:
+    inputs:
+      package_type:
+        description: "npm or maven"
+        required: true
+        type: string
+      group_id:
+        description: "The group ID for the Maven package"
+        required: false
+        type: string
+        default: 'com.taosdata.tdasset'
+      package_name:
+        description: "The name of the package to clean"
+        required: true
+        type: string
+      keep_days:
+        description: "The number of days to keep the package"
+        required: true
+        type: string
+        default: '10'
+    secrets:
+      WORKFLOW_WRITE_PAT:
+        description: "GitHub PAT with packages write permission"
+        required: true
+
+jobs:
+  clean-packages:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+        with:
+          repository: 'taosdata/.github'
+          ref: 'main'
+
+      - name: Clean package
+        run: |
+          PACKAGE_SCOPE="taosdata"
+          PACKAGE_NAME="${{ inputs.package_name }}"
+          PACKAGE_TYPE="${{ inputs.package_type }}"
+          GROUP_ID="${{ inputs.group_id }}"
+          KEEP_DAYS="${{ inputs.keep_days }}"
+          chmod +x ./.github/scripts/clean_packages.sh
+
+          echo "Cleaning Package: @${PACKAGE_SCOPE}/${PACKAGE_NAME}"
+          ./.github/scripts/clean_packages.sh \
+              -t "$PACKAGE_TYPE" \
+              -g "$GROUP_ID" \
+              -n "$PACKAGE_NAME" \
+              -s "$PACKAGE_SCOPE" \
+              -d "$KEEP_DAYS" \
+              -a ${{ secrets.WORKFLOW_WRITE_PAT }}
