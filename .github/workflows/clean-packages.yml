@@ -13,18 +13,11 @@ on:
         required: true
         type: number
         default: 10
-      auth_token:
-        description: "Authentication token for package registry"
-        required: true
-        type: string
-  pull_request:
-    branches:
-      - 'main'
 
 jobs:
   clean-frontend-packages:
     runs-on: ubuntu-latest
-    # if: ${{ inputs.paackage_type == 'npm' || inputs.paackage_type == 'all' }}
+    if: ${{ inputs.paackage_type == 'npm' || inputs.paackage_type == 'all' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -40,12 +33,12 @@ jobs:
               -t "npm" \
               -n "$PACKAGE_NAME" \
               -s "$PACKAGE_SCOPE" \
-              -d "10" \
+              -d ${{ inputs.keep_days }} \
               -a ${{ secrets.WORKFLOW_WRITE_PAT }}
 
   clean-backend-packages:
     runs-on: ubuntu-latest
-    # if: ${{ inputs.paackage_type == 'maven' || inputs.paackage_type == 'all' }}
+    if: ${{ inputs.paackage_type == 'maven' || inputs.paackage_type == 'all' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -61,7 +54,7 @@ jobs:
               -t "maven" \
               -n "$BACKEND_PACKAGE_NAME" \
               -s "$PACKAGE_SCOPE" \
-              -d "10" \
+              -d ${{ inputs.keep_days }} \
               -a ${{ secrets.WORKFLOW_WRITE_PAT }}
 
           STANDALONE_PACKAGE_NAME="tdasset-standalone"
@@ -71,7 +64,7 @@ jobs:
               -t "maven" \
               -n "$STANDALONE_PACKAGE_NAME" \
               -s "$PACKAGE_SCOPE" \
-              -d "10" \
+              -d ${{ inputs.keep_days }} \
               -a ${{ secrets.WORKFLOW_WRITE_PAT }}
 
           LIB_PACKAGE_NAME="tdasset-lib"
@@ -81,5 +74,5 @@ jobs:
               -t "maven" \
               -n "$LIB_PACKAGE_NAME" \
               -s "$PACKAGE_SCOPE" \
-              -d "10" \
+              -d ${{ inputs.keep_days }} \
               -a ${{ secrets.WORKFLOW_WRITE_PAT }}
