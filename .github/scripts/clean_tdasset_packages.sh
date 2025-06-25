@@ -5,7 +5,7 @@
 show_help() {
     echo "Usage: $0 -t <package_type> -n <package_name> -d <keep_days> -s <package_scope> -a <auth_token>"
     echo "  -t, --type        Package type (maven or npm)"
-    echo "  -g, --group_id    Group ID for Maven packages (default: com.taosdata.tdasset)"
+    echo "  -g, --group_id    Group ID for Maven packages"
     echo "  -n, --name        Package name"
     echo "  -d, --days        Days to keep packages (default: 10)"
     echo "  -s, --scope       Package scope (for npm packages, default: taosdata)"
@@ -31,7 +31,7 @@ while [[ $# -gt 0 ]]; do
             shift
             shift
             ;;
-        -g --group_id)
+        -g|--group_id)
             GROUP_ID="$2"
             shift
             shift
