@@ -1,0 +1,81 @@
+name: Clean TDasset Packages
+
+on:
+  workflow_call:
+    inputs:
+      paackage_type:
+        description: "npm or maven, or all"
+        required: true
+        type: string
+      keep_days:
+        description: "The number of days to keep the package"
+        required: true
+        type: number
+      auth_token:
+        description: "Authentication token for package registry"
+        required: true
+        type: string
+  pull_request:
+    branches:
+      - "main"
+
+jobs:
+  clean-frontend-packages:
+    runs-on: ubuntu-latest
+    if: ${{ inputs.paackage_type == 'npm' || inputs.paackage_type == 'all' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Clean frontend packages
+        run: |
+          PACKAGE_SCOPE="taosdata"
+          PACKAGE_NAME="tdasset-frontend"
+
+          echo "Cleaning NPM Package: @${PACKAGE_SCOPE}/${PACKAGE_NAME}"
+          ./.github/scripts/clean_tdasset_packages.sh \
+              -t npm \
+              -n "$PACKAGE_NAME" \
+              -s "$PACKAGE_SCOPE" \
+              -d "${{ inputs.keep_days }}" \
+              -a "${{ inputs.auth_token }}"
+
+  clean-backend-packages:
+    runs-on: ubuntu-latest
+    if: ${{ inputs.paackage_type == 'maven' || inputs.paackage_type == 'all' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Clean backend packages
+        run: |
+          PACKAGE_SCOPE="taosdata"
+          BACKEND_PACKAGE_NAME="tdasset-backend"
+
+          echo "Cleaning Maven Package: ${BACKEND_PACKAGE_NAME}"
+          ./.github/scripts/clean_tdasset_packages.sh \
+              -t maven \
+              -n "$BACKEND_PACKAGE_NAME" \
+              -s "$PACKAGE_SCOPE" \
+              -d "${{ inputs.keep_days }}" \
+              -a "${{ inputs.auth_token }}"
+
+          STANDALONE_PACKAGE_NAME="tdasset-standalone"
+
+          echo "Cleaning Maven Package: ${STANDALONE_PACKAGE_NAME}"
+          ./.github/scripts/clean_tdasset_packages.sh \
+              -t maven \
+              -n "$STANDALONE_PACKAGE_NAME" \
+              -s "$PACKAGE_SCOPE" \
+              -d "${{ inputs.keep_days }}" \
+              -a "${{ inputs.auth_token }}"
+
+          LIB_PACKAGE_NAME="tdasset-lib"
+
+          echo "Cleaning Maven Package: ${LIB_PACKAGE_NAME}"
+          ./.github/scripts/clean_tdasset_packages.sh \
+              -t maven \
+              -n "$LIB_PACKAGE_NAME" \
+              -s "$PACKAGE_SCOPE" \
+              -d "${{ inputs.keep_days }}" \
+              -a "${{ inputs.auth_token }}"
