@@ -19,8 +19,12 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ inputs.paackage_type == 'npm' || inputs.paackage_type == 'all' }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+        with:
+          repository: 'taosdata/.github'
+          ref: 'ci/tdasset'
+          fetch-depth: 0
 
       - name: Clean frontend packages
         run: |
