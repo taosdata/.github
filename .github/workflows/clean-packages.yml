@@ -34,8 +34,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: 'taosdata/.github'
-          ref: 'ci/tdasset'
-          fetch-depth: 0
+          ref: 'main'
 
       - name: Clean package
         run: |
