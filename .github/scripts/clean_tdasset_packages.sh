@@ -92,6 +92,8 @@ echo "=================================================="
 
 # check package type
 if [ "$PACKAGE_TYPE" == "maven" ]; then
+    GROUP_ID="com.taosdata.tdasset"
+    PACKAGE_ID="${GROUP_ID}.${PACKAGE_NAME}"
     # Maven package
     while $has_more_pages; do
         echo "- Fetch $page page data..."
@@ -101,7 +103,7 @@ if [ "$PACKAGE_TYPE" == "maven" ]; then
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer $AUTH_TOKEN" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            "https://api.github.com/orgs/taosdata/packages/maven/${PACKAGE_NAME}/versions?per_page=100&page=$page")
+            "https://api.github.com/orgs/taosdata/packages/maven/${PACKAGE_ID}/versions?per_page=100&page=$page")
         
         # check if it's a valid JSON file
         if ! echo "$PAGE_RESPONSE" | jq empty 2>/dev/null; then
@@ -182,7 +184,7 @@ if [ "$PACKAGE_TYPE" == "maven" ]; then
                 -H "Authorization: Bearer $AUTH_TOKEN" \
                 -H "Accept: application/vnd.github+json" \
                 -H "X-GitHub-Api-Version: 2022-11-28" \
-                "https://api.github.com/orgs/taosdata/packages/maven/${PACKAGE_NAME}/versions/${version_id}")
+                "https://api.github.com/orgs/taosdata/packages/maven/${PACKAGE_ID}/versions/${version_id}")
             
             if [ -n "$DELETE_RESPONSE" ] && [ "$(echo "$DELETE_RESPONSE" | jq -r 'has("message")')" == "true" ]; then
                 echo "  Failed to delete: $(echo "$DELETE_RESPONSE" | jq -r '.message')"
