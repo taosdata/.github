@@ -11,8 +11,8 @@ on:
       keep_days:
         description: "The number of days to keep the package"
         required: true
-        type: number
-        default: 10
+        type: string
+        default: '10'
 
 jobs:
   clean-frontend-packages:
