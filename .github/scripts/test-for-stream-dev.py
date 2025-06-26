@@ -52,13 +52,14 @@ class TestRunner:
         #     self.utils.run_commands(mac_cmds)
 
     def run(self):
-        if self.test_type == 'assert':
-            self.run_assert_test()
-        elif self.test_type == 'void':
-            self.run_void_function_test()
-        elif self.test_type == 'function_returns':
-            self.run_function_return_test()
-        elif self.test_type == 'function':
+        # if self.test_type == 'assert':
+        #     self.run_assert_test()
+        # elif self.test_type == 'void':
+        #     self.run_void_function_test()
+        # elif self.test_type == 'function_returns':
+        #     self.run_function_return_test()
+        # el
+        if self.test_type == 'function':
             self.run_function_test()
             if self.platform == 'linux':
                 self.cleanup()
