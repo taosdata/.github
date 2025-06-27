@@ -21,7 +21,7 @@ class TestBuild:
         cmds = [
             'date',
             f'rm -rf {self.wkc}/debug',
-            f'cd {self.wkc}/test/ci && time ./container_build.sh -w {self.wkdir} -e -b 3.0'
+            f'cd {self.wkc}/test/ci && time ./container_build.sh -w {self.wkdir} -e -b 3.0 '
         ]
         self.utils.run_commands(cmds)
 
