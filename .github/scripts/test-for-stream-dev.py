@@ -23,7 +23,7 @@ class TestRunner:
         linux_cmds = [
             f"cd {self.wkc}/test/ci && export DEFAULT_RETRY_TIME=2",
             f"date",
-            f"cd {self.wkc}/test/ci && {self.timeout} time ./run.sh -e -m /home/m.json -t ../tools/streamlist_for_ci.task -b PR-{self.utils.get_env_var('PR_NUMBER')}_{self.utils.get_env_var('GITHUB_RUN_NUMBER')} -l {self.wkdir}/log -o 1030 {self.utils.get_env_var('extra_param')}",
+            f"cd {self.wkc}/test/ci && {self.timeout} time ./run.sh -e -m /home/m.json -t streamlist_for_ci.task -b PR-{self.utils.get_env_var('PR_NUMBER')}_{self.utils.get_env_var('GITHUB_RUN_NUMBER')} -l {self.wkdir}/log -o 1030 {self.utils.get_env_var('extra_param')}",
         ]
         if self.platform == 'linux':
             self.utils.run_commands(linux_cmds)
