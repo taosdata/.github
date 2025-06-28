@@ -50,7 +50,7 @@ runs:
   steps:
     - name: Set script permissions
       shell: bash
-      run: chmod +x ${{ github.action_path }}/../../scripts/download-packages.sh
+      run: chmod +x ${{ github.action_path }}/../../scripts/download_packages.sh
 
     - name: Format package name for output
       id: format-package-name
@@ -64,7 +64,7 @@ runs:
       shell: bash
       run: |
         echo "::group::Downloading package ${{ inputs.package-name }} (${{ inputs.package-type }})"
-        ${{ github.action_path }}/../../scripts/download-packages.sh \
+        ${{ github.action_path }}/../../scripts/download_packages.sh \
         --type ${{ inputs.package-type }} \
         --name ${{ inputs.package-name }} \
         --token ${{ inputs.github-token }} \
