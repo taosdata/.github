@@ -63,7 +63,7 @@ jobs:
         include:
           - platform: linux
             runner_group: CI
-            runner_labels: [self-hosted, Linux, X64, new-framework]
+            runner_labels: [self-hosted, Linux, X64, new-framework, stream_testing]
     runs-on:
       group: ${{ matrix.runner_group }}
       labels: ${{ matrix.runner_labels }}
