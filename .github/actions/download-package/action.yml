@@ -63,6 +63,7 @@ runs:
       id: download
       shell: bash
       run: |
+        echo "::group::Downloading package ${{ inputs.package-name }} (${{ inputs.package-type }})"
         ${{ github.action_path }}/../../scripts/download-packages.sh \
         --type ${{ inputs.package-type }} \
         --name ${{ inputs.package-name }} \
@@ -74,3 +75,4 @@ runs:
         ${{ inputs.extract-path != '' && format('--extract-path {0}', inputs.extract-path) || '' }} \
         ${{ inputs.backup == 'true' && '--backup' || '' }} \
         ${{ inputs.backup-dir != '' && format('--backup-dir {0}', inputs.backup-dir) || '' }}
+        echo "::endgroup::"

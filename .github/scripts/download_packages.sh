@@ -318,8 +318,6 @@ download_maven_package() {
 
 # Main function to download a specified package
 main() {
-  echo "::group::Downloading package ${PACKAGE_NAME} (${PACKAGE_TYPE})"
-  
   case "${PACKAGE_TYPE}" in
     "npm")
       download_npm_package "${PACKAGE_NAME}" "${VERSION}" "${EXTRACT}" "${EXTRACT_DIR}" "${GITHUB_TOKEN}"
@@ -330,7 +328,6 @@ main() {
   esac
   
   echo "Package ${PACKAGE_NAME} processed successfully"
-  echo "::endgroup::"
 }
 
 # Run the main function
