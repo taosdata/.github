@@ -96,7 +96,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: 'taosdata/.github'
-          ref: 'main'
+          ref: 'new_testcases'
           fetch-depth: 0
 
       - name: Prepare the environment
