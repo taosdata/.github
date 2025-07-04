@@ -76,6 +76,24 @@ function install_system_packages() {
         # yum localinstall -y "$script_path"/py_venv/system_packages/*.rpm >/dev/null 2>&1
     elif [ -f /etc/debian_version ]; then
         DEBIAN_FRONTEND=noninteractive dpkg -i "$script_path/system_packages/"*.deb >/dev/null 2>&1
+    elif [ -f /etc/SuSE-release ] || [ -f /etc/os-release ]; then
+        # Check if it's a SUSE system
+        if [ -f /etc/os-release ]; then
+            OS_ID=$(grep -E '^ID=' /etc/os-release | cut -d= -f2 | tr -d '"')
+            if [ "$OS_ID" = "sles" ] || [ "$OS_ID" = "opensuse-leap" ] || [ "$OS_ID" = "suse" ]; then
+                compare_field "ID" || exit 1
+                compare_field "VERSION_ID" || exit 1
+                # Install RPM packages on SUSE systems
+                for i in "$script_path/system_packages/"*.rpm;
+                do
+                    rpm -ivh --nodeps "$i" >/dev/null 2>&1
+                done
+            else
+                red_echo "Unsupported Linux distribution.. Please install the packages manually."
+            fi
+        else
+            red_echo "Unsupported Linux distribution.. Please install the packages manually."
+        fi
     else
         red_echo "Unsupported Linux distribution.. Please install the packages manually."
     fi
