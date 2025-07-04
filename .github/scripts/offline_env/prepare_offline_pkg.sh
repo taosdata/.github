@@ -129,6 +129,19 @@ function init() {
                 PKG_MGR="yum"
                 PKG_CONFIRM="rpm -q"
                 ;;
+            sles|opensuse*|suse)
+                OS_ID=$(grep -E '^ID=' /etc/os-release | cut -d= -f2 | tr -d '"')
+                OS_VERSION=$(grep -E '^VERSION_ID=' /etc/os-release | cut -d= -f2 | tr -d '"')
+                # Extract SP version for SLES
+                if [ "$OS_ID" = "sles" ]; then
+                    SP_VERSION=$(grep -E '^VERSION=' /etc/os-release | cut -d= -f2 | tr -d '"' | sed -n 's/.*SP\([0-9]\+\).*/SP\1/p')
+                    if [ -n "$SP_VERSION" ]; then
+                        SUB_VERSION="${SP_VERSION}-"
+                    fi
+                fi
+                PKG_MGR="zypper"
+                PKG_CONFIRM="rpm -q"
+                ;;
             *)
                 red_echo "Unsupported OS and set OS_ID and OS_VERSION to unkown"
                 OS_ID=unknown_os
@@ -261,6 +274,66 @@ function install_system_packages() {
             cd "$system_packages_dir" || exit
             yellow_echo "Downloading offline pkgs......"
             apt-get download $(cat /dependencies.txt)
+        elif [ -f /etc/SuSE-release ] || [ "$OS_ID" = "sles" ] || [ "$OS_ID" = "opensuse-leap" ] || [ "$OS_ID" = "suse" ]; then
+            # SUSE/openSUSE systems using zypper
+            yellow_echo "$PKG_MGR updating"
+            $PKG_MGR refresh
+            $PKG_MGR install -y wget curl gcc gcc-c++
+            for pkg in $formated_system_packages;
+            do
+                if [[ "$pkg" == "bpftrace" ]] && [ "$OS_ID" = "sles" ]; then
+                    yellow_echo "Handling bpftrace specially for SUSE/SLES..."
+                    BPFTRACE_URL="https://github.com/bpftrace/bpftrace/releases/download/v0.23.2/bpftrace"
+                    mkdir -p "$offline_env_path/binary_tools"
+                    if ! wget -q "$BPFTRACE_URL" -O "$offline_env_path/binary_tools/bpftrace"; then
+                        red_echo "Failed to download bpftrace binary"
+                        exit 1
+                    fi
+                    chmod +x "$offline_env_path/binary_tools/bpftrace"
+                    continue
+                else
+                    yellow_echo "Downloading offline pkgs for $pkg......"
+                    mkdir -p "$system_packages_dir"
+                    temp_cache_dir="$system_packages_dir/temp_cache"
+                    mkdir -p "$temp_cache_dir"
+                    cd "$system_packages_dir" || exit
+                    # Get complete dependency list using dry-run
+                    yellow_echo "Resolving dependencies for $pkg..."
+                    dep_list_file="$temp_cache_dir/dep_list.txt"
+
+                    # Extract package names from dry-run output (handle both singular and plural cases)
+                    $PKG_MGR --non-interactive install --dry-run "$pkg" 2>/dev/null | \
+                        awk '/The following.*NEW package.*going to be installed:/{flag=1; next}
+                             /^[[:space:]]*$/{if(flag) flag=0}
+                             flag && /^[[:space:]]*[a-zA-Z0-9]/{
+                                 gsub(/^[[:space:]]+/, ""); gsub(/[[:space:]]+$/, "");
+                                 split($0, pkgs, /[[:space:]]+/);
+                                 for(i in pkgs) {
+                                     if(pkgs[i] && pkgs[i] !~ /^[[:space:]]*$/) print pkgs[i]
+                                 }
+                             }' > "$dep_list_file"
+
+                    # If no packages found, add the original package
+                    if [ ! -s "$dep_list_file" ]; then
+                        echo "$pkg" > "$dep_list_file"
+                    fi
+
+                    # Download each package with dependencies
+                    yellow_echo "Downloading packages: $(tr '\n' ' ' < "$dep_list_file")"
+                    while IFS= read -r pkg_name; do
+                        if [ -n "$pkg_name" ]; then
+                            $PKG_MGR --non-interactive --no-gpg-checks --pkg-cache-dir="$temp_cache_dir" download "$pkg_name" 2>/dev/null || true
+                        fi
+                    done < "$dep_list_file"
+
+                    # Also try install --download-only as backup
+                    $PKG_MGR --non-interactive --no-gpg-checks --pkg-cache-dir="$temp_cache_dir" install --download-only "$pkg" 2>/dev/null || true
+                    # Move all RPM files to the main system_packages directory
+                    find "$temp_cache_dir" -name "*.rpm" -exec mv {} "$system_packages_dir/" \;
+                    # Clean up temp cache directory structure
+                    rm -rf "$temp_cache_dir"
+                fi
+            done
             # cat raw_deps.txt | tr '\n' ' ' | xargs -n 20 apt-cache policy | awk '
             #     /^[^ ]/ { current_pkg = $0 }
             #     /Candidate:/ && $2 = "(none)" {
@@ -439,6 +512,12 @@ function install_offline_pkgs() {
 #         done
     elif [ -f /etc/debian_version ]; then
         DEBIAN_FRONTEND=noninteractive dpkg -i "$HOME"/"$offline_env_dir"/system_packages/*.deb >/dev/null 2>&1
+    elif [ -f /etc/SuSE-release ] || [ "$OS_ID" = "sles" ] || [ "$OS_ID" = "opensuse-leap" ] || [ "$OS_ID" = "suse" ]; then
+        # Install RPM packages on SUSE systems
+        for i in "$HOME/$offline_env_dir/system_packages/"*.rpm;
+        do
+            rpm -ivh --nodeps "$i" >/dev/null 2>&1
+        done
     else
         red_echo "Unsupported Linux distribution.. Please install the packages manually."
     fi
