@@ -20,7 +20,7 @@ class TestRunner:
 
     def run_assert_test(self):
         cmd = f"cd {self.wkc}/test/ci && ./run_check_assert_container.sh -d {self.wkdir}",
-        self.utils.run_command(cmd, silent=True)
+        self.utils.run_command(cmd, silent=False)
 
     def run_void_function_test(self):
         cmd = f"cd {self.wkc}/test/ci && ./run_check_void_container.sh -d {self.wkdir}",
