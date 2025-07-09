@@ -1,0 +1,18 @@
+name: Install JMeter
+description: Install JMeter
+
+inputs:
+  jmeter_version:
+    description: 'Version to install (e.g. 5.6.3)'
+    required: false
+    default: '5.6.3'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install JMeter
+      shell: bash
+      run: |
+        script_path=$(find $GITHUB_WORKSPACE/../../ -name install_jmeter.sh 2>/dev/null | head -n 1)
+        chmod +x $script_path
+        $script_path "${{ inputs.jmeter_version }}"
