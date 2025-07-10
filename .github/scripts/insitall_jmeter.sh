@@ -29,7 +29,12 @@ else
     exit 1
 fi
 
-echo "当前系统类型: $OS_ID"
+# 修正部分 SUSE 系统
+if grep -qi suse /etc/os-release; then
+  OS_ID=suse
+fi
+
+echo "安装 Jmeter $JMETER_VERSION (系统: $OS_ID)"
 
 # 安装依赖
 install_dep() {
@@ -44,6 +49,10 @@ install_dep() {
             centos|rhel|rocky|almalinux|kylin)
                 echo $SUDO yum install -y "$PKG"
                 $SUDO yum install -y "$PKG"
+                ;;
+            sles|suse|opensuse-leap|opensuse-tumbleweed)
+                echo "$SUDO zypper install -y $PKG"
+                $SUDO zypper install -y "$PKG"
                 ;;
             *)
                 echo "不支持的系统: $OS_ID"
