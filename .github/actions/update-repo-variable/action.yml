@@ -25,5 +25,5 @@ runs:
           -H "Authorization: token ${{ inputs.github-token }}" \
           -H "Accept: application/vnd.github.v3+json" \
           -H "Content-Type: application/json" \
-          "https://api.github.com/repos/{{ inputs.repo-name }}/actions/variables/${{ inputs.variable-name }}" \
+          "https://api.github.com/repos/${{ inputs.repo-name }}/actions/variables/${{ inputs.variable-name }}" \
           -d '{"name":"${{ inputs.variable-name }}","value":"${{ inputs.variable-value }}"}'
