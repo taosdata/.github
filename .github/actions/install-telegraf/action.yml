@@ -1,0 +1,37 @@
+name: Install telegraf
+description: Install telegraf
+
+inputs:
+  telegraf_version:
+    description: 'Version to install (e.g. 1.35.2-1)'
+    required: false
+    default: '1.35.2-1'
+  ip:
+    description: 'IP of taosadapter'
+    required: true
+  port:
+    description: 'REST service port, default is 6041'
+    required: false
+    default: '6041'
+  db_name:
+    description: 'database name, default is telegraf'
+    required: false
+    default: 'telegraf'
+  username:
+    description: 'username for login TDengine, default is root'
+    required: false
+    default: 'root'
+  username:
+    description: 'password for login TDengine, default is taosdata'
+    required: false
+    default: 'taosdata'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install telegraf
+      shell: bash
+      run: |
+        script_path=$(find $GITHUB_WORKSPACE/../../ -name install_telegraf.sh 2>/dev/null | head -n 1)
+        chmod +x $script_path
+        $script_path "${{ inputs.telegraf_version }}" "${{ inputs.ip }}" "${{ inputs.ip }}" "${{ inputs.port }}" "${{ inputs.db_name }}" "${{ inputs.username }}" "${{ inputs.password }}"

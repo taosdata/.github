@@ -1,6 +1,43 @@
 #!/bin/bash
 set -e
 
+TELEGRAF_VERSION=${1:latest}
+
+add_telegraf_http_output() {
+  local ip="$1"
+  local port="$2"
+  local db="$3"
+  local username="$4"
+  local password="$5"
+  # local conf_file="$6"
+
+  # 备份原配置（可选）
+  cp "/etc/telegraf/telegraf.conf" "/etc/telegraf/telegraf.conf.bak"
+
+  # 删除旧的 [[outputs.http]] 区块（包含内容）
+  # 注意：使用 awk 处理多行删除
+  awk '
+    BEGIN { skip = 0 }
+    /^\[\[outputs\.http\]\]/ { skip = 1; next }
+    /^\[\[.*\]\]/ { skip = 0 }
+    skip == 0 { print }
+  ' "/etc/telegraf/telegraf.conf" > "/etc/telegraf/telegraf.conf.tmp"
+
+  cat <<EOF >> "/etc/telegraf/telegraf.conf.tmp"
+
+[[outputs.http]]
+  url = "http://${ip}:${port}/influxdb/v1/write?db=${db}"
+  method = "POST"
+  timeout = "5s"
+  username = "${username}"
+  password = "${password}"
+  data_format = "influx"
+EOF
+
+  # 替换原配置文件
+  mv "/etc/telegraf/telegraf.conf.tmp" "/etc/telegraf/telegraf.conf"
+}
+
 # 判断是否有 sudo 权限
 if [ "$(id -u)" -ne 0 ]; then
   if command -v sudo &>/dev/null && sudo -n true 2>/dev/null; then
@@ -30,6 +67,12 @@ fi
 echo "安装 Nginx(系统: $OS_ID)"
 
 install_telegraf_deb() {
+  if [[ "$1" == "latest" ]]; then
+    TELEGRAF_VERSION="telegraf"
+  else
+    TELEGRAF_VERSION="telegraf=$1"
+  fi
+
   if ls /tmp/telegraf/*.deb &>/dev/null; then
     echo "使用离线 .deb 安装 Telegraf..."
     $SUDO dpkg -i /tmp/telegraf/*.deb || $SUDO apt -f install -y
@@ -40,11 +83,17 @@ install_telegraf_deb() {
     curl -s https://repos.influxdata.com/influxdata-archive.key | $SUDO gpg --dearmor -o /etc/apt/trusted.gpg.d/influxdata.gpg
     echo "deb [signed-by=/etc/apt/trusted.gpg.d/influxdata.gpg] https://repos.influxdata.com/ubuntu $(lsb_release -cs) stable" | $SUDO tee /etc/apt/sources.list.d/influxdata.list
     $SUDO apt update
-    $SUDO apt install -y telegraf
+    $SUDO apt install -y telegraf --nogpgcheck
   fi
 }
 
 install_telegraf_rpm() {
+  if [[ "$1" == "latest" ]]; then
+    TELEGRAF_VERSION="telegraf"
+  else
+    TELEGRAF_VERSION="telegraf-$1"
+  fi
+
   if ls /tmp/telegraf/*.rpm &>/dev/null; then
     echo "使用离线 .rpm 安装 Telegraf..."
     $SUDO rpm -Uvh /tmp/telegraf/*.rpm
@@ -60,16 +109,16 @@ enabled = 1
 gpgcheck = 1
 gpgkey = https://repos.influxdata.com/influxdata-archive.key
 EOF
-    $SUDO yum install -y telegraf
+    $SUDO yum install -y telegraf --nogpgcheck
   fi
 }
 
 case "$OS_ID" in
   ubuntu|debian)
-    install_telegraf_deb
+    install_telegraf_deb $TELEGRAF_VERSION
     ;;
   centos|rhel|rocky|almalinux|kylin|suse)
-    install_telegraf_rpm
+    install_telegraf_rpm $TELEGRAF_VERSION
     ;;
   *)
     echo "不支持的操作系统: $OS_ID"
@@ -80,6 +129,19 @@ esac
 # 启动 Telegraf
 echo "启动 Telegraf 服务..."
 $SUDO systemctl enable telegraf
+
+if systemctl list-unit-files | grep -q '^telegraf.service'; then
+    echo "Telegraf 已注册为 systemd 服务"
+else
+    echo "Telegraf 未注册"
+    exit 1
+fi
+
+# 需要配置/etc/telegraf/telegraf.conf，设置outputs
+add_telegraf_http_output $2 $3 $4 $5 $6
+
+# 启动册 Telegraf
+echo "启动 Telegraf 服务..."
 $SUDO systemctl restart telegraf
 
 # 检查状态
