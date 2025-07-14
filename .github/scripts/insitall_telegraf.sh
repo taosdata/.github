@@ -9,22 +9,17 @@ add_telegraf_http_output() {
   local db="$3"
   local username="$4"
   local password="$5"
-  # local conf_file="$6"
-
-  # 备份原配置（可选）
-  cp "/etc/telegraf/telegraf.conf" "/etc/telegraf/telegraf.conf.bak"
 
   # 删除旧的 [[outputs.http]] 区块（包含内容）
   # 注意：使用 awk 处理多行删除
-  awk '
-    BEGIN { skip = 0 }
-    /^\[\[outputs\.http\]\]/ { skip = 1; next }
-    /^\[\[.*\]\]/ { skip = 0 }
-    skip == 0 { print }
-  ' "/etc/telegraf/telegraf.conf" > "/etc/telegraf/telegraf.conf.tmp"
+  $SUDO awk '
+   BEGIN { skip = 0 }
+   /^\[\[outputs\.http\]\]/ { skip = 1; next }
+   /^\[\[.*\]\]/ { skip = 0 }
+   skip == 0 { print }
+  ' /etc/telegraf/telegraf.conf | sudo tee /etc/telegraf/telegraf.conf.tmp > /dev/null
 
-  cat <<EOF >> "/etc/telegraf/telegraf.conf.tmp"
-
+  $SUDO cat <<EOF | sudo tee -a /etc/telegraf/telegraf.conf.tmp > /dev/null
 [[outputs.http]]
   url = "http://${ip}:${port}/influxdb/v1/write?db=${db}"
   method = "POST"
@@ -33,9 +28,8 @@ add_telegraf_http_output() {
   password = "${password}"
   data_format = "influx"
 EOF
-
   # 替换原配置文件
-  mv "/etc/telegraf/telegraf.conf.tmp" "/etc/telegraf/telegraf.conf"
+  $SUDO mv "/etc/telegraf/telegraf.conf.tmp" "/etc/telegraf/telegraf.conf"
 }
 
 # 判断是否有 sudo 权限
