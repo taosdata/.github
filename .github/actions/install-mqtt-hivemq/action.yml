@@ -1,0 +1,10 @@
+name: Install MQTT HiveMQ
+description: Install HiveMQ and start the service
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install HiveMQ
+      shell: bash
+      run: |
+        ${GITHUB_ACTION_PATH}/../../scripts/install_hivemq.sh
