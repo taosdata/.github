@@ -28,7 +28,7 @@ class TestRunner:
 
     def run_function_return_test(self):
         print(f"PR number: {self.pr_number}, run number: {self.run_number}, extra param: {self.extra_param}")
-        cmd = f"cd {self.wkc}/test/ci && ./run_scan_container.sh -d {self.wkdir} -b {self.pr_number}_{self.run_number} -f {self.wkdir}/tmp/{self.pr_number}_{self.run_number}/docs_changed.txt {self.extra_param}",
+        cmd = f"cd {self.wkc}/test/ci && ./run_scan_container.sh -d {self.wkdir} -b {self.pr_number}_{self.run_number}  {self.extra_param}",
         self.utils.run_command(cmd, silent=False)
 
     def run_function_test(self):
