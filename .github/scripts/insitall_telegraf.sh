@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
 
+# 使用方法
+# ./insitall_telegraf.sh 1.35.2-1 192.168.1.1 6041 testdb root taosdata
+# ./insitall_telegraf.sh latest 192.168.1.1 6041 testdb root taosdata
+
 TELEGRAF_VERSION=${1:latest}
 
 add_telegraf_http_output() {
@@ -74,10 +78,12 @@ install_telegraf_deb() {
     echo "在线安装 Telegraf (Debian/Ubuntu)"
     $SUDO apt update
     $SUDO apt install -y curl gnupg
-    curl -s https://repos.influxdata.com/influxdata-archive.key | $SUDO gpg --dearmor -o /etc/apt/trusted.gpg.d/influxdata.gpg
+    wget -qO influxdata.gpg https://repos.influxdata.com/influxdata-archive.key
+    sudo install -m 644 -o root -g root influxdata.gpg /etc/apt/trusted.gpg.d/influxdata.gpg
+    # curl -s https://repos.influxdata.com/influxdata-archive.key | $SUDO gpg --dearmor -o /etc/apt/trusted.gpg.d/influxdata.gpg
     echo "deb [signed-by=/etc/apt/trusted.gpg.d/influxdata.gpg] https://repos.influxdata.com/ubuntu $(lsb_release -cs) stable" | $SUDO tee /etc/apt/sources.list.d/influxdata.list
     $SUDO apt update
-    $SUDO apt install -y telegraf --nogpgcheck
+    $SUDO apt install -y telegraf
   fi
 }
 
