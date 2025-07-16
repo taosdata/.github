@@ -1,0 +1,10 @@
+name: Install MQTT EMQ
+description: Install EMQ and start the service
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install EMQ
+      shell: bash
+      run: |
+        ${GITHUB_ACTION_PATH}/../../scripts/install_emq.sh
