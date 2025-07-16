@@ -3,9 +3,9 @@ description: Install telegraf
 
 inputs:
   telegraf_version:
-    description: 'Version to install (e.g. 1.35.2-1)'
+    description: 'Version to install (e.g. latest)'
     required: false
-    default: '1.35.2-1'
+    default: 'latest'
   ip:
     description: 'IP of taosadapter'
     required: true
@@ -14,15 +14,15 @@ inputs:
     required: false
     default: '6041'
   db_name:
-    description: 'database name, default is telegraf'
+    description: 'Database name, default is telegraf'
     required: false
     default: 'telegraf'
   username:
-    description: 'username for login TDengine, default is root'
+    description: 'Username for login TDengine, default is root'
     required: false
     default: 'root'
   username:
-    description: 'password for login TDengine, default is taosdata'
+    description: 'Password for login TDengine, default is taosdata'
     required: false
     default: 'taosdata'
 

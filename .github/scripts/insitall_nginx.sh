@@ -46,7 +46,7 @@ install_nginx_deb() {
 }
 
 install_nginx_rpm() {
-  if ls $LOCAL_PACK/*.deb >/dev/null 2>&1; then
+  if ls $LOCAL_PACK/*.rpm >/dev/null 2>&1; then
     echo "离线安装 RPM 包..."
     $SUDO rpm -Uvh --force $LOCAL_PACK/*.rpm
   else
@@ -56,7 +56,7 @@ install_nginx_rpm() {
 }
 
 install_nginx_rpm_suse() {
-  if ls $LOCAL_PACK/*.deb >/dev/null 2>&1; then
+  if ls $LOCAL_PACK/*.rpm >/dev/null 2>&1; then
     echo "离线安装 RPM 包..."
     $SUDO rpm -Uvh --force $LOCAL_PACK/*.rpm
   else

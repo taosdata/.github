@@ -3,7 +3,8 @@ set -e
 
 JMETER_VERSION=${1:-5.6.3}
 JMETER_TGZ="apache-jmeter-${JMETER_VERSION}.tgz"
-DOWNLOAD_URL="https://dlcdn.apache.org/jmeter/binaries/${JMETER_TGZ}"
+# DOWNLOAD_URL="https://dlcdn.apache.org/jmeter/binaries/${JMETER_TGZ}"
+DOWNLOAD_URL="https://mirrors.huaweicloud.com/apache/jmeter/binaries/${JMETER_TGZ}"
 INSTALL_BASE="/opt"
 INSTALL_DIR="${INSTALL_BASE}/apache-jmeter-${JMETER_VERSION}"
 LOCAL_TGZ="/tmp/jmeter/${JMETER_TGZ}"
@@ -66,16 +67,12 @@ install_dep curl
 install_dep tar
 
 # 下载或使用本地包
-if curl -s --head "$DOWNLOAD_URL" | grep "200 OK" >/dev/null; then
+if ls $LOCAL_TGZ >/dev/null 2>&1; then
+    echo "使用本地包: $LOCAL_TGZ"
+    $SUDO cp "$LOCAL_TGZ" "$JMETER_TGZ"
+else
     echo "联网正常，下载 JMeter..."
     curl -LO "$DOWNLOAD_URL"
-else
-    echo "无法联网，使用本地包: $LOCAL_TGZ"
-    if [ ! -f "$LOCAL_TGZ" ]; then
-        echo "本地包不存在: $LOCAL_TGZ"
-        exit 1
-    fi
-    $SUDO cp "$LOCAL_TGZ" "$JMETER_TGZ"
 fi
 
 # 解压与软链接
