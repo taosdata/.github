@@ -3,7 +3,7 @@ set -e
 
 JMETER_VERSION=${1:-5.6.3}
 JDBC_VERSION=${2:-3.6.3}
-JDBC_FILE_NAME="taos-jdbcdriver-${JDBC_VERSION}-dist.jar "
+JDBC_FILE_NAME="taos-jdbcdriver-${JDBC_VERSION}-dist.jar"
 JDBC_DOWNLOAD_URL="https://repo1.maven.org/maven2/com/taosdata/jdbc/taos-jdbcdriver/${JDBC_VERSION}/${JDBC_FILE_NAME}"
 JMETER_TGZ="apache-jmeter-${JMETER_VERSION}.tgz"
 # DOWNLOAD_URL="https://dlcdn.apache.org/jmeter/binaries/${JMETER_TGZ}"
