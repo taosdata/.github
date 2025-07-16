@@ -21,7 +21,7 @@ inputs:
     description: 'Username for login TDengine, default is root'
     required: false
     default: 'root'
-  username:
+  password:
     description: 'Password for login TDengine, default is taosdata'
     required: false
     default: 'taosdata'
@@ -34,4 +34,4 @@ runs:
       run: |
         script_path=$(find $GITHUB_WORKSPACE/../../ -name install_telegraf.sh 2>/dev/null | head -n 1)
         chmod +x $script_path
-        $script_path "${{ inputs.telegraf_version }}" "${{ inputs.ip }}" "${{ inputs.ip }}" "${{ inputs.port }}" "${{ inputs.db_name }}" "${{ inputs.username }}" "${{ inputs.password }}"
+        $script_path "${{ inputs.telegraf_version }}" "${{ inputs.ip }}" "${{ inputs.port }}" "${{ inputs.db_name }}" "${{ inputs.username }}" "${{ inputs.password }}"

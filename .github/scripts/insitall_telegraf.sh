@@ -5,7 +5,7 @@ set -e
 # ./insitall_telegraf.sh 1.35.2-1 192.168.1.1 6041 testdb root taosdata
 # ./insitall_telegraf.sh latest 192.168.1.1 6041 testdb root taosdata
 
-TELEGRAF_VERSION=${1:latest}
+TELEGRAF_VERSION=${1:-latest}
 
 add_telegraf_http_output() {
   local ip="$1"
@@ -62,7 +62,7 @@ if grep -qi suse /etc/os-release; then
   OS_ID=suse
 fi
 
-echo "安装 Nginx(系统: $OS_ID)"
+echo "安装 Telegraf(系统: $OS_ID)"
 
 install_telegraf_deb() {
   if [[ "$1" == "latest" ]]; then
@@ -140,7 +140,7 @@ fi
 # 需要配置/etc/telegraf/telegraf.conf，设置outputs
 add_telegraf_http_output $2 $3 $4 $5 $6
 
-# 启动册 Telegraf
+# 启动 Telegraf
 echo "启动 Telegraf 服务..."
 $SUDO systemctl restart telegraf
 
