@@ -2,6 +2,9 @@
 set -e
 
 JMETER_VERSION=${1:-5.6.3}
+JDBC_VERSION=${2:-3.6.3}
+JDBC_FILE_NAME="taos-jdbcdriver-${JDBC_VERSION}-dist.jar "
+JDBC_DOWNLOAD_URL="https://repo1.maven.org/maven2/com/taosdata/jdbc/taos-jdbcdriver/${JDBC_VERSION}/${JDBC_FILE_NAME}"
 JMETER_TGZ="apache-jmeter-${JMETER_VERSION}.tgz"
 # DOWNLOAD_URL="https://dlcdn.apache.org/jmeter/binaries/${JMETER_TGZ}"
 DOWNLOAD_URL="https://mirrors.huaweicloud.com/apache/jmeter/binaries/${JMETER_TGZ}"
@@ -11,14 +14,8 @@ LOCAL_TGZ="/tmp/jmeter/${JMETER_TGZ}"
 
 # 检测是否为 root 或使用 sudo
 if [ "$(id -u)" -ne 0 ]; then
-    if command -v sudo >/dev/null && sudo -n true 2>/dev/null; then
-        SUDO="sudo"
-    else
-        echo "需要 root 或具有 sudo 权限的用户运行脚本"
-        exit 1
-    fi
-else
-    SUDO=""
+    echo "需要 root 权限的用户运行脚本"
+    exit 1
 fi
 
 # 判断操作系统类型
@@ -44,16 +41,16 @@ install_dep() {
         echo "📦 安装依赖包: $PKG"
         case "$OS_ID" in
             ubuntu|debian)
-                echo $SUDO apt update -y && $SUDO apt install -y "$PKG"
-                $SUDO apt update -y && $SUDO apt install -y "$PKG"
+                echo apt update -y && apt install -y "$PKG"
+                apt update -y && apt install -y "$PKG"
                 ;;
             centos|rhel|rocky|almalinux|kylin)
-                echo $SUDO yum install -y "$PKG"
-                $SUDO yum install -y "$PKG"
+                echo yum install -y "$PKG"
+                yum install -y "$PKG"
                 ;;
             sles|suse|opensuse-leap|opensuse-tumbleweed)
-                echo "$SUDO zypper install -y $PKG"
-                $SUDO zypper install -y "$PKG"
+                echo "zypper install -y $PKG"
+                zypper install -y "$PKG"
                 ;;
             *)
                 echo "不支持的系统: $OS_ID"
@@ -69,7 +66,7 @@ install_dep tar
 # 下载或使用本地包
 if ls $LOCAL_TGZ >/dev/null 2>&1; then
     echo "使用本地包: $LOCAL_TGZ"
-    $SUDO cp "$LOCAL_TGZ" "$JMETER_TGZ"
+    cp "$LOCAL_TGZ" "$JMETER_TGZ"
 else
     echo "联网正常，下载 JMeter..."
     curl -LO "$DOWNLOAD_URL"
@@ -77,14 +74,19 @@ fi
 
 # 解压与软链接
 echo "解压 JMeter 到 $INSTALL_DIR"
-$SUDO mkdir -p "$INSTALL_BASE"
-$SUDO tar -xzf "$JMETER_TGZ" -C "$INSTALL_BASE"
+mkdir -p "$INSTALL_BASE"
+tar -xzf "$JMETER_TGZ" -C "$INSTALL_BASE"
 
 echo "创建软链接 /opt/jmeter -> $INSTALL_DIR"
-$SUDO ln -sfn "$INSTALL_DIR" "$INSTALL_BASE/jmeter"
+ln -sfn "$INSTALL_DIR" "$INSTALL_BASE/jmeter"
 
 echo "创建命令软链接 /usr/local/bin/jmeter"
-$SUDO ln -sfn "$INSTALL_BASE/jmeter/bin/jmeter" /usr/local/bin/jmeter
+ln -sfn "$INSTALL_BASE/jmeter/bin/jmeter" /usr/local/bin/jmeter
+
+echo "下载JDBC驱动"
+curl -LO "$JDBC_DOWNLOAD_URL"
+echo "将JDBC驱动复制到JMeter的lib目录"
+cp "$JDBC_FILE_NAME" "$INSTALL_BASE/jmeter/lib/"
 
 echo 'export JMETER_HOME=/opt/jmeter' >> ~/.bashrc
 echo 'export PATH=$JMETER_HOME/bin:$PATH' >> ~/.bashrc

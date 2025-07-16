@@ -32,6 +32,4 @@ runs:
     - name: Install telegraf
       shell: bash
       run: |
-        script_path=$(find $GITHUB_WORKSPACE/../../ -name install_telegraf.sh 2>/dev/null | head -n 1)
-        chmod +x $script_path
-        $script_path "${{ inputs.telegraf_version }}" "${{ inputs.ip }}" "${{ inputs.port }}" "${{ inputs.db_name }}" "${{ inputs.username }}" "${{ inputs.password }}"
+        sudo ${GITHUB_ACTION_PATH}/../../scripts/install_telegraf.sh "${{ inputs.telegraf_version }}" "${{ inputs.ip }}" "${{ inputs.port }}" "${{ inputs.db_name }}" "${{ inputs.username }}" "${{ inputs.password }}"

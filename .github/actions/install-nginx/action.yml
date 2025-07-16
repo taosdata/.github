@@ -13,6 +13,4 @@ runs:
     - name: Install Nginx
       shell: bash
       run: |
-        script_path=$(find $GITHUB_WORKSPACE/../../ -name install_nginx.sh 2>/dev/null | head -n 1)
-        chmod +x $script_path
-        $script_path "${{ inputs.nginx_port }}"
+        sudo ${GITHUB_ACTION_PATH}/../../scripts/install_nginx.sh "${{ inputs.nginx_port }}"
