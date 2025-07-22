@@ -4,7 +4,7 @@ set -e
 # set -x
 # 版本号和部署模式可以通过命令行参数传入，默认版本为 3.9.1，默认部署模式为 kraft
 # Usage: ./install_kafka.sh <version> <deploy_mode> <server_ip> <donwload_url>
-
+# deploy_mode: kraft 或 zookeeper
 # NOTE: Kraft 模式从 Kafka 2.8.0 开始引入
 
 KAFKA_VERSION="${1:-3.9.1}"
@@ -26,7 +26,7 @@ get_minor_version() {
 # 
 check_privilege(){
     if [ "$(id -u)" -ne 0 ]; then
-        echo "需要 root 权限的用户运行脚本"
+        echo "[ERROR] 需要 root 权限的用户运行脚本"
         exit 1
 fi
 }
@@ -273,37 +273,59 @@ function create_kafka_user() {
 
 # 创建 systemd 服务
 function create_systemd_service() {
-    echo "创建 systemd 服务..."
+    echo "[INFO] 创建 systemd 服务..."
     local service_file="/etc/systemd/system/kafka.service"
 
     if [[ "$DEPLOY_MODE" == "kraft" ]]; then
-        cat <<EOF > "$service_file"
+    echo "[INFO] Creating Kafka systemd（kraft model） service file..."
+    cat <<EOF > "$service_file"
 [Unit]
 Description=Apache Kafka (KRaft mode)
 After=network.target
 
 [Service]
 Type=simple
-User=$KAFKA_USER
 ExecStart=$INSTALL_DIR/bin/kafka-server-start.sh $INSTALL_DIR/config/kraft/server.properties
 Restart=on-failure
 LimitNOFILE=100000
+User=root
+Group=root
 
 [Install]
 WantedBy=multi-user.target
 EOF
     else
-        cat <<EOF > "$service_file"
+    echo "[INFO] Creating Kafka systemd（zookeeper model） service file..."
+    cat <<EOF > "$service_file"
 [Unit]
 Description=Apache Kafka (Zookeeper mode)
 After=network.target zookeeper.service
 
 [Service]
 Type=simple
-User=$KAFKA_USER
 ExecStart=$INSTALL_DIR/bin/kafka-server-start.sh $INSTALL_DIR/config/server.properties
 Restart=on-failure
 LimitNOFILE=100000
+User=root
+Group=root
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    echo "[INFO] Creating Zookeeper systemd service file..."
+    cat <<EOF > /etc/systemd/system/zookeeper.service
+[Unit]
+Description=Apache Zookeeper Service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=$INSTALL_DIR/bin/zookeeper-server-start.sh $INSTALL_DIR/config/zookeeper.properties
+ExecStop=$INSTALL_DIR/bin/zookeeper-server-stop.sh
+Restart=on-failure
+User=root
+Group=root
 
 [Install]
 WantedBy=multi-user.target
@@ -311,10 +333,12 @@ EOF
     fi
 
     # 设置logs目录权限
-    chown -R "$KAFKA_USER":"$KAFKA_USER" "$INSTALL_DIR"/logs
+    # chown -R "$KAFKA_USER":"$KAFKA_USER" "$INSTALL_DIR"/logs
 
-    systemctl daemon-reexec
     systemctl daemon-reload
+    if [[ "$DEPLOY_MODE" == "zookeeper" ]]; then
+        systemctl enable zookeeper
+    fi
     systemctl enable kafka
 }
 
@@ -344,6 +368,31 @@ function detect_kraft_mode() {
     # ls -l $tmp_log_dir
 }
 
+start_service() {
+    if [[ "$DEPLOY_MODE" == "zookeeper" ]]; then
+        echo "[INFO] Starting Zookeeper service..."
+        systemctl stop zookeeper
+        rm -rf /opt/kafka/logs/*
+        systemctl start zookeeper
+        # Check if Zookeeper started successfully
+        if ! systemctl is-active --quiet zookeeper; then
+            echo "[ERROR] Failed to start Zookeeper service."
+            exit 1
+        fi
+        echo "[INFO] Zookeeper service started successfully."
+    fi
+
+    echo "[INFO] Starting Kafka service..."
+    systemctl stop kafka
+    systemctl start kafka
+    # Check if Kafka started successfully
+    if ! systemctl is-active --quiet kafka; then
+        echo "[ERROR] Failed to start Kafka service."
+        exit 1
+    fi
+    echo "[INFO] Kafka service started successfully."
+}
+
 ### 主流程
 main() {
     check_privilege
@@ -354,14 +403,7 @@ main() {
     config_kafka
     detect_kraft_mode
     create_systemd_service
-
-    systemctl start kafka
-    systemctl status kafka --no-pager
-    if [[ "$USE_KRAFT" == "true" ]]; then
-        echo "[INFO] Kraft 模式已启用，Kafka 已启动"
-    else
-        echo "[INFO] Zookeeper 模式已启用，Kafka 已启动"
-    fi
+    start_service
 }
 
 main "$@"
