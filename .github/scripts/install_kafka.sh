@@ -399,7 +399,7 @@ main() {
     detect_os
     install_dependencies
     install_kafka
-    create_kafka_user
+    # create_kafka_user
     config_kafka
     detect_kraft_mode
     create_systemd_service
