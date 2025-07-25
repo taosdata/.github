@@ -1,0 +1,19 @@
+#!/usr/bin/expect -f
+
+set timeout 300
+
+spawn su - oracle -c "/opt/oracle/product/19c/dbhome_1/runInstaller \
+  -silent -waitforcompletion -ignorePrereqFailure \
+  -responseFile /opt/oracle/product/19c/dbhome_1/db_install_19c.rsp"
+
+expect {
+  "Enter password for 'root' user:" {
+    send "tbase125!\r"
+  }
+  timeout {
+    puts "Timed out waiting for password prompt"
+    exit 1
+  }
+}
+
+expect eof
