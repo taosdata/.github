@@ -1,10 +1,11 @@
 #!/bin/bash
 set -e
-# set -x
+set -x
 
 # Oracle 安装参数
 ORACLE_VERSION="${1:-19c}"       # 传入参数：19c / 21c 等
 ORACLE_FILE_NAME="${2:-LINUX.X64_193000_db_home.zip}" 
+CREATE_DB="${2:-true}" 
 ORACLE_FILE_PATH=/tmp/oracle/$ORACLE_FILE_NAME  # Oracle 安装包路径
 INSTALL_DIR=/opt/oracle_install
 ORACLE_BASE=/opt/oracle
@@ -207,20 +208,34 @@ EOF
 init_oracle_db(){
     # === 可配置参数 ===
     echo "[INFO] 初始化 Oracle 数据库..."
-    DB_NAME=ORCL
+    DB_NAME=orcl
     DATAFILE_DEST=$ORACLE_BASE/oradata
     SYS_PASSWORD=Oracle123
     SYSTEM_PASSWORD=Oracle123
 
     # === 创建参数文件（init.ora）如果不存在 ===
-    echo "[INFO] 检查并创建参数文件(init$ORACLE_SID.ora)..."
+    echo "[INFO] 创建参数文件(init$ORACLE_SID.ora)..."
     INIT_FILE=$ORACLE_HOME/dbs/init$ORACLE_SID.ora
 
-    if [ ! -f "$INIT_FILE" ]; then
-        echo "[INFO] 创建参数文件: $INIT_FILE"
-        cp $ORACLE_HOME/dbs/init.ora $INIT_FILE
-        sed -i "s/^db_name=.*/db_name='$DB_NAME'/" "$INIT_FILE"
-    fi
+    rm -f $INIT_FILE
+    echo "[INFO] 参数文件: $INIT_FILE"
+    cp $ORACLE_HOME/dbs/init.ora $INIT_FILE
+    sed -i "s/^db_name=.*/db_name='$DB_NAME'/" "$INIT_FILE"
+    sed -i 's#<ORACLE_BASE>#/opt/oracle#g' $INIT_FILE
+    
+
+    # 
+    echo "[INFO] 创建audit_file_dest目录..."
+    rm -rf $ORACLE_BASE/admin/$DB_NAME/adump
+    mkdir -p $ORACLE_BASE/admin/$DB_NAME/adump
+    chown -R oracle:oinstall $ORACLE_BASE/admin/$DB_NAME
+    chmod -R 750 $ORACLE_BASE/admin/$DB_NAME
+
+    # === 检查并创建数据文件目录 ===
+    rm -rf $ORACLE_BASE/fast_recovery_area
+    mkdir -p $ORACLE_BASE/fast_recovery_area
+    chown -R oracle:oinstall $ORACLE_BASE/fast_recovery_area
+    chmod -R 750 $ORACLE_BASE/fast_recovery_area
 
     # === 创建数据文件目录 ===
     echo "[INFO] 创建数据文件目录: $DATAFILE_DEST"
@@ -229,11 +244,17 @@ init_oracle_db(){
 
     # === 使用 DBCA 静默创建数据库 ===
     echo "[INFO] 开始使用 dbca 创建数据库 $ORACLE_SID ..."
+    if [ "$CREATE_DB" != "true" ]; then
+        echo "[INFO] 跳过数据库创建"
+        echo "[INFO] 数据库初始化完成！"
+        return 0
+    fi
 
     su - oracle -c "
 dbca -silent -createDatabase \
   -templateName General_Purpose.dbc \
-  -gdbname ${DB_NAME} -sid ${ORACLE_SID} \
+  -gdbname ${DB_NAME} \
+  -sid ${ORACLE_SID} \
   -responseFile NO_VALUE \
   -characterSet AL32UTF8 \
   -createAsContainerDatabase false \
@@ -246,10 +267,13 @@ dbca -silent -createDatabase \
   -datafileDestination ${DATAFILE_DEST}
 "
 
-    echo "[INFO] 数据库创建完成！"
+    echo "[INFO] 数据库初始化完成！"
 }
 
 check_oracle_status(){
+    su - oracle
+    echo "[INFO] 检查 Oracle 状态..."
+
     # 检查 ORACLE_HOME 目录
     if [ ! -d "$ORACLE_HOME" ]; then
         echo "[ERROR] ORACLE_HOME 目录不存在: $ORACLE_HOME"
@@ -287,6 +311,7 @@ check_oracle_status(){
         echo "[ERROR] 监听端口 1521 未监听"
         exit 1
     fi
+    echo "[INFO] 检查 Oracle 工作正常"
 }
 
 
@@ -299,13 +324,13 @@ main() {
 
     detect_os
     uninstall_oracle
-    # install_dependencies
-    # setup_oracle_user
-    # install_oracle_centos
-    # init_oracle_db
-    # check_oracle_status
+    install_dependencies
+    setup_oracle_user
+    install_oracle_centos
+    init_oracle_db
+    check_oracle_status
 
-    echo "Oracle $ORACLE_VERSION 安装完成"
+    echo "[INFO] Oracle $ORACLE_VERSION 安装完成"
 }
 
 main "$@"
