@@ -117,6 +117,7 @@ def main():
     
     # encode release notes to base64
     release_notes_b64 =  base64.b64encode(release_notes.encode('utf-8')).decode('ascii')
+    print(f"Release notes (base64): {release_notes_b64}")
     
     # set GitHub Actions output
     with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
