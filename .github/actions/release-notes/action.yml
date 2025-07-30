@@ -23,6 +23,9 @@ inputs:
     default: 'tdasset_en'
 
 outputs:
+  notes_b64:
+    description: 'Base64 encoded release notes'
+    value: ${{ steps.release_notes.outputs.notes_b64 }}
   notes:
     description: 'Release notes generated from Jira issues'
     value: ${{ steps.release_notes.outputs.notes }}
