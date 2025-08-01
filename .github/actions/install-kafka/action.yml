@@ -11,7 +11,7 @@ inputs:
     default: 'kraft'
   server_ip:
     required: false
-    description: 'The IP address of advertised.listeners in Kafka's server.properties, default is ip of kafka server'
+    description: 'The IP address of advertised.listeners in Kafka server.properties, default is ip of kafka server'
     default: 'localhost'
   download_url:
     description: 'The download URL for Kafka, default is undefined which means it will use the official Apache Kafka download URL'
