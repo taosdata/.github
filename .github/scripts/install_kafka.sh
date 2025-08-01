@@ -76,6 +76,17 @@ install_kafka() {
 }
 
 create_service_files() {
+    # Check if JAVA_HOME is set system-wide
+    JAVA_HOME_PATH=""
+    if [ -n "$JAVA_HOME" ]; then
+        JAVA_HOME_PATH="$JAVA_HOME"
+    else
+        # Try to find Java installation
+        if command -v java &> /dev/null; then
+            JAVA_HOME_PATH=$(dirname $(dirname $(readlink -f $(which java))))
+        fi
+    fi
+
     echo "Creating Zookeeper systemd service file..."
     cat <<EOF > /etc/systemd/system/zookeeper.service
 [Unit]
@@ -84,9 +95,13 @@ After=network.target
 
 [Service]
 Type=simple
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+$([ -n "$JAVA_HOME_PATH" ] && echo "Environment=JAVA_HOME=$JAVA_HOME_PATH")
+WorkingDirectory=/opt/kafka
 ExecStart=/opt/kafka/bin/zookeeper-server-start.sh /opt/kafka/config/zookeeper.properties
 ExecStop=/opt/kafka/bin/zookeeper-server-stop.sh
 Restart=on-failure
+RestartSec=5
 User=root
 Group=root
 
@@ -99,12 +114,17 @@ EOF
 [Unit]
 Description=Apache Kafka Service
 After=zookeeper.service
+Requires=zookeeper.service
 
 [Service]
 Type=simple
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+$([ -n "$JAVA_HOME_PATH" ] && echo "Environment=JAVA_HOME=$JAVA_HOME_PATH")
+WorkingDirectory=/opt/kafka
 ExecStart=/opt/kafka/bin/kafka-server-start.sh /opt/kafka/config/server.properties
 ExecStop=/opt/kafka/bin/kafka-server-stop.sh
 Restart=on-failure
+RestartSec=5
 User=root
 Group=root
 
