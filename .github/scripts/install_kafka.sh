@@ -14,6 +14,8 @@ check_java() {
         else
             echo "Java version $java_version is installed."
         fi
+    else
+        echo "Java is not installed. Installing Java..."
     fi
 }
 
@@ -80,11 +82,22 @@ create_service_files() {
     JAVA_HOME_PATH=""
     if [ -n "$JAVA_HOME" ]; then
         JAVA_HOME_PATH="$JAVA_HOME"
+        echo "Found JAVA_HOME: $JAVA_HOME_PATH"
     else
         # Try to find Java installation
         if command -v java &> /dev/null; then
             JAVA_HOME_PATH=$(dirname $(dirname $(readlink -f $(which java))))
+            echo "Detected JAVA_HOME: $JAVA_HOME_PATH"
         fi
+    fi
+
+    # Prepare JAVA_HOME environment line
+    JAVA_ENV_LINE=""
+    if [ -n "$JAVA_HOME_PATH" ]; then
+        JAVA_ENV_LINE="Environment=JAVA_HOME=$JAVA_HOME_PATH"
+        echo "Will set JAVA_HOME in service: $JAVA_HOME_PATH"
+    else
+        echo "Warning: JAVA_HOME not found, services may fail to start"
     fi
 
     echo "Creating Zookeeper systemd service file..."
@@ -96,7 +109,7 @@ After=network.target
 [Service]
 Type=simple
 Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-$([ -n "$JAVA_HOME_PATH" ] && echo "Environment=JAVA_HOME=$JAVA_HOME_PATH")
+${JAVA_ENV_LINE}
 WorkingDirectory=/opt/kafka
 ExecStart=/opt/kafka/bin/zookeeper-server-start.sh /opt/kafka/config/zookeeper.properties
 ExecStop=/opt/kafka/bin/zookeeper-server-stop.sh
@@ -119,7 +132,7 @@ Requires=zookeeper.service
 [Service]
 Type=simple
 Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-$([ -n "$JAVA_HOME_PATH" ] && echo "Environment=JAVA_HOME=$JAVA_HOME_PATH")
+${JAVA_ENV_LINE}
 WorkingDirectory=/opt/kafka
 ExecStart=/opt/kafka/bin/kafka-server-start.sh /opt/kafka/config/server.properties
 ExecStop=/opt/kafka/bin/kafka-server-stop.sh
