@@ -4,7 +4,7 @@
 HBASE_VERSION="${1:-2.4.18}"
 HBASE_TAR="hbase-${HBASE_VERSION}-bin.tar.gz"
 HBASE_URL="https://mirrors.tuna.tsinghua.edu.cn/apache/hbase/${HBASE_VERSION}/${HBASE_TAR}"
-JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
+# JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
 DOWNLOAD_URL="https://downloads.apache.org/hbase/${HBASE_VERSION}/${HBASE_TAR}"
 # 国内镜像（可选）
 MIRROR_URL="https://mirrors.tuna.tsinghua.edu.cn/apache/hbase/${HBASE_VERSION}/${HBASE_TAR}"

@@ -6,9 +6,8 @@ set -e  # 遇到错误立即退出
 # 配置参数
 OPENTSDB_VERSION="${1:-2.4.1}"
 PROTOBUF_VERSION="${2:-2.5.0}"
-HBASE_HOME="${3:-/opt/hbase}"
-ZK_QUORUM="${3:-localhost}"
-# INSTALL_DIR="/usr/share/opentsdb"
+HBASE_HOME="/opt/hbase"
+ZK_QUORUM="localhost"
 OPENTSDB_HOME="/usr/share/opentsdb"
 TSDB_PORT=4242
 TSDB_LOG="/var/log/opentsdb.log"
@@ -20,6 +19,9 @@ get_db_download_url() {
         RPM_URL="https://github.com/OpenTSDB/opentsdb/releases/download/v2.4.1/opentsdb-2.4.1-1-20210902183110-root.noarch.rpm"
     elif [ "$OPENTSDB_VERSION" == "2.4.0" ]; then
         RPM_URL="https://github.com/OpenTSDB/opentsdb/releases/download/v2.4.0/opentsdb-2.4.0.noarch.rpm"
+    else
+        echo "[ERROR] 不支持的 OpenTSDB 版本：$OPENTSDB_VERSION"
+        exit 1
     fi
 }
 
@@ -89,13 +91,43 @@ install_dependencies(){
 
 uninstall_opentsdb(){
     # 卸载 OpenTSDB
-    echo "[INFO][3/7] 安装系统依赖..."
+    echo "[INFO][3/7] 卸载 OpenTSDB RPM..."
+    echo "remove OpenTSDB ..."
     rpm -e opentsdb || true
-    # 删除日志、临时缓存、配置文件等（慎用）
+    # 停止 OpenTSDB 服务
+    DB_PID=$(ps -ef | grep opentsdb | grep -v install_opentsdb.sh | grep -v grep | awk '{print $2}')
+    if [[ -n "$DB_PID" ]]; then
+        echo "Kill process of OpenTSDB, pid=$DB_PID ..."
+        kill -9 $DB_PID || echo "Failed to kill $DB_PID"
+    else
+        echo "No OpenTSDB process found."
+    fi
+    echo ”删除日志、临时缓存、配置文件等“
     # rm -rf /usr/share/opentsdb
     rm -rf $OPENTSDB_HOME
     rm -rf /tmp/tsdb_cache
     rm -f $TSDB_LOG
+
+    # 删除hbase中的表
+    # 设置要删除的表列表
+    tsdb_tables=("tsdb" "tsdb-uid" "tsdb-tree" "tsdb-meta")
+
+    # 创建临时HBase命令文件
+    HBASE_CMD_FILE=$(mktemp)
+
+    # 写入禁用和删除命令
+    for table in "${tsdb_tables[@]}"; do
+        echo "disable '${table}'" >> "$HBASE_CMD_FILE"
+        echo "drop '${table}'" >> "$HBASE_CMD_FILE"
+    done
+    echo "exit" >> "$HBASE_CMD_FILE"
+
+    # 执行 hbase shell
+    echo "Deleting OpenTSDB tables in HBase..."
+    hbase shell "$HBASE_CMD_FILE" > /dev/null 2>&1
+    
+    # 清理临时文件
+    rm -f "$HBASE_CMD_FILE"
 }
 
 install_opentsdb(){
