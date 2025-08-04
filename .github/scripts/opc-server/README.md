@@ -1,5 +1,13 @@
 # OPC UA 服务器配置说明
 
+这是一个用于测试的简易OPC UA服务器程序，可以通过配置文件完成基本的OPC UA Server配置和运行，并支持各种数据类型的测点。
+
+## 启动opc-server
+
+```bash
+npm install
+npm server.js
+```
 ## 📁 配置文件结构
 
 ### 1. `server-config.json` - 服务器主配置文件
