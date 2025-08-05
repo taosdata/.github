@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import sys
+import base64
 from jira import JIRA
 
 # config logging
@@ -113,10 +114,19 @@ def main():
 
     # get release notes
     release_notes = get_release_note(issues, project_name, version)
-
+    
+    # encode release notes to base64
+    release_notes_b64 =  base64.b64encode(release_notes.encode('utf-8')).decode('ascii')
+    print(f"Release notes (base64): {release_notes_b64}")
+    
     # set GitHub Actions output
     with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
-        # release notes
+        # base64 encoded release notes
+        f.write("notes_b64<<EOF\n")
+        f.write(release_notes_b64)
+        f.write("\nEOF\n")
+        
+        # also output original notes for debugging
         f.write("notes<<EOF\n")
         f.write(release_notes)
         f.write("\nEOF\n")
