@@ -1,0 +1,27 @@
+[
+  {
+    "name": "FastTemperature",
+    "displayName": "快速温度传感器",
+    "description": "模拟的快速更新温度传感器",
+    "nodeId": "ns=1;i=1001",  
+    "type": "Double",
+    "dynamic": true,
+    "dynamicType": "random",
+    "range": [20, 30],
+    "interval": 1000,
+    "deviceName": "DynamicDevice"
+  },
+  {
+    "name": "SlowCounter",
+    "displayName": "慢速计数器",
+    "description": "递增计数器，每秒增加1",
+    "nodeId": "ns=1;i=1002",
+    "type": "Int32",
+    "dynamic": true,
+    "dynamicType": "increment",
+    "initialValue": 0,
+    "step": 1,
+    "interval": 1000,
+    "deviceName": "DynamicDevice"
+  }
+]

@@ -1,0 +1,66 @@
+{
+  "server": {
+    "port": 4840,
+    "resourcePath": "/UA/ConfigServer",
+    "bindAddress": "0.0.0.0",
+    "allowAnonymous": true,
+    "securityPolicies": ["None", "Basic128Rsa15", "Basic256Sha256"],
+    "alternateHostname": ["localhost", "127.0.0.1", "192.168.100.45"],
+    "maxConnections": 20,
+    "maxConnectionsPerEndpoint": 10,
+    "maxSessionsPerEndpoint": 10,
+    "maxNodesPerRead": 1000,
+    "maxNodesPerBrowse": 3000,
+    "transportSettings": {
+      "maxMessageSize": 16777216,
+      "maxChunkCount": 1000,
+      "sendBufferSize": 65536,
+      "receiveBufferSize": 65536
+    },
+    "serverCapabilities": {
+      "maxSessions": 10,
+      "maxByteStringLength": 1048576,
+      "maxStringLength": 1048576,
+      "maxArrayLength": 65535,
+      "maxBrowseContinuationPoints": 10,
+      "maxHistoryContinuationPoints": 10,
+      "maxInactiveLockTime": 60000,
+      "maxRequestAge": 600000,
+      "minSupportedSampleRate": 100,
+      "maxMonitoredItemsPerCall": 1000,
+      "maxNotificationsPerPublish": 1000,
+      "maxPublishRequestCount": 20,
+      "maxSubscriptionCount": 100,
+      "maxSubscriptionsPerSession": 100,
+      "maxMonitoredItemCount": 1000,
+      "maxMonitoredItemsPerSubscription": 1000
+    }
+  },
+  "namespace": {
+    "uri": "http://example.com/dynamic-config",
+    "name": "CustomNamespace"
+  },
+  "nodeStructure": {
+    "customRoot": {
+      "browseName": "CustomRoot",
+      "nodeId": "ns=1;i=9000",
+      "description": "自定义根节点",
+      "displayName": "CustomRoot"
+    },
+    "devices": [
+      {
+        "browseName": "DynamicDevice",
+        "nodeId": "ns=1;i=1000",
+        "description": "动态设备节点",
+        "displayName": "DynamicDevice",
+        "parentNode": "customRoot"
+      }
+    ]
+  },
+  "logging": {
+    "enableStartupInfo": true,
+    "enableEndpointInfo": true,
+    "enableNodeInfo": true,
+    "enableTimerInfo": true
+  }
+}
