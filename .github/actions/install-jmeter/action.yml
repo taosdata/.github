@@ -1,0 +1,20 @@
+name: Install JMeter
+description: Install JMeter
+
+inputs:
+  jmeter_version:
+    description: 'Version of Jmeter (default: 5.6.3)'
+    required: false
+    default: '5.6.3'
+  jdbc_version:
+    description: 'Version of TDengine JDBC driver (default: 3.6.3)'
+    required: false
+    default: '3.6.3'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install JMeter
+      shell: bash
+      run: |
+        sudo ${GITHUB_ACTION_PATH}/../../scripts/install_jmeter.sh "${{ inputs.jmeter_version }}" "${{ inputs.jdbc_version }}"

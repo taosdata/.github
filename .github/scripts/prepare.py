@@ -3,6 +3,8 @@ import json
 import platform
 from utils import Utils
 from pathlib import Path
+import subprocess
+from datetime import datetime
 
 class TestPreparer:
     """Prepare the environment for testing TDengine or TDinternal
@@ -42,7 +44,7 @@ class TestPreparer:
             pr = self.event.get('pull_request', {})
             self.source_branch = pr.get('head', {}).get('ref', '')
             self.target_branch = pr.get('base', {}).get('ref', '')
-            self.pr_number = str(pr.get('number', ''))
+            self.pr_number = str(pr.get('number', ''))     
         else:
             # From inputs
             self.source_branch = self.inputs.get('specified_source_branch', '')
@@ -59,9 +61,9 @@ class TestPreparer:
         if (self.inputs.get('specified_source_branch') == 'unavailable' and
         self.inputs.get('specified_target_branch') == 'unavailable' and
         self.inputs.get('specified_pr_number') == 'unavailable'):
-            # self._prepare_repo(self.wk, self.target_branch)
+            self._prepare_repo(self.wk, self.target_branch)
             # verification needed
-            self._prepare_repo(self.wk, 'main')
+            # self._prepare_repo(self.wk, 'main')
         else:
             self._prepare_repo(self.wk, self.source_branch)
         self._prepare_repo(self.wkc, self.target_branch)
@@ -89,39 +91,54 @@ class TestPreparer:
         print("is enterprise: ", self.enterprise)
         if self.enterprise:
             print("Updating codes for TDinternal...")
-            self._update_lastest_merge_from_pr(self.wk, self.pr_number)
+            job_name = 'TDinternalCI'
+            self._update_latest_merge_from_pr(self.wk, self.pr_number, job_name)
             self._update_latest_from_target_branch(self.wkc)
         else:
             print("Updating codes for community...")
-            self._update_lastest_merge_from_pr(self.wkc, self.pr_number)
+            job_name = 'NewTest'
+            self._update_latest_merge_from_pr(self.wkc, self.pr_number, job_name)
             self._update_latest_from_target_branch(self.wk)
 
     def _update_latest_from_target_branch(self, repo_path):
-        """Update latest code from target branch"""
+        """Update latest code from target branch, and log to jenkins.log"""
+        repo_log_name = 'community' if 'community' in str(repo_path) else 'tdinternal'
+        # 拉取最新代码
         cmds = [
             f"cd {repo_path} && git remote prune origin",
-            f"cd {repo_path} && git pull > /dev/null",
-            f"cd {repo_path} && git log -5",
-            f"cd {repo_path} && echo 'community log: `git log -5`' >> {repo_path}/jenkins.log"
+            f"cd {repo_path} && git pull > /dev/null"
         ]
         self.utils.run_commands(cmds)
+        # 记录日志
+        log = subprocess.getoutput(f"cd {repo_path} && git log -5")
+        with open(f"{self.wkdir}/jenkins.log", "a") as f:
+            f.write(f"{repo_log_name} log: {log}\n")
 
-    def _update_lastest_merge_from_pr(self, repo_path, pr_number):
-        """Update latest codes and merge from PR"""
-        repo_name = 'TDinternal' if 'TDinternal' in str(repo_path) else 'TDengine'
-
+    def _update_latest_merge_from_pr(self, repo_path, pr_number, job_name=''):
+        """Update latest codes and merge from PR, and log to jenkins.log"""
+        repo_log_name = 'community' if 'community' in str(repo_path) else 'tdinternal'
+        # 拉取最新代码
         cmds = [
-            f"cd { repo_path } && git pull >/dev/null",
-            f"cd { repo_path } && git log -5",
-            f'''echo `date "+%Y%m%d-%H%M%S"` {repo_name}Test/PR-{pr_number}:{self.run_number}:{self.target_branch} >> {self.wkdir}/jenkins.log''',
-            f"cd { repo_path } && echo CHANGE_BRANCH:{self.source_branch} >> {self.wkdir}/jenkins.log",
-            f"cd { repo_path } && echo {repo_name} log: `git log -5` >> {self.wkdir}/jenkins.log",
-            f"cd { repo_path } && git fetch origin +refs/pull/{pr_number}/merge",
-            f"cd { repo_path } && git checkout -qf FETCH_HEAD",
-            f"cd { repo_path } && git log -5",
-            f"cd { repo_path } && echo {repo_name} log merged: `git log -5` >> {self.wkdir}/jenkins.log"
+            f"cd {repo_path} && git pull >/dev/null"
         ]
         self.utils.run_commands(cmds)
+        # 记录日志
+        log = subprocess.getoutput(f"cd {repo_path} && git log -5")
+        with open(f"{self.wkdir}/jenkins.log", "a") as f:
+            now = datetime.now().strftime("%Y%m%d-%H%M%S")
+            f.write(f"{now} {job_name}/PR-{pr_number}:{self.run_number}:{self.target_branch}\n")
+            f.write(f"CHANGE_BRANCH:{self.source_branch}\n")
+            f.write(f"{repo_log_name} log: {log}\n")
+        # fetch PR 并切换
+        cmds = [
+            f"cd {repo_path} && git fetch origin +refs/pull/{pr_number}/merge",
+            f"cd {repo_path} && git checkout -qf FETCH_HEAD"
+        ]
+        self.utils.run_commands(cmds)
+        # 记录 merge 后日志
+        log_merged = subprocess.getoutput(f"cd {repo_path} && git log -5")
+        with open(f"{self.wkdir}/jenkins.log", "a") as f:
+            f.write(f"{repo_log_name} log merged: {log_merged}\n")
 
     def outut_file_no_doc_change(self):
         cmds = [

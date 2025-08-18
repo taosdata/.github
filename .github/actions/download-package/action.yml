@@ -1,0 +1,78 @@
+name: 'Download Package'
+description: 'Download maven or npm package from GitHub Packages'
+
+inputs:
+  package-type:
+    description: 'Type of package to download (npm or maven)'
+    required: true
+  package-name:
+    description: 'Name of the package to download'
+    required: true
+  github-token:
+    description: 'GitHub token with package access permissions'
+    required: true
+  group-id:
+    description: 'Group ID for Maven packages (optional, required for maven package type)'
+    required: false
+    default: 'com.taosdata.tdasset'
+  repo-name:
+    description: 'Repository name for maven packages'
+    required: false
+    default: 'tdasset'
+  version:
+    description: 'Version to download (default: latest)'
+    required: false
+    default: 'latest'
+  backup:
+    description: 'Whether to backup downloaded packages'
+    required: false
+    default: 'false'
+  backup-dir:
+    description: 'Directory to backup packages to'
+    required: false
+    default: ''
+  extract:
+    description: 'Whether to extract the packages'
+    required: false
+    default: 'true'
+  extract-path:
+    description: 'Target directory for extracted files'
+    required: false
+    default: ''
+
+outputs:
+  package_version:
+    description: 'Version of the downloaded package'
+    value: ${{ steps.download.outputs[format('{0}_version', steps.format-package-name.outputs.formatted_name)] }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set script permissions
+      shell: bash
+      run: chmod +x ${{ github.action_path }}/../../scripts/download_packages.sh
+
+    - name: Format package name for output
+      id: format-package-name
+      shell: bash
+      run: |
+        formatted_name=$(echo "${{ inputs.package-name }}" | tr '-' '_')
+        echo "formatted_name=$formatted_name" >> $GITHUB_OUTPUT
+
+    - name: Download package
+      id: download
+      shell: bash
+      run: |
+        echo "::group::Downloading package ${{ inputs.package-name }} (${{ inputs.package-type }})"
+        ${{ github.action_path }}/../../scripts/download_packages.sh \
+        --type ${{ inputs.package-type }} \
+        --name ${{ inputs.package-name }} \
+        --token ${{ inputs.github-token }} \
+        --version ${{ inputs.version }} \
+        ${{ inputs.group-id != '' && format('--group-id {0}', inputs.group-id) || '' }} \
+        ${{ inputs.repo-name != '' && format('--repo-name {0}', inputs.repo-name) || '' }} \
+        ${{ inputs.extract == 'true' && '--extract' || '' }} \
+        ${{ inputs.extract-path != '' && format('--extract-path {0}', inputs.extract-path) || '' }} \
+        ${{ inputs.backup == 'true' && '--backup' || '' }} \
+        ${{ inputs.backup-dir != '' && format('--backup-dir {0}', inputs.backup-dir) || '' }}
+        echo "::endgroup::"
