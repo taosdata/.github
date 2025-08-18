@@ -22,8 +22,8 @@ on:
         type: string
         default: '10'
     secrets:
-      WORKFLOW_WRITE_PAT:
-        description: "GitHub PAT with packages write permission"
+      WORKFLOW_PAT:
+        description: "GitHub PAT with packages permission"
         required: true
 
 jobs:
@@ -52,4 +52,4 @@ jobs:
               -n "$PACKAGE_NAME" \
               -s "$PACKAGE_SCOPE" \
               -d "$KEEP_DAYS" \
-              -a ${{ secrets.WORKFLOW_WRITE_PAT }}
+              -a ${{ secrets.WORKFLOW_PAT }}
