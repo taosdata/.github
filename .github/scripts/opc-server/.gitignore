@@ -1,0 +1,49 @@
+# 依赖包目录
+node_modules/
+
+# npm 相关文件
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 运行时生成的文件
+*.log
+*.pid
+
+# 环境变量文件
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE 和编辑器文件
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 操作系统生成的文件
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# 临时文件
+tmp/
+temp/
+
+# 构建输出
+dist/
+build/
+
+# 覆盖率报告
+coverage/
+
+# 调试文件
+*.tgz
+*.tar.gz

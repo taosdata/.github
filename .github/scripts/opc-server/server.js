@@ -16,8 +16,38 @@ if (MessageChunker && MessageChunker.defaultMaxChunkCount !== undefined) {
 process.env.OPCUA_MAX_CHUNK_COUNT = "1000";
 process.env.OPCUA_MAX_MESSAGE_SIZE = "16777216"; // 16MB
 
+// 扩展点位配置，支持批量生成
+function expandPointsConfig(config) {
+  const expanded = [];
+  config.forEach(point => {
+    if (point.count && point.count > 1) {
+      // 批量生成点位
+      for (let i = 1; i <= point.count; i++) {
+        const nodeIdBase = point.nodeIdPrefix.split('=')[2];
+        const newNodeId = parseInt(nodeIdBase) + i;
+        expanded.push({
+          ...point,
+          name: `${point.namePrefix}${i}`,
+          displayName: `${point.displayNamePrefix}${i}`,
+          nodeId: `ns=1;i=${newNodeId}`,
+          // 移除批量配置相关字段
+          count: undefined,
+          namePrefix: undefined,
+          displayNamePrefix: undefined,
+          nodeIdPrefix: undefined
+        });
+      }
+    } else {
+      // 单个点位直接添加
+      expanded.push(point);
+    }
+  });
+  return expanded;
+}
+
 // 加载配置文件
-const pointsConfig = JSON.parse(fs.readFileSync(path.join(__dirname, "points-config.json"), "utf8"));
+const rawPointsConfig = JSON.parse(fs.readFileSync(path.join(__dirname, "points-config.json"), "utf8"));
+const pointsConfig = expandPointsConfig(rawPointsConfig);
 const serverConfig = JSON.parse(fs.readFileSync(path.join(__dirname, "server-config.json"), "utf8"));
 
 // 存储动态变量的当前值
@@ -243,6 +273,13 @@ async function startServer() {
     config.alternateHostname.forEach(hostname => {
       console.log(`  - opc.tcp://${hostname}:${config.port}${config.resourcePath}`);
     });
+    
+    console.log(`\n数据点统计信息:`);
+    console.log(`  - 总共生成了 ${pointsConfig.length} 个数据点`);
+    const dynamicPoints = pointsConfig.filter(p => p.dynamic).length;
+    const staticPoints = pointsConfig.length - dynamicPoints;
+    console.log(`  - 动态点位: ${dynamicPoints} 个`);
+    console.log(`  - 静态点位: ${staticPoints} 个`);
     
     console.log(`\n数据点节点路径:`);
     console.log(`  ${nodeStructure.customRoot.browseName} > ${nodeStructure.devices.map(d => d.browseName).join(', ')} > [${pointsConfig.map(p => p.name).join(', ')}]`);

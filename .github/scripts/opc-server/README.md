@@ -75,24 +75,53 @@ npm server.js
 
 ### 2. `points-config.json` - 数据点配置文件
 
-这个文件定义了所有的 OPC UA 变量节点（数据点）：
+这个文件定义了所有的 OPC UA 变量节点（数据点）。支持两种配置方式：**批量生成**和**单个配置**。
 
+#### 批量生成点位配置
 ```json
-[
-  {
-    "name": "FastTemperature",              // 节点名称
-    "displayName": "快速温度传感器",         // 显示名称
-    "description": "模拟的快速更新温度传感器", // 描述
-    "nodeId": "ns=1;i=1001",               // 节点ID
-    "type": "Double",                      // 数据类型
-    "dynamic": true,                       // 是否为动态值
-    "dynamicType": "random",               // 动态类型（random/increment）
-    "range": [20, 30],                     // 随机值范围
-    "interval": 1000,                      // 更新间隔（毫秒）
-    "deviceName": "DynamicDevice"          // 挂载到的设备名称
-  }
-]
+{
+  "namePrefix": "Temperature",           // 点位名称前缀
+  "displayNamePrefix": "温度传感器",      // 显示名称前缀
+  "description": "模拟的温度传感器",      // 点位描述
+  "nodeIdPrefix": "ns=1;i=1000",        // 节点ID前缀（基础ID）
+  "type": "Double",                     // 数据类型
+  "dynamic": true,                      // 是否为动态点位
+  "dynamicType": "random",              // 动态类型（random/increment）
+  "range": [20, 30],                    // 随机值范围（仅用于 random 类型）
+  "interval": 1000,                     // 更新间隔（毫秒）
+  "deviceName": "DynamicDevice",        // 挂载的设备名称
+  "count": 5                            // 生成点位数量
+}
 ```
+
+#### 单个点位配置
+```json
+{
+  "name": "StaticValue",                // 点位名称
+  "displayName": "静态值",              // 显示名称
+  "description": "静态数值，可读写",     // 点位描述
+  "nodeId": "ns=1;i=4001",             // 节点ID
+  "type": "Double",                     // 数据类型
+  "dynamic": false,                     // 静态点位
+  "initialValue": 100.0,                // 初始值
+  "deviceName": "DynamicDevice"         // 挂载的设备名称
+}
+```
+
+#### 支持的数据类型
+- `Double`: 双精度浮点数
+- `Int32`: 32位整数
+- `String`: 字符串
+- `Boolean`: 布尔值
+
+#### 动态类型说明
+- `random`: 在指定范围内生成随机值
+- `increment`: 按指定步长递增
+
+#### 批量生成规则
+1. 点位名称：`{namePrefix}{序号}`，例如：`Temperature1`、`Temperature2`...
+2. 显示名称：`{displayNamePrefix}{序号}`，例如：`温度传感器1`、`温度传感器2`...
+3. 节点ID：基于 `nodeIdPrefix` 的数字部分递增，例如：`ns=1;i=1001`、`ns=1;i=1002`...
 
 ## 🎯 节点定义说明
 
@@ -146,11 +175,32 @@ npm server.js
 ```
 
 ### 3. 添加新的数据点
+
+#### 批量添加多个相似数据点
 在 `points-config.json` 中添加：
 ```json
 {
-  "name": "Pressure",
-  "displayName": "压力传感器",
+  "namePrefix": "Pressure",
+  "displayNamePrefix": "压力传感器",
+  "description": "压力值（0-10 bar）",
+  "nodeIdPrefix": "ns=1;i=2000",
+  "type": "Double",
+  "dynamic": true,
+  "dynamicType": "random",
+  "range": [0, 10],
+  "interval": 2000,
+  "deviceName": "SensorDevice",
+  "count": 3                             // 生成 3 个压力传感器
+}
+```
+这将自动生成：`Pressure1`、`Pressure2`、`Pressure3` 三个点位。
+
+#### 添加单个数据点
+在 `points-config.json` 中添加：
+```json
+{
+  "name": "ManualPressure",
+  "displayName": "手动压力传感器",
   "description": "压力值（0-10 bar）",
   "nodeId": "ns=1;i=2001",
   "type": "Double",
@@ -179,11 +229,13 @@ npm server.js
 ## 🚀 优势
 
 1. **配置与代码分离**: 无需修改代码即可调整服务器配置
-2. **灵活的节点结构**: 可以通过配置文件定义复杂的节点层次结构
-3. **易于扩展**: 添加新设备和数据点只需修改 JSON 文件
-4. **多语言支持**: 支持中文显示名称和描述
-5. **日志控制**: 可以通过配置控制日志输出级别
-6. **环境适配**: 可以为不同环境配置不同的端点地址
+2. **批量点位生成**: 支持通过配置文件批量生成大量相似点位，只需指定前缀和数量
+3. **灵活的节点结构**: 可以通过配置文件定义复杂的节点层次结构
+4. **易于扩展**: 添加新设备和数据点只需修改 JSON 文件
+5. **多语言支持**: 支持中文显示名称和描述
+6. **日志控制**: 可以通过配置控制日志输出级别
+7. **环境适配**: 可以为不同环境配置不同的端点地址
+8. **混合配置**: 支持批量生成和单个配置混合使用
 
 ## 📝 注意事项
 
@@ -191,3 +243,18 @@ npm server.js
 2. 数据点的 `deviceName` 必须与设备节点的 `browseName` 匹配
 3. 修改配置文件后需要重启服务器才能生效
 4. 确保节点 ID 在同一命名空间内唯一
+5. **批量配置注意事项**：
+   - 确保 `nodeIdPrefix` 的基础数字不重复
+   - `count` 字段大于1时才会批量生成，否则按单个点位处理
+   - 批量生成的节点ID会自动递增，避免冲突
+   - 动态点位会自动启动定时器进行数值更新
+
+## 📊 当前配置示例
+
+当前配置文件生成的点位：
+- **温度传感器** (5个): Temperature1-5，随机值范围 20-30，更新间隔 1秒
+- **压力传感器** (3个): Pressure1-3，随机值范围 0-100，更新间隔 2秒
+- **计数器** (2个): Counter1-2，每秒递增1
+- **静态值** (1个): StaticValue，可读写的静态值
+
+总计：**11个数据点**（10个动态 + 1个静态）

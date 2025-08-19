@@ -1,27 +1,52 @@
 [
   {
-    "name": "FastTemperature",
-    "displayName": "快速温度传感器",
-    "description": "模拟的快速更新温度传感器",
-    "nodeId": "ns=1;i=1001",  
+    "namePrefix": "Temperature",
+    "displayNamePrefix": "温度传感器",
+    "description": "模拟的温度传感器",
+    "nodeIdPrefix": "ns=1;i=1000",
     "type": "Double",
     "dynamic": true,
     "dynamicType": "random",
     "range": [20, 30],
     "interval": 1000,
-    "deviceName": "DynamicDevice"
+    "deviceName": "DynamicDevice",
+    "count": 5
   },
   {
-    "name": "SlowCounter",
-    "displayName": "慢速计数器",
-    "description": "递增计数器，每秒增加1",
-    "nodeId": "ns=1;i=1002",
+    "namePrefix": "Pressure",
+    "displayNamePrefix": "压力传感器",
+    "description": "模拟的压力传感器",
+    "nodeIdPrefix": "ns=1;i=2000",
+    "type": "Double",
+    "dynamic": true,
+    "dynamicType": "random",
+    "range": [0, 100],
+    "interval": 2000,
+    "deviceName": "DynamicDevice",
+    "count": 3
+  },
+  {
+    "namePrefix": "Counter",
+    "displayNamePrefix": "计数器",
+    "description": "递增计数器",
+    "nodeIdPrefix": "ns=1;i=3000",
     "type": "Int32",
     "dynamic": true,
     "dynamicType": "increment",
     "initialValue": 0,
     "step": 1,
     "interval": 1000,
+    "deviceName": "DynamicDevice",
+    "count": 2
+  },
+  {
+    "name": "StaticValue",
+    "displayName": "静态值",
+    "description": "静态数值，可读写",
+    "nodeId": "ns=1;i=4001",
+    "type": "Double",
+    "dynamic": false,
+    "initialValue": 100.0,
     "deviceName": "DynamicDevice"
   }
 ]
