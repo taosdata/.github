@@ -1,6 +1,13 @@
 #!/bin/bash
 set -e
 
+# Usage: ./install_flink.sh <FLINK_VERSION> <SCALA_VERSION> <JAVA_VERSION> <INSTALL_JAVA> <INSTALL_DIR> <FLINK_USER>
+# FLINK_VERSION: flink的版本号，默认值：1.17.2
+# SCALA_VERSION: scala的版本号，默认值：2.12
+# JAVA_VERSION: Java的版本号，默认值：11
+# INSTALL_JAVA: 是否安装Java，默认值：true
+# INSTALL_DIR: influxdb的安装目录，默认值：/opt/flink
+# FLINK_USER: influxdb的用户，默认值：flink
 
 # 下表列出了不同 Flink 版本与 Java 版本的对应关系，本脚本安装java11，若要安装Flink 1.8，需要安装 Java 8。
 # | **Flink 版本**      | **最低支持的 Java 版本** | **最高支持的 Java 版本** | 说明                             |
@@ -634,10 +641,21 @@ Web UI: http://localhost:8081
 EOF
 }
 
+start_flink(){
+    systemctl start flink
+    sleep 5  # 等待服务启动
+    log_info "检查 Web UI (http://localhost:8081)..."
+    if curl -s --head --request GET http://localhost:8081 | grep "200 OK" >/dev/null; then
+        log_info "Web UI 可访问"
+    else
+        log_error "Web UI 无法访问，请检查防火墙或 JobManager 是否启动"
+    fi
+}
+
 # 主函数
 main() {
-    echo "开始安装 Apache Flink ${FLINK_VERSION}"
-    echo "=========================================="
+    log_info "开始安装 Apache Flink ${FLINK_VERSION}"
+    log_info "=========================================="
     
     # 检测操作系统
     detect_os
@@ -671,7 +689,7 @@ main() {
     # 验证
     if verify_installation; then
         show_installation_info
-        systemctl start flink
+        start_flink
     else
         log_error "安装验证失败"
         exit 1

@@ -89,7 +89,7 @@ install_via_official_script() {
     OS_TYPE=$(detect_system)
     case $OS_TYPE in
         "debian")
-            echo "deb [signed-by=/usr/share/keyrings/influxdata-archive-keyring.gpg] https://repos.influxdata.com/$(lsb_release -cs) stable" > /etc/apt/sources.list.d/influxdb.list
+            echo "deb [signed-by=/usr/share/keyrings/influxdata-archive-keyring.gpg] https://repos.influxdata.com/ubuntu $(lsb_release -cs) stable" > /etc/apt/sources.list.d/influxdb.list
             apt-get update
             if [ "$INFLUXDB_VERSION" = "latest" ]; then
                 apt-get install -y influxdb2
