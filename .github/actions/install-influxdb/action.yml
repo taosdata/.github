@@ -1,0 +1,24 @@
+name: "Setup InfluxDB"
+description: "Start a specific version of InfluxDB"
+
+inputs:
+  influxdb_version:
+    description: "The version of InfluxDB (default is 2.7.11), e.g. 1.8.7, 2.7.11, latest"
+    required: false
+    default: "2.7.11"
+  influxdb_port:
+    description: "The port of InfluxDB (default: 8086)"
+    required: false
+    default: "8086"
+  influxdb_data_dir:
+    description: "The data dir of InfluxDB (default: /var/lib/influxdb)"
+    required: false
+    default: "/var/lib/influxdb"
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install InfluxDB
+      shell: bash
+      run: |
+        sudo ${GITHUB_ACTION_PATH}/../../scripts/install_influxdb.sh "${{ inputs.influxdb_version }}" "${{ inputs.influxdb_port }}" "${{ inputs.influxdb_data_dir }}"
