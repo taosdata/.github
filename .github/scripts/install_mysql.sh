@@ -7,6 +7,7 @@ set -e
 # Usage: ./install_mysql.sh <version>
 # version: 5.5, 5.6, 5.7, 8.0
 # ubuntu系统仅支持 mysql 8.0+
+
 MYSQL_VERSION="${1:-8.0}"
 NEW_ROOT_PASSWORD="MyNewPassw0rd!"
 

@@ -1,6 +1,11 @@
 #!/bin/bash
 set -e
 
+# Usage: ./install_influxdb.sh <INFLUXDB_VERSION> <INFLUXDB_PORT> <INFLUXDB_DATA_DIR>
+# INFLUXDB_VERSION：influxdb的版本号，默认值：2.7.11
+# INFLUXDB_PORT：influxdb占用端口号，默认值：8086
+# INFLUXDB_DATA_DIR：influxdb的数据目录，默认值：/var/lib/influxdb
+
 # 配置参数
 INFLUXDB_VERSION=${1:-"2.7.11"}
 INFLUXDB_PORT=${2:-"8086"}

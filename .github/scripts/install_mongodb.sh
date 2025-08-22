@@ -2,6 +2,9 @@
 
 set -e
 
+# Usage: ./install_mongodb.sh <MONGO_VERSION>
+# MONGO_VERSION: mongoDB的版本号，默认值为 "default"
+
 MONGO_VERSION=${1:-"default"}  # 可改为 5.0、4.4 等
 OS_ID=$(grep ^ID= /etc/os-release | cut -d= -f2 | tr -d '"')
 OS_VERSION_ID=$(grep ^VERSION_ID= /etc/os-release | cut -d= -f2 | tr -d '"')

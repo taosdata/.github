@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
 
+# Usage: ./install_jmeter.sh <JMETER_VERSION> <JDBC_VERSION>
+# JMETER_VERSION: Jmeter的版本号，默认值：5.6.3
+# JDBC_VERSION: taos jdbcdirver的版本号，默认值：3.6.3
+
 JMETER_VERSION=${1:-5.6.3}
 JDBC_VERSION=${2:-3.6.3}
 JDBC_FILE_NAME="taos-jdbcdriver-${JDBC_VERSION}-dist.jar"

@@ -1,4 +1,8 @@
 #!/bin/bash
+set -e
+
+# Usage: ./install_hbase.sh <HBASE_VERSION>
+# HBASE_VERSION默认：2.4.18
 
 # 定义变量
 HBASE_VERSION="${1:-2.4.18}"

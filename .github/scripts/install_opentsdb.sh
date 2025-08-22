@@ -3,6 +3,10 @@
 
 set -e  # 遇到错误立即退出
 
+# Usage: ./install_opentsdb.sh <OPENTSDB_VERSION> <PROTOBUF_VERSION>
+# OPENTSDB_VERSION默认值：2.4.1
+# PROTOBUF_VERSION默认值：2.5.0
+
 # 配置参数
 OPENTSDB_VERSION="${1:-2.4.1}"
 PROTOBUF_VERSION="${2:-2.5.0}"
