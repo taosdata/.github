@@ -17,6 +17,10 @@ inputs:
     description: 'The download URL for Kafka, default is undefined which means it will use the official Apache Kafka download URL'
     required: false
     default: 'undefined'
+  backup_kafka:
+    description: 'Whether to backup existing Kafka installation, default is false'
+    required: false
+    default: 'false'
 
 
 runs:
@@ -25,4 +29,4 @@ runs:
     - name: Install kafka
       shell: bash
       run: |
-        sudo ${GITHUB_ACTION_PATH}/../../scripts/install_kafka.sh "${{ inputs.kafka_version }}" "${{ inputs.deploy_model }}" "${{ inputs.server_ip }}" "${{ inputs.download_url }}"
+        sudo ${GITHUB_ACTION_PATH}/../../scripts/install_kafka.sh "${{ inputs.kafka_version }}" "${{ inputs.deploy_model }}" "${{ inputs.server_ip }}" "${{ inputs.download_url }}" "${{ inputs.backup_kafka }}"

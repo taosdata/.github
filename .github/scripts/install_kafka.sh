@@ -2,15 +2,22 @@
 
 set -e
 # set -x
+
 # 版本号和部署模式可以通过命令行参数传入，默认版本为 3.9.1，默认部署模式为 kraft
-# Usage: ./install_kafka.sh <version> <deploy_mode> <server_ip> <donwload_url>
+# Usage: ./install_kafka.sh <kafka_version> <deploy_mode> <server_ip> <donwload_url> <backup_kafka>
+# kafka_version: kafka版本，默认为 3.9.1
 # deploy_mode: kraft 或 zookeeper
+# server_ip:  Kafka 广播的 IP 地址，默认为 localhost
+# donwload_url: 可选的下载 URL，如果未提供则使用默认镜像
+# backup_kafka: 是否备份kafka目录，默认为 true
 # NOTE: Kraft 模式从 Kafka 2.8.0 开始引入
 
 KAFKA_VERSION="${1:-3.9.1}"
 DEPLOY_MODE="${2:-kraft}"  # kraft 或 zookeeper
 SERVER_IP="${3:-localhost}" # Kafka 广播的 IP 地址，默认为 localhost
 DOWNLOAD_URL="${4:-undefined}" # 可选的下载 URL，如果未提供则使用默认镜像
+BACKUP_KAFKA="${5:-false}" # 是否备份kafka目录，默认为 true
+
 INSTALL_DIR="/opt/kafka"
 KAFKA_USER="kafka"
 USE_KRAFT=""
@@ -195,9 +202,14 @@ function install_kafka() {
         echo "[INFO] 检测到已有 Kafka 安装在 $INSTALL_DIR，准备卸载..."
 
         # 可选：备份旧目录
-        BACKUP_DIR="${INSTALL_DIR}_backup_$(date +%Y%m%d%H%M%S)"
-        echo "[INFO] 备份现有 Kafka 到 $BACKUP_DIR"
-        mv "$INSTALL_DIR" "$BACKUP_DIR"
+        if [ "$BACKUP_KAFKA" = "true" ]; then
+            BACKUP_DIR="${INSTALL_DIR}_backup_$(date +%Y%m%d%H%M%S)"
+            echo "[INFO] 备份现有 Kafka 到 $BACKUP_DIR"
+            mv "$INSTALL_DIR" "$BACKUP_DIR"
+        else
+            echo "[INFO] 删除现有 Kafka 目录 $INSTALL_DIR"
+            rm -rf "$INSTALL_DIR"
+        fi
     fi
 
     # ==== 下载 Kafka 安装包 ====
