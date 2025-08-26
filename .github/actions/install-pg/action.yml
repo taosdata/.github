@@ -1,0 +1,16 @@
+name: Install PostgreSQL
+description: Install PostgreSQL and start the service
+inputs:
+  pg_version:
+    description: 'PG version to install, default is 15'
+    required: false
+    default: '15'
+  
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install PostgreSQL
+      shell: bash
+      run: |
+        sudo ${GITHUB_ACTION_PATH}/../../scripts/install_pg.sh "${{ inputs.pg_version }}"

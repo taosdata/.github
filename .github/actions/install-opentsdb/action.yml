@@ -1,0 +1,25 @@
+name: Install OpenTSDB
+description: Install OpenTSDB and start the service
+inputs:
+  hbase_version:
+    description: 'Hbase version to install, default is 2.4.18'
+    required: false
+    default: '2.4.18'
+  protobuf_version:
+    description: 'protobuf version to install, default is 2.5.0'
+    required: false
+    default: '2.5.0'
+  opentsdb_version:
+    description: 'OpenTSDB version to install, default is 2.4.1. Support 2.4.0 and 2.4.1'
+    required: false
+    default: '2.4.1'
+
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install OpenTSDB
+      shell: bash
+      run: |
+        sudo ${GITHUB_ACTION_PATH}/../../scripts/install_hbase.sh "${{ inputs.hbase_version }}"
+        sudo ${GITHUB_ACTION_PATH}/../../scripts/install_opentsdb.sh "${{ inputs.opentsdb_version }}" "${{ inputs.protobuf_version }}"
