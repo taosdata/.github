@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+# set -x
 
 # Usage: ./install_hbase.sh <HBASE_VERSION>
 # HBASE_VERSION默认：2.4.18
@@ -71,7 +72,7 @@ install_jdk() {
     case "$OS_ID" in
         ubuntu|debian)
             apt-get update -y
-            apt-get install -y openjdk-8-jdk
+            NEEDRESTART_MODE=a apt-get -y install openjdk-8-jdk
             ;;
         centos|rhel)
             yum install -y java-1.8.0-openjdk-devel
@@ -118,8 +119,8 @@ function uninstall_hbase(){
     fi
 
     # 强制杀死残留的 Java 进程（HMaster/HRegionServer）
-    pkill -f "HMaster"
-    pkill -f "HRegionServer"
+    pkill -f "HMaster" || true
+    pkill -f "HRegionServer" || true
     sleep 3  # 等待进程终止
 
     # 删除 HBase 安装目录
@@ -227,9 +228,10 @@ EOF
 
     for ((i=1; i<=$max_retries; i++)); do
         # 获取 HTTP 状态码
-        ret_code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:16010/master-status)
+        ret_code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:16010/master-status) || true
         
-        if [ "$ret_code" -eq 200 ]; then
+        echo "当前状态码: $ret_code"
+        if [ "$ret_code" -eq "200" ]; then
             echo "HBase 启动成功！"
             echo "Web 界面：http://$(hostname -I | awk '{print $1}'):16010"
             exit 0
