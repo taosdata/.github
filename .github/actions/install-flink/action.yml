@@ -14,10 +14,6 @@ inputs:
     description: "The version of scala (default: 11)"
     required: false
     default: "11"
-  install_java:
-    description: "Whether to install Java (default: true)"
-    required: false
-    default: "true"
   install_dir:
     description: "The directory to install Flink (default: /opt/flink)"
     required: false
@@ -33,4 +29,4 @@ runs:
     - name: Install Flink
       shell: bash
       run: |
-        sudo ${GITHUB_ACTION_PATH}/../../scripts/install_flink.sh "${{ inputs.flink_version }}" "${{ inputs.scala_version }}" "${{ inputs.java_version }}" "${{ inputs.install_java }}" "${{ inputs.install_dir }}" "${{ inputs.flink_user }}"
+        sudo ${GITHUB_ACTION_PATH}/../../scripts/install_flink.sh "${{ inputs.flink_version }}" "${{ inputs.java_version }}" "${{ inputs.scala_version }}" "${{ inputs.install_dir }}" "${{ inputs.flink_user }}"
