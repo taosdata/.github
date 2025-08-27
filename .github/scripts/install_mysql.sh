@@ -54,12 +54,11 @@ check_compatible(){
       echo "[INFO] 系统版本: $UBUNTU_VERSION"
 
       if [[ "$MYSQL_VERSION" =~ ^5\. ]]; then
-        # case "$UBUNTU_VERSION" in
-        #     "16.04"|"18.04"|"20.04")
-        #         is_compatible=true
-        #         ;;
-        # esac
-        is_compatible=false
+        case "$UBUNTU_VERSION" in
+            "16.04"|"18.04"|"20.04")
+                is_compatible=true
+                ;;
+        esac
       elif [[ "$MYSQL_VERSION" =~ ^8\. ]]; then
         case "$UBUNTU_VERSION" in
             "16.04"|"18.04"|"20.04"|"22.04"|"24.04")
@@ -125,8 +124,30 @@ install_mysql() {
 
   case "$OS_ID" in
     ubuntu | debian)
-      apt-get update
-      apt-get install -y wget lsb-release gnupg debconf-utils
+      # 1. 清理现有的MySQL配置
+      sudo rm -f /etc/apt/sources.list.d/mysql*
+      sudo rm -f /etc/apt/trusted.gpg.d/mysql*
+
+      # 2. 创建目录结构
+      sudo mkdir -p /etc/apt/keyrings
+
+      # 3. 下载并安装GPG密钥
+      if [ -f "/etc/apt/keyrings/mysql.gpg" ]; then
+        sudo rm -f /etc/apt/keyrings/mysql.gpg
+      fi
+      curl -fsSL https://repo.mysql.com/RPM-GPG-KEY-mysql-2023 | sudo gpg --dearmor -o /etc/apt/keyrings/mysql.gpg
+
+      # 4. 添加正确的APT源
+      echo "deb [signed-by=/etc/apt/keyrings/mysql.gpg] http://repo.mysql.com/apt/ubuntu jammy mysql-$MYSQL_VERSION" | sudo tee /etc/apt/sources.list.d/mysql.list
+
+      # 5. 设置正确的权限
+      sudo chmod 644 /etc/apt/keyrings/mysql.gpg
+      sudo chmod 644 /etc/apt/sources.list.d/mysql.list
+
+      # 6. 更新APT缓存
+      sudo apt-get update
+      apt-get install -y wget lsb-release gnupg debconf-utils 
+
       wget https://dev.mysql.com/get/mysql-apt-config_0.8.24-1_all.deb
 
       # 设置非交互版本选择
