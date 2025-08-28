@@ -2,6 +2,7 @@
 
 set -e
 # set -x
+
 # 版本号可以通过命令行参数传入，默认版本为 15
 # Usage: ./install_pg.sh <version>
 
@@ -22,9 +23,21 @@ set -e
 # | 13            | 2.17+       | 是（可替代）    | 3.10+         |
 # | 12            | 2.12+       | 否            | 2.6.32+       |
 
+# 用户名: postgres
+# 密码: MyNewPassw0rd!
+# 连接命令: psql -U postgres -h localhost
+# 或: PGPASSWORD='MyNewPassw0rd!' psql -U postgres -h localhost -d postgres
+
+
 PG_VERSION="${1:-15}"
 INSTALL_DIR="/opt/kafka"
+NEW_PASSWORD="MyNewPassw0rd!"
 
+
+error_exit() {
+    echo "错误: $1" >&2
+    exit 1
+}
 
 # 用户权限级别校验
 check_privilege(){
@@ -197,12 +210,108 @@ function install_pg() {
     echo "[INFO] PostgreSQL $PG_VERSION 安装完成！"
 }
 
+alter_postgres_password() {
+    # 检查 PostgreSQL 是否安装
+    if ! command -v psql &> /dev/null; then
+        echo "PostgreSQL 未安装，请先安装 PostgreSQL"
+        exit 1
+    fi
+
+    # # 启动 PostgreSQL 服务
+    # echo "检查 PostgreSQL 服务状态..."
+    # if ! systemctl is-active --quiet postgresql; then
+    #     echo "启动 PostgreSQL 服务..."
+    #     systemctl start postgresql || echo "无法启动 PostgreSQL 服务" | exit 1
+    #     systemctl enable postgresql 2>/dev/null
+    # fi
+
+    # 查找 pg_hba.conf 文件
+    echo "查找 pg_hba.conf 配置文件..."
+    PG_HBA_CONF=$(sudo -u postgres psql -t -c "SHOW hba_file;" 2>/dev/null | tr -d ' ')
+
+    if [ -z "$PG_HBA_CONF" ] || [ ! -f "$PG_HBA_CONF" ]; then
+        # 尝试常见路径
+        COMMON_PATHS=(
+            "/var/lib/pgsql/data/pg_hba.conf"
+            "/var/lib/postgresql/*/main/pg_hba.conf"
+            "/etc/postgresql/*/main/pg_hba.conf"
+        )
+        
+        for path in "${COMMON_PATHS[@]}"; do
+            if [ -f $path ]; then
+                PG_HBA_CONF=$path
+                break
+            fi
+        done
+    fi
+
+    if [ -z "$PG_HBA_CONF" ] || [ ! -f "$PG_HBA_CONF" ]; then
+        error_exit "无法找到 pg_hba.conf 文件"
+    fi
+
+    echo "找到配置文件: $PG_HBA_CONF"
+
+    # 备份原始配置文件
+    BACKUP_FILE="${PG_HBA_CONF}.backup.$(date +%Y%m%d_%H%M%S)"
+    cp "$PG_HBA_CONF" "$BACKUP_FILE"
+    echo "已创建备份: $BACKUP_FILE"
+
+    # 修改认证方式为 md5
+    echo "修改认证方式为密码认证..."
+    sed -i 's/^local\s\+all\s\+all\s\+peer$/local   all             all                                     md5/' "$PG_HBA_CONF"
+    sed -i 's/^local\s\+all\s\+all\s\+ident$/local   all             all                                     md5/' "$PG_HBA_CONF"
+    sed -i 's/^local\s\+all\s\+all\s\+trust$/local   all             all                                     md5/' "$PG_HBA_CONF"
+
+    # 修改密码
+    echo "设置 postgres 用户密码..."
+    sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD '$NEW_PASSWORD';" 2>/dev/null || \
+    echo "警告: 无法通过 psql 设置密码，可能需要其他方式"
+
+    # 重启 PostgreSQL 使配置生效
+    echo "重启 PostgreSQL 服务..."
+    case "$OS_ID" in
+        ubuntu)
+            systemctl restart postgresql || error_exit "无法重启 PostgreSQL 服务"
+            ;;
+        centos|rhel)
+            systemctl restart "postgresql-$PG_VERSION" || error_exit "无法重启 PostgreSQL 服务"
+            ;;
+        opensuse*|sles)
+            systemctl restart postgresql || error_exit "无法重启 PostgreSQL 服务"
+            ;;
+        *)
+            echo "[ERROR] 当前系统 $OS_ID 不受支持"
+            exit 1
+            ;;
+    esac
+
+    # 验证密码是否生效
+    echo "验证密码设置..."
+    sleep 2  # 等待服务完全启动
+
+    if PGPASSWORD="$NEW_PASSWORD" psql -U postgres -h localhost -c "\q" 2>/dev/null; then
+        echo "密码设置成功！"
+        echo "认证配置已更新"
+    else
+        echo "密码验证失败，但密码可能已设置"
+        echo "请尝试手动登录: psql -U postgres -h localhost"
+    fi
+
+    echo ""
+    echo "=== 设置完成 ==="
+    echo "用户名: postgres"
+    echo "密码: $NEW_PASSWORD"
+    echo "连接命令: psql -U postgres -h localhost"
+    echo "或: PGPASSWORD='$NEW_PASSWORD' psql -U postgres -h localhost -d postgres"
+}
+
 main() {
     check_privilege
     detect_os
     uninstall_pg
     check_requirements
     install_pg
+    alter_postgres_password
 }
 
 main "$@"
