@@ -146,6 +146,10 @@ install_via_github_release() {
     tar xzf /tmp/influxdb.tar.gz -C /tmp
     
     # 移动到安装目录
+    if [ -d "/opt/influxdb" ]; then
+        rm -rf /opt/influxdb
+    fi
+
     if [[ "$INFLUXDB_VERSION" == 1.* ]]; then
         mv "/tmp/influxdb_${INFLUXDB_VERSION}_1" /opt/influxdb
     else
@@ -236,7 +240,7 @@ install_via_docker() {
 
 # 检查服务状态
 check_service_status() {
-    local max_attempts=30
+    local max_attempts=60
     local attempt=1
     
     log_info "检查 InfluxDB 服务状态..."

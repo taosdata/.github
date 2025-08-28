@@ -3,9 +3,9 @@ description: Install Mongodb And Start Service
 
 inputs:
   mongo_version:
-    description: 'MongoDB version to install'
+    description: 'MongoDB version to install, default is 6.0'
     required: false
-    default: 'default'
+    default: '6.0'
 
 runs:
   using: 'composite'

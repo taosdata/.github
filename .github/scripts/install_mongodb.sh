@@ -5,7 +5,7 @@ set -e
 # Usage: ./install_mongodb.sh <MONGO_VERSION>
 # MONGO_VERSION: mongoDB的版本号，默认值为 "default"
 
-MONGO_VERSION=${1:-"default"}  # 可改为 5.0、4.4 等
+MONGO_VERSION=${1:-"6.0"}  # 可改为 6.0、5.0、4.4 等
 OS_ID=$(grep ^ID= /etc/os-release | cut -d= -f2 | tr -d '"')
 OS_VERSION_ID=$(grep ^VERSION_ID= /etc/os-release | cut -d= -f2 | tr -d '"')
 
@@ -55,8 +55,17 @@ remove_mongodb() {
   fi
 }
 
+# 判断version1是否小于version2， 是则返回0，否则返回1
 version_lt() {
-    [ "$(printf '%s\n' "$1" "$2" | sort -V | head -n1)" != "$2" ]
+    local version1="$1"
+    local version2="$2"
+    
+    # 检查version1是否严格小于version2
+    if printf "%s\n%s" "$version1" "$version2" | sort -C -V && [ "$version1" != "$version2" ]; then
+        return 0  # true: version1 < version2
+    else
+        return 1  # false: version1 >= version2
+    fi
 }
 
 check_avx_support() {
@@ -73,9 +82,12 @@ install_mongodb_ubuntu() {
   get_mongo_version
   echo "[INFO] Installing MongoDB ${MONGO_VERSION} on Ubuntu..."
 
-  # apt purge -y mongodb-org*
-  # rm -rf /etc/mongod.conf /var/lib/mongodb /var/log/mongodb /usr/share/keyrings/mongodb-server*.gpg
-  # apt autoremove -y
+  apt-get update
+  apt-get install -y wget gnupg curl
+  
+  if [ -f "/usr/share/keyrings/mongodb-server-${MONGO_VERSION}.gpg" ]; then
+    rm -f "/usr/share/keyrings/mongodb-server-${MONGO_VERSION}.gpg"
+  fi
 
   curl -fsSL https://pgp.mongodb.com/server-${MONGO_VERSION}.asc | \
   gpg -o /usr/share/keyrings/mongodb-server-${MONGO_VERSION}.gpg --dearmor
@@ -83,8 +95,8 @@ install_mongodb_ubuntu() {
   echo "deb [ signed-by=/usr/share/keyrings/mongodb-server-${MONGO_VERSION}.gpg ] https://repo.mongodb.org/apt/ubuntu $(lsb_release -cs)/mongodb-org/${MONGO_VERSION} multiverse" | \
   tee /etc/apt/sources.list.d/mongodb-org-${MONGO_VERSION}.list
 
-  apt update
-  apt install -y mongodb-org
+  apt-get update
+  apt-get install -y mongodb-org
 
   systemctl enable mongod
   systemctl start mongod
@@ -118,9 +130,9 @@ main() {
   else
     echo "[INFO] AVX is not supported."
     if version_lt "$MONGO_VERSION" "5.0"; then
-        echo "[WARN] AVX support is not required for MongoDB versions below 5.0. MONGO_VERSION=$MONGO_VERSION, "
+        echo "[WARN] AVX support is not required for MongoDB versions below 5.0. MONGO_VERSION=$MONGO_VERSION"
     else
-        echo "[ERROR] AVX support is required for MongoDB 5.0 and above. Exiting."
+        echo "[ERROR] AVX support is required for MongoDB 5.0 and above. Exiting. MONGO_VERSION=$MONGO_VERSION"
         exit 1
     fi
   fi
