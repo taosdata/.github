@@ -1,0 +1,415 @@
+name: Deploy Superset with Docker
+description: Deploy Apache Superset using Docker with configurable Redis and database dependencies
+
+inputs:
+  # Superset 配置
+  superset-version:
+    description: 'Superset Docker image version'
+    required: false
+    default: 'latest'
+  
+  superset-port:
+    description: 'Port to expose Superset service'
+    required: false
+    default: '8088'
+  
+  superset-secret-key:
+    description: 'Secret key for Superset'
+    required: true
+  
+  # 数据库配置
+  database-type:
+    description: 'Database type (postgresql, mysql)'
+    required: true
+  
+  database-host:
+    description: 'Database host'
+    required: true
+  
+  database-port:
+    description: 'Database port'
+    required: false
+    default: '5432'
+  
+  database-name:
+    description: 'Database name'
+    required: true
+  
+  database-user:
+    description: 'Database username'
+    required: true
+  
+  database-password:
+    description: 'Database password'
+    required: true
+  
+  # Redis 配置
+  redis-host:
+    description: 'Redis host'
+    required: true
+  
+  redis-port:
+    description: 'Redis port'
+    required: false
+    default: '6379'
+  
+  redis-password:
+    description: 'Redis password (optional)'
+    required: false
+    default: ''
+  
+  redis-db:
+    description: 'Redis database number'
+    required: false
+    default: '1'
+  
+  # 部署配置
+  container-name:
+    description: 'Container name for Superset'
+    required: false
+    default: 'superset'
+  
+  network-name:
+    description: 'Docker network name'
+    required: false
+    default: 'superset-network'
+  
+  admin-username:
+    description: 'Superset admin username'
+    required: false
+    default: 'admin'
+  
+  admin-email:
+    description: 'Superset admin email'
+    required: false
+    default: 'admin@superset.com'
+  
+  admin-password:
+    description: 'Superset admin password'
+    required: true
+  
+  # 高级配置
+  enable-oauth:
+    description: 'Enable OAuth authentication'
+    required: false
+    default: 'false'
+  
+  custom-config:
+    description: 'Custom Superset configuration (base64 encoded)'
+    required: false
+    default: ''
+
+outputs:
+  superset-url:
+    description: 'URL to access Superset'
+    value: ${{ steps.deploy.outputs.superset-url }}
+  
+  container-id:
+    description: 'Container ID of deployed Superset'
+    value: ${{ steps.deploy.outputs.container-id }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Validate inputs
+      shell: bash
+      run: |
+        echo "🔍 验证输入参数..."
+        
+        # 验证数据库类型
+        if [[ "${{ inputs.database-type }}" != "postgresql" && "${{ inputs.database-type }}" != "mysql" ]]; then
+          echo "❌ 错误: database-type 必须是 'postgresql' 或 'mysql'"
+          exit 1
+        fi
+        
+        # 验证必需参数
+        if [[ -z "${{ inputs.superset-secret-key }}" ]]; then
+          echo "❌ 错误: superset-secret-key 是必需的"
+          exit 1
+        fi
+        
+        if [[ -z "${{ inputs.admin-password }}" ]]; then
+          echo "❌ 错误: admin-password 是必需的"
+          exit 1
+        fi
+        
+        echo "✅ 输入参数验证通过"
+
+    - name: Setup Docker network
+      shell: bash
+      run: |
+        echo "🌐 创建 Docker 网络..."
+        
+        # 检查网络是否已存在
+        if ! docker network ls | grep -q "${{ inputs.network-name }}"; then
+          docker network create ${{ inputs.network-name }}
+          echo "✅ 创建网络: ${{ inputs.network-name }}"
+        else
+          echo "ℹ️ 网络已存在: ${{ inputs.network-name }}"
+        fi
+
+    - name: Generate Superset configuration
+      shell: bash
+      run: |
+        echo "📝 生成 Superset 配置..."
+        
+        # 创建配置目录
+        mkdir -p ./superset-config
+        
+        # 生成数据库连接字符串
+        if [[ "${{ inputs.database-type }}" == "postgresql" ]]; then
+          DB_URI="postgresql+psycopg2://${{ inputs.database-user }}:${{ inputs.database-password }}@${{ inputs.database-host }}:${{ inputs.database-port }}/${{ inputs.database-name }}"
+        elif [[ "${{ inputs.database-type }}" == "mysql" ]]; then
+          DB_URI="mysql+pymysql://${{ inputs.database-user }}:${{ inputs.database-password }}@${{ inputs.database-host }}:${{ inputs.database-port }}/${{ inputs.database-name }}"
+        fi
+        
+        # 生成 Redis 连接字符串
+        if [[ -n "${{ inputs.redis-password }}" ]]; then
+          REDIS_URI="redis://:${{ inputs.redis-password }}@${{ inputs.redis-host }}:${{ inputs.redis-port }}/${{ inputs.redis-db }}"
+        else
+          REDIS_URI="redis://${{ inputs.redis-host }}:${{ inputs.redis-port }}/${{ inputs.redis-db }}"
+        fi
+        
+        # 生成 superset_config.py
+        cat > ./superset-config/superset_config.py << 'EOF'
+        import os
+        from datetime import timedelta
+        
+        # 数据库配置
+        SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URI')
+        
+        # Redis 配置
+        REDIS_HOST = os.environ.get('REDIS_HOST')
+        REDIS_PORT = int(os.environ.get('REDIS_PORT', 6379))
+        REDIS_DB = int(os.environ.get('REDIS_DB', 1))
+        
+        # Celery 配置
+        CELERY_CONFIG = {
+            'broker_url': os.environ.get('REDIS_URI'),
+            'imports': ('superset.sql_lab',),
+            'result_backend': os.environ.get('REDIS_URI'),
+            'worker_prefetch_multiplier': 1,
+            'task_acks_late': False,
+            'task_annotations': {
+                'sql_lab.get_sql_results': {
+                    'rate_limit': '100/s',
+                },
+            },
+        }
+        
+        # 安全配置
+        SECRET_KEY = os.environ.get('SECRET_KEY')
+        
+        # 会话配置
+        PERMANENT_SESSION_LIFETIME = timedelta(days=31)
+        
+        # 功能标志
+        FEATURE_FLAGS = {
+            'DASHBOARD_RBAC': True,
+            'ENABLE_TEMPLATE_PROCESSING': True,
+        }
+        
+        # Web 服务器配置
+        SUPERSET_WEBSERVER_PORT = 8088
+        SUPERSET_WEBSERVER_TIMEOUT = 60
+        
+        # 日志配置
+        ENABLE_TIME_ROTATE = True
+        TIME_ROTATE_LOG_LEVEL = 'INFO'
+        FILENAME = '/app/superset_home/superset.log'
+        ROLLOVER = 'midnight'
+        INTERVAL = 1
+        BACKUP_COUNT = 30
+        
+        # 缓存配置
+        CACHE_CONFIG = {
+            'CACHE_TYPE': 'redis',
+            'CACHE_DEFAULT_TIMEOUT': 300,
+            'CACHE_KEY_PREFIX': 'superset_',
+            'CACHE_REDIS_HOST': os.environ.get('REDIS_HOST'),
+            'CACHE_REDIS_PORT': int(os.environ.get('REDIS_PORT', 6379)),
+            'CACHE_REDIS_DB': int(os.environ.get('REDIS_DB', 1)),
+        }
+        
+        # 数据缓存配置
+        DATA_CACHE_CONFIG = CACHE_CONFIG
+        
+        # 如果有自定义配置，加载它
+        if os.path.exists('/app/pythonpath/custom_config.py'):
+            exec(open('/app/pythonpath/custom_config.py').read())
+        EOF
+        
+        # 如果提供了自定义配置，解码并保存
+        if [[ -n "${{ inputs.custom-config }}" ]]; then
+          echo "${{ inputs.custom-config }}" | base64 -d > ./superset-config/custom_config.py
+          echo "✅ 自定义配置已保存"
+        fi
+        
+        # 保存环境变量到文件
+        cat > ./superset-config/.env << EOF
+        DATABASE_URI=${DB_URI}
+        REDIS_URI=${REDIS_URI}
+        REDIS_HOST=${{ inputs.redis-host }}
+        REDIS_PORT=${{ inputs.redis-port }}
+        REDIS_DB=${{ inputs.redis-db }}
+        SECRET_KEY=${{ inputs.superset-secret-key }}
+        SUPERSET_ENV=production
+        EOF
+        
+        echo "✅ Superset 配置生成完成"
+
+    - name: Create initialization script
+      shell: bash
+      run: |
+        echo "📜 创建初始化脚本..."
+        
+        cat > ./superset-config/init-superset.sh << 'EOF'
+        #!/bin/bash
+        set -e
+        
+        echo "🚀 初始化 Superset..."
+        
+        # 等待数据库连接
+        echo "⏳ 等待数据库连接..."
+        python -c "
+        import time
+        import sqlalchemy as sa
+        import os
+        
+        max_retries = 30
+        retry_interval = 2
+        
+        for i in range(max_retries):
+            try:
+                engine = sa.create_engine(os.environ['DATABASE_URI'])
+                engine.connect()
+                print('✅ 数据库连接成功')
+                break
+            except Exception as e:
+                if i == max_retries - 1:
+                    print(f'❌ 数据库连接失败: {e}')
+                    exit(1)
+                print(f'⏳ 数据库连接重试 {i+1}/{max_retries}...')
+                time.sleep(retry_interval)
+        "
+        
+        # 升级数据库
+        echo "📊 升级数据库schema..."
+        superset db upgrade
+        
+        # 初始化角色和权限
+        echo "🔐 初始化角色和权限..."
+        superset init
+        
+        # 创建管理员用户
+        echo "👤 创建管理员用户..."
+        superset fab create-admin \
+            --username "${ADMIN_USERNAME}" \
+            --firstname "Superset" \
+            --lastname "Admin" \
+            --email "${ADMIN_EMAIL}" \
+            --password "${ADMIN_PASSWORD}" || true
+        
+        echo "✅ Superset 初始化完成"
+        EOF
+        
+        chmod +x ./superset-config/init-superset.sh
+        echo "✅ 初始化脚本创建完成"
+
+    - name: Deploy Superset
+      id: deploy
+      shell: bash
+      run: |
+        echo "🚀 部署 Superset 服务..."
+        
+        # 停止并删除现有容器
+        if docker ps -a | grep -q "${{ inputs.container-name }}"; then
+          echo "🛑 停止现有容器..."
+          docker stop ${{ inputs.container-name }} || true
+          docker rm ${{ inputs.container-name }} || true
+        fi
+        
+        # 启动 Superset 容器
+        echo "🐳 启动 Superset 容器..."
+        CONTAINER_ID=$(docker run -d \
+          --name ${{ inputs.container-name }} \
+          --network ${{ inputs.network-name }} \
+          -p ${{ inputs.superset-port }}:8088 \
+          -v "$(pwd)/superset-config:/app/pythonpath" \
+          --env-file ./superset-config/.env \
+          -e ADMIN_USERNAME="${{ inputs.admin-username }}" \
+          -e ADMIN_EMAIL="${{ inputs.admin-email }}" \
+          -e ADMIN_PASSWORD="${{ inputs.admin-password }}" \
+          apache/superset:${{ inputs.superset-version }} \
+          bash -c "/app/pythonpath/init-superset.sh && superset run -h 0.0.0.0 -p 8088 --with-threads --reload --debugger")
+        
+        echo "container-id=${CONTAINER_ID}" >> $GITHUB_OUTPUT
+        
+        # 等待服务启动
+        echo "⏳ 等待 Superset 服务启动..."
+        for i in {1..60}; do
+          if docker logs ${{ inputs.container-name }} 2>&1 | grep -q "Running on"; then
+            echo "✅ Superset 服务启动成功"
+            break
+          fi
+          if [ $i -eq 60 ]; then
+            echo "❌ Superset 服务启动超时"
+            docker logs ${{ inputs.container-name }}
+            exit 1
+          fi
+          sleep 5
+        done
+        
+        # 输出访问地址
+        SUPERSET_URL="http://localhost:${{ inputs.superset-port }}"
+        echo "superset-url=${SUPERSET_URL}" >> $GITHUB_OUTPUT
+        
+        echo "🎉 Superset 部署完成!"
+        echo "📱 访问地址: ${SUPERSET_URL}"
+        echo "👤 管理员账号: ${{ inputs.admin-username }}"
+
+    - name: Health check
+      shell: bash
+      run: |
+        echo "🏥 执行健康检查..."
+        
+        # 检查容器状态
+        if ! docker ps | grep -q "${{ inputs.container-name }}"; then
+          echo "❌ 容器未运行"
+          docker logs ${{ inputs.container-name }}
+          exit 1
+        fi
+        
+        # 检查服务响应
+        for i in {1..12}; do
+          if curl -f -s "http://localhost:${{ inputs.superset-port }}/health" > /dev/null; then
+            echo "✅ 健康检查通过"
+            break
+          fi
+          if [ $i -eq 12 ]; then
+            echo "❌ 健康检查失败"
+            exit 1
+          fi
+          echo "⏳ 等待服务响应... ($i/12)"
+          sleep 5
+        done
+
+    - name: Display deployment info
+      shell: bash
+      run: |
+        echo "📋 部署信息汇总:"
+        echo "=================="
+        echo "🔗 Superset URL: http://localhost:${{ inputs.superset-port }}"
+        echo "👤 管理员用户: ${{ inputs.admin-username }}"
+        echo "📧 管理员邮箱: ${{ inputs.admin-email }}"
+        echo "🐳 容器名称: ${{ inputs.container-name }}"
+        echo "🌐 网络名称: ${{ inputs.network-name }}"
+        echo "💾 数据库类型: ${{ inputs.database-type }}"
+        echo "📡 Redis 主机: ${{ inputs.redis-host }}:${{ inputs.redis-port }}"
+        echo "=================="
+        echo ""
+        echo "🛠️ 管理命令:"
+        echo "查看日志: docker logs -f ${{ inputs.container-name }}"
+        echo "进入容器: docker exec -it ${{ inputs.container-name }} bash"
+        echo "停止服务: docker stop ${{ inputs.container-name }}"
+        echo "重启服务: docker restart ${{ inputs.container-name }}"
