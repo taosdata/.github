@@ -133,20 +133,16 @@ install_jdk() {
     # 获取 Java path
     JAVA_PATH=$(dirname $(dirname $(readlink -f $(which javac))))
 
-    # 检查 .bashrc 中是否已定义 JAVA_HOME
-    if ! grep -q "export JAVA_HOME=" ~/.bashrc; then
-        {
-            echo ""
-            echo "# Set JAVA_HOME automatically"
-            echo "export JAVA_HOME=${JAVA_PATH}"
-            echo 'export PATH=$JAVA_HOME/bin:$PATH'
-        } >> ~/.bashrc
+    # 删除所有现有的 JAVA_HOME 和 PATH 相关配置
+    echo "清理 JAVA 环境变量..."
+    sed -i '/JAVA_HOME\|JRE_HOME\|PATH.*java/d' /etc/environment /etc/profile /etc/bash.bashrc ~/.bashrc ~/.bash_profile 2>/dev/null || true
 
-        echo "[INFO] 已将 JAVA_HOME 添加到 ~/.bashrc"
-    else
-        echo "[INFO] JAVA_HOME 已存在于 ~/.bashrc, 跳过添加"
-    fi
-
+    # 写入新的配置
+    cat >> /etc/profile <<EOF
+export JAVA_HOME=${JAVA_PATH}
+export PATH=\$PATH:\$JAVA_HOME/bin
+EOF
+    source /etc/profile
     echo "[INFO] Java version $jdk_ver is installed."
 }
 
