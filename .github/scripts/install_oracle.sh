@@ -64,12 +64,12 @@ uninstall_oracle() {
 install_dependencies() {
     echo "安装系统依赖..."
     case "$OS_ID" in
-        ubuntu|debian)
-            apt update
-            apt install -y alien binutils gcc make sysstat libaio1 expect
-            ;;
+        # ubuntu|debian)
+        #     apt update
+        #     apt install -y alien binutils gcc make sysstat libaio1 expect unzip
+        #     ;;
         centos|rhel)
-            yum install -y binutils gcc make sysstat libaio expect
+            yum install -y binutils gcc make sysstat libaio expect unzip
             ;;
         # opensuse-leap|sles|suse)
         #     zypper --non-interactive remove java-* || true
@@ -192,6 +192,12 @@ EOF
     echo "[INFO] 配置环境变量..."
     for user in root $ORACLE_USER; do
         echo "设置 ~/.bash_profile for $user"
+        mkdir -p /home/$user
+        if [ -f /home/$user/.bash_profile ]; then
+            mv /home/$user/.bash_profile /home/$user/.bash_profile_oracle_backup
+        else
+            touch /home/$user/.bash_profile
+        fi
         cat >> /home/$user/.bash_profile <<EOF
 export ORACLE_BASE=$ORACLE_BASE
 export ORACLE_HOME=$ORACLE_HOME
