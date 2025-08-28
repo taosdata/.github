@@ -156,6 +156,7 @@ uninstall_opentsdb(){
     echo "exit" >> "$HBASE_CMD_FILE"
 
     # 执行 hbase shell
+    source /etc/profile  # 重新加载环境变量，确保 HBASE_HOME 可用
     echo "Deleting OpenTSDB tables in HBase..."
     hbase shell "$HBASE_CMD_FILE" > /dev/null 2>&1
     

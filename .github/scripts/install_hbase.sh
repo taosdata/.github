@@ -97,7 +97,6 @@ install_jdk() {
 
     # 写入新的配置
     cat >> /etc/profile <<EOF
-# Java Environment (Auto-generated)
 export JAVA_HOME=${JAVA_HOME}
 export PATH=\$PATH:\$JAVA_HOME/bin
 EOF
@@ -176,6 +175,10 @@ function install_hbase() {
 
     # 配置 HBase 环境变量
     echo "配置 HBASE_HOME..."
+    # 删除所有现有的 HBASE_HOME 和 PATH 相关配置
+    sed -i '/export HBASE_HOME=/d' /etc/profile
+    sed -i '/export PATH=.*HBASE_HOME/d' /etc/profile
+
     cat >> /etc/profile <<EOF
 export HBASE_HOME=${HBASE_HOME}
 export PATH=\$PATH:\$HBASE_HOME/bin
