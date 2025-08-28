@@ -46,9 +46,10 @@ function expandPointsConfig(config) {
 }
 
 // 加载配置文件
-const rawPointsConfig = JSON.parse(fs.readFileSync(path.join(__dirname, "points-config.json"), "utf8"));
+const config = JSON.parse(fs.readFileSync(path.join(__dirname, "config.json"), "utf8"));
+const rawPointsConfig = config.dataPoints;
 const pointsConfig = expandPointsConfig(rawPointsConfig);
-const serverConfig = JSON.parse(fs.readFileSync(path.join(__dirname, "server-config.json"), "utf8"));
+const serverConfig = config;
 
 // 存储动态变量的当前值
 const dynamicValues = new Map();

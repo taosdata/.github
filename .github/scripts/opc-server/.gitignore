@@ -10,6 +10,10 @@ yarn-error.log*
 *.log
 *.pid
 
+# 旧的配置文件（已合并到 config.json）
+server-config.json
+points-config.json
+
 # 环境变量文件
 .env
 .env.local
