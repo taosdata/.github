@@ -98,7 +98,7 @@ uninstall_mysql() {
       yum remove -y mysql-community-server mysql-community-client mysql-community-common mysql-community-libs mysql-community-devel mysql-community-client-plugins
 
       yum-config-manager --disable mysql*-Community > /dev/null 2>&1 || true
-      yum repolist all | grep mysql
+      yum repolist all | grep mysql || true
 
       rm -rf /var/lib/mysql /etc/my.cnf
       if [ -f /var/log/mysqld.log ]; then
@@ -165,7 +165,7 @@ install_mysql() {
     centos | rhel)
       # rm -f /etc/pki/rpm-gpg/RPM-GPG-KEY-mysql
       # rpm --import https://repo.mysql.com/RPM-GPG-KEY-mysql-2023
-      yum install -y expect
+      yum install -y expect yum-utils
       yum install -y https://dev.mysql.com/get/mysql80-community-release-el7-3.noarch.rpm || true
       yum-config-manager --enable "mysql${MYSQL_VERSION/./}-community"
       yum install -y mysql-community-server  --nogpgcheck
