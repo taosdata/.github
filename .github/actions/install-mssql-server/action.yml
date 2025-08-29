@@ -1,0 +1,42 @@
+name: Install Microsoft SQL Server
+description: Install Microsoft SQL Server and start the service
+
+inputs:
+  mssql_version:
+    description: 'SQL Server version to install (2017, 2019, 2022)'
+    required: false
+    default: '2022'
+  sa_password:
+    description: 'SA user password (minimum 8 characters)'
+    required: false
+    default: 'MyStr0ng!P@ssw0rd'
+  edition:
+    description: 'Edition number (1=Evaluation, 2=Developer, 3=Express, 4=Web, 5=Standard, 6=Enterprise)'
+    required: false
+    default: '2'
+  install_dir:
+    description: 'Installation directory'
+    required: false
+    default: '/opt/mssql'
+  data_dir:
+    description: 'Data directory'
+    required: false
+    default: '/var/opt/mssql/data'
+  skip_config:
+    description: 'Skip SQL Server configuration (true/false)'
+    required: false
+    default: 'false'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install Microsoft SQL Server
+      shell: bash
+      run: |
+        sudo MSSQL_VERSION="${{ inputs.mssql_version }}" \
+             SA_PASSWORD="${{ inputs.sa_password }}" \
+             EDITION="${{ inputs.edition }}" \
+             INSTALL_DIR="${{ inputs.install_dir }}" \
+             DATA_DIR="${{ inputs.data_dir }}" \
+             SKIP_CONFIG="${{ inputs.skip_config }}" \
+             ${GITHUB_ACTION_PATH}/../../scripts/install-mssql.sh
