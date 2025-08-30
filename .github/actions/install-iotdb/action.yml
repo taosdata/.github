@@ -1,0 +1,83 @@
+name: Install Apache IoTDB
+description: Install Apache IoTDB time-series database and start the service
+
+inputs:
+  iotdb_version:
+    description: 'IoTDB version to install (default: 2.0.5)'
+    required: false
+    default: '2.0.5'
+  install_dir:
+    description: 'Installation directory (default: /opt/iotdb)'
+    required: false
+    default: '/opt/iotdb'
+  download_dir:
+    description: 'Download directory (default: /tmp/iotdb-packages)'
+    required: false
+    default: '/tmp/iotdb-packages'
+  cluster_name:
+    description: 'Cluster name (default: defaultCluster)'
+    required: false
+    default: 'defaultCluster'
+  rpc_port:
+    description: 'RPC port (default: 6667)'
+    required: false
+    default: '6667'
+  force_install:
+    description: 'Force installation even if already installed (true/false)'
+    required: false
+    default: 'false'
+  skip_download:
+    description: 'Skip download if package exists (true/false)'
+    required: false
+    default: 'false'
+  action_mode:
+    description: 'Action mode: install or uninstall (default: install)'
+    required: false
+    default: 'install'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Uninstall IoTDB (if requested)
+      if: inputs.action_mode == 'uninstall'
+      shell: bash
+      run: |
+        sudo ${GITHUB_ACTION_PATH}/../../scripts/install_iotdb.sh --uninstall-force
+    
+    - name: Install IoTDB
+      if: inputs.action_mode == 'install'
+      shell: bash
+      run: |
+        args=""
+        
+        # Build command line arguments
+        if [ "${{ inputs.iotdb_version }}" != "2.0.5" ]; then
+          args="$args --version ${{ inputs.iotdb_version }}"
+        fi
+        
+        if [ "${{ inputs.install_dir }}" != "/opt/iotdb" ]; then
+          args="$args --install-dir ${{ inputs.install_dir }}"
+        fi
+        
+        if [ "${{ inputs.download_dir }}" != "/tmp/iotdb-packages" ]; then
+          args="$args --download-dir ${{ inputs.download_dir }}"
+        fi
+        
+        if [ "${{ inputs.cluster_name }}" != "defaultCluster" ]; then
+          args="$args --cluster-name ${{ inputs.cluster_name }}"
+        fi
+        
+        if [ "${{ inputs.rpc_port }}" != "6667" ]; then
+          args="$args --rpc-port ${{ inputs.rpc_port }}"
+        fi
+        
+        if [ "${{ inputs.force_install }}" == "true" ]; then
+          args="$args --force"
+        fi
+        
+        if [ "${{ inputs.skip_download }}" == "true" ]; then
+          args="$args --skip-download"
+        fi
+        
+        # Execute installation
+        sudo ${GITHUB_ACTION_PATH}/../../scripts/install_iotdb.sh $args
