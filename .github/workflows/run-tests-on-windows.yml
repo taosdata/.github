@@ -36,7 +36,7 @@ jobs:
       WIN_COMMUNITY_ROOT: "C:\\workspace\\0\\TDinternal\\community"
       WIN_SYSTEM_TEST_ROOT: "C:\\workspace\\0\\TDinternal\\community\\tests\\system-test"
       WIN_ARMY_TEST_ROOT: "C:\\workspace\\0\\TDinternal\\community\\tests\\army"
-      WIN_VS_PATH: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat"
+      WIN_VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat"
       WIN_CPU_TYPE: "x64"
       IS_TDINTERNAL: ${{ inputs.tdinternal }}
       SPECIFIED_SOURCE_BRANCH: ${{ inputs.specified_source_branch }}
