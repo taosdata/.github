@@ -193,8 +193,8 @@ jobs:
           time /t
 
           cd %WIN_COMMUNITY_ROOT%/tests/ci
-          pip3 install -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn taospy==2.8.1
-          pip3 install -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn taos-ws-py==0.5.1
+          pip3 install -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn taospy==2.8.5
+          pip3 install -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn taos-ws-py==0.6.1
           xcopy /e/y/i/f "%WIN_INTERNAL_ROOT%\debug\build\bin\taos.dll" C:\Windows\System32
           xcopy /e/y/i/f "%WIN_INTERNAL_ROOT%\debug\build\bin\pthreadVC3.dll" C:\Windows\System32
           if exist "%WIN_INTERNAL_ROOT%\\debug\\build\\bin\\taosnative.dll" (
