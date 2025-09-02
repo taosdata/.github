@@ -205,6 +205,7 @@ jobs:
         run: |
           echo "windows ctest ..."
           time /t
+          call "%WIN_VS_PATH%" %WIN_CPU_TYPE%
           cd %WIN_INTERNAL_ROOT%\\debug
           ctest -E "pcre*|example*" || exit 7
           time /t
