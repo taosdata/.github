@@ -59,14 +59,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [linux, macos]
+        platform: [linux]
         include:
           - platform: linux
             runner_group: CI
             runner_labels: [self-hosted, Linux, X64, new-framework]
-          - platform: macos
-            runner_group: CI
-            runner_labels: [self-hosted, macOS, X64, testing]
+          # - platform: macos
+          #   runner_group: CI
+          #   runner_labels: [self-hosted, macOS, X64, testing]
           # - platform: windows
           #   runner_group: CI
           #   runner_labels: [self-hosted, Linux, X64, new-framework]
