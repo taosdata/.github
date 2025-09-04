@@ -69,7 +69,7 @@ jobs:
             runner_labels: [self-hosted, macOS, X64, testing]
           - platform: windows
             runner_group: CI
-            runner_labels: [self-hosted, Linux, X64, testing]
+            runner_labels: [self-hosted, Linux, X64, test-win]
     runs-on:
       group: ${{ matrix.runner_group }}
       labels: ${{ matrix.runner_labels }}
