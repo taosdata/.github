@@ -46,10 +46,17 @@ class TestRunner:
             f"cd {self.wkc}/test && source .venv/bin/activate && sudo TAOS_BIN_PATH={self.wk}/debug/build/bin WORK_DIR=`pwd`/yourtest DYLD_LIBRARY_PATH={self.wk}/debug/build/lib pytest --clean cases/01-DataTypes/test_datatype_bigint.py",
             "date"
         ]
+        wi_cmds = [
+            "date",
+            f"cd {self.wkc}/test && python3 ci/run_win_cases.py ci/cases.task PR-{self.utils.get_env_var('PR_NUMBER')}_{self.utils.get_env_var('GITHUB_RUN_NUMBER')} ",
+            "date"
+        ]        
         if self.platform == 'linux':
             self.utils.run_commands(linux_cmds)
         elif self.platform == 'darwin':
             self.utils.run_commands(mac_cmds)
+        elif self.platform == 'windows':
+            self.utils.run_commands(wi_cmds)
 
     def run_tdgpt_test(self):
         print(f"timeout: {self.timeout}")
