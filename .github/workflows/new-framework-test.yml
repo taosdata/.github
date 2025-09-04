@@ -59,7 +59,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: [linux, macos]
+        platform: [linux, macos, windows]
         include:
           - platform: linux
             runner_group: CI
