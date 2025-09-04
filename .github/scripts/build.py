@@ -15,6 +15,8 @@ class TestBuild:
 
         self.ZH_DOC_REPO = 'docs.taosdata.com'
         self.EN_DOC_REPO = 'docs.tdengine.com'
+        self.win_vs_path = "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat"
+        self.win_cpu_type = "x64"
 
     def docker_build(self):
         """Build TDinternal repo in docker, just for linux platform"""
@@ -55,6 +57,15 @@ class TestBuild:
             'echo "PATH=/opt/homebrew/bin:$PATH" >> $GITHUB_ENV',
             f'cd {self.wk}/debug && cmake .. -DBUILD_TEST=true -DBUILD_HTTPS=false  -DCMAKE_BUILD_TYPE=Release && make -j10'
         ]
+        windows_cmds = [
+            'time',
+            f'cd {self.wk} && rm -rf debug && mkdir debug ',
+            f'call {self.win_vs_path} {self.win_cpu_type}',
+            f'set CL=/MP8 && cd {self.wk}/debug && cmake .. -G "NMake Makefiles JOM" -DBUILD_TEST=true -DBUILD_TOOLS=true ',
+            'time',
+            'jom -j6',
+            'time'
+        ]
         if self.platform == 'linux':
             if install_dependencies:
                 self.utils.install_dependencies('linux')
@@ -64,7 +75,7 @@ class TestBuild:
                 self.utils.install_dependencies('macOS')
             self.utils.run_commands(mac_cmds)
         elif self.platform == 'windows':
-            pass
+            self.utils.run_commands(windows_cmds)
 
     def run(self):
         if self.build_type == 'docker':
