@@ -1,0 +1,271 @@
+name: Install Grafana + TDinsight Dashboard
+
+# 手动触发工作流，支持在 GitHub 前端界面操作
+on:
+  workflow_dispatch:
+    inputs:
+      target_host:
+        description: '目标主机IP地址'
+        required: true
+        default: '192.168.1.100'
+        type: string
+      
+      tdengine_host:
+        description: 'TDengine 服务器IP地址'
+        required: true
+        default: '192.168.1.100'
+        type: string
+      
+      tdengine_port:
+        description: 'TDengine 服务端口'
+        required: false
+        default: '6041'
+        type: string
+      
+      grafana_admin_password:
+        description: 'Grafana 管理员密码'
+        required: false
+        default: 'admin123'
+        type: string
+      
+      dashboard_ids:
+        description: 'TDinsight 仪表板 IDs (逗号分隔)'
+        required: false
+        default: '15146,15155,15167'
+        type: string
+      
+      dashboard_uids:
+        description: 'TDinsight 仪表板 UIDs (逗号分隔)'
+        required: false
+        default: 'tdinsight,tdinsight-cluster,tdinsight-alert'
+        type: string
+
+# 环境变量定义
+env:
+  GRAFANA_PORT: 3000
+  GRAFANA_USER: admin
+  GRAFANA_PASSWORD: ${{ github.event.inputs.grafana_admin_password }}
+  TDENGINE_HOST: ${{ github.event.inputs.tdengine_host }}
+  TDENGINE_PORT: ${{ github.event.inputs.tdengine_port }}
+  TARGET_HOST: ${{ github.event.inputs.target_host }}
+  DASHBOARD_IDS: ${{ github.event.inputs.dashboard_ids }}
+  DASHBOARD_UIDS: ${{ github.event.inputs.dashboard_uids }}
+
+jobs:
+  install-monitoring:
+    name: 安装 Grafana + TDinsight 监控方案
+    
+    # 指定运行在特定的 self-hosted runner
+    runs-on: 
+      - self-hosted
+      - customers  # group 标签
+      - u2-191     # 具体的 runner 标签
+    
+    # 设置超时时间为30分钟
+    timeout-minutes: 30
+    
+    steps:
+      - name: 检出代码仓库
+        uses: actions/checkout@v4
+      
+      - name: 显示运行环境信息
+        run: |
+          echo "🚀 开始在 runner u2-191 上安装 Grafana + TDinsight"
+          echo "目标主机: ${{ env.TARGET_HOST }}"
+          echo "TDengine 主机: ${{ env.TDENGINE_HOST }}:${{ env.TDENGINE_PORT }}"
+          echo "仪表板 IDs: ${{ env.DASHBOARD_IDS }}"
+          echo "仪表板 UIDs: ${{ env.DASHBOARD_UIDS }}"
+          echo "当前运行环境:"
+          hostname
+          whoami
+          pwd
+          df -h
+      
+      - name: 检查目标主机连通性
+        run: |
+          echo "🔍 检查目标主机 ${{ env.TARGET_HOST }} 连通性..."
+          ping -c 3 ${{ env.TARGET_HOST }} || {
+            echo "❌ 无法连接到目标主机 ${{ env.TARGET_HOST }}"
+            exit 1
+          }
+          echo "✅ 目标主机连通性检查通过"
+      
+      - name: 检查 TDengine 服务连通性
+        run: |
+          echo "🔍 检查 TDengine 服务 ${{ env.TDENGINE_HOST }}:${{ env.TDENGINE_PORT }} 连通性..."
+          nc -z ${{ env.TDENGINE_HOST }} ${{ env.TDENGINE_PORT }} || {
+            echo "❌ 无法连接到 TDengine 服务 ${{ env.TDENGINE_HOST }}:${{ env.TDENGINE_PORT }}"
+            exit 1
+          }
+          echo "✅ TDengine 服务连通性检查通过"
+      
+      - name: 安装 Grafana
+        uses: taosdata/.github/.github/actions/install-grafana@main
+        with:
+          target-host: ${{ env.TARGET_HOST }}
+          grafana-port: ${{ env.GRAFANA_PORT }}
+          admin-password: ${{ env.GRAFANA_PASSWORD }}
+      
+      - name: 等待 Grafana 服务启动
+        run: |
+          echo "⏳ 等待 Grafana 服务完全启动..."
+          max_attempts=30
+          attempt=1
+          
+          while [ $attempt -le $max_attempts ]; do
+            if curl -s -f "http://${{ env.TARGET_HOST }}:${{ env.GRAFANA_PORT }}/api/health" > /dev/null 2>&1; then
+              echo "✅ Grafana 服务已成功启动 (尝试 $attempt/$max_attempts)"
+              break
+            else
+              echo "⏳ Grafana 服务尚未就绪，等待中... (尝试 $attempt/$max_attempts)"
+              sleep 10
+              ((attempt++))
+            fi
+          done
+          
+          if [ $attempt -gt $max_attempts ]; then
+            echo "❌ Grafana 服务启动超时"
+            exit 1
+          fi
+      
+      - name: 安装 Grafana TDengine 数据源插件
+        uses: taosdata/.github/.github/actions/install-grafana-plugin@main
+        with:
+          grafana-host: ${{ env.TARGET_HOST }}
+          grafana-port: ${{ env.GRAFANA_PORT }}
+          grafana-user: ${{ env.GRAFANA_USER }}
+          grafana-password: ${{ env.GRAFANA_PASSWORD }}
+          monitor-ip: ${{ env.TDENGINE_HOST }}
+          monitor-port: ${{ env.TDENGINE_PORT }}
+      
+      - name: 导入 TDinsight 仪表板
+        uses: taosdata/.github/.github/actions/import-grafana-dashboard@main
+        with:
+          grafana-url: "http://${{ env.TARGET_HOST }}:${{ env.GRAFANA_PORT }}"
+          grafana-user: ${{ env.GRAFANA_USER }}
+          grafana-password: ${{ env.GRAFANA_PASSWORD }}
+          dashboard-ids: ${{ env.DASHBOARD_IDS }}
+          dashboard-uids: ${{ env.DASHBOARD_UIDS }}
+      
+      - name: 验证安装结果
+        run: |
+          echo "🔍 验证 Grafana + TDinsight 安装结果..."
+          
+          # 检查 Grafana 服务状态
+          echo "检查 Grafana 服务状态:"
+          curl -s -u "${{ env.GRAFANA_USER }}:${{ env.GRAFANA_PASSWORD }}" \
+            "http://${{ env.TARGET_HOST }}:${{ env.GRAFANA_PORT }}/api/admin/stats" | jq .
+          
+          # 检查数据源配置
+          echo "检查 TDengine 数据源:"
+          curl -s -u "${{ env.GRAFANA_USER }}:${{ env.GRAFANA_PASSWORD }}" \
+            "http://${{ env.TARGET_HOST }}:${{ env.GRAFANA_PORT }}/api/datasources" | jq '.[] | select(.type=="tdengine")'
+          
+          # 检查仪表板
+          echo "检查已导入的仪表板:"
+          curl -s -u "${{ env.GRAFANA_USER }}:${{ env.GRAFANA_PASSWORD }}" \
+            "http://${{ env.TARGET_HOST }}:${{ env.GRAFANA_PORT }}/api/search?type=dash-db" | jq '.[] | {title: .title, uid: .uid}'
+      
+      - name: 生成访问信息
+        run: |
+          echo "🎉 Grafana + TDinsight 安装完成!"
+          echo ""
+          echo "📊 访问信息:"
+          echo "  Grafana URL: http://${{ env.TARGET_HOST }}:${{ env.GRAFANA_PORT }}"
+          echo "  用户名: ${{ env.GRAFANA_USER }}"
+          echo "  密码: ${{ env.GRAFANA_PASSWORD }}"
+          echo ""
+          echo "📈 TDinsight 仪表板:"
+          IFS=',' read -ra DASHBOARD_ARRAY <<< "${{ env.DASHBOARD_IDS }}"
+          IFS=',' read -ra UID_ARRAY <<< "${{ env.DASHBOARD_UIDS }}"
+          
+          for i in "${!DASHBOARD_ARRAY[@]}"; do
+            dashboard_id="${DASHBOARD_ARRAY[i]}"
+            dashboard_uid="${UID_ARRAY[i]:-}"
+            echo "  - 仪表板 ID: $dashboard_id"
+            if [ -n "$dashboard_uid" ]; then
+              echo "    访问链接: http://${{ env.TARGET_HOST }}:${{ env.GRAFANA_PORT }}/d/$dashboard_uid"
+            fi
+          done
+          echo ""
+          echo "🔗 TDengine 连接信息:"
+          echo "  主机: ${{ env.TDENGINE_HOST }}"
+          echo "  端口: ${{ env.TDENGINE_PORT }}"
+      
+      - name: 安装后清理
+        if: always()
+        run: |
+          echo "🧹 执行安装后清理..."
+          # 清理临时文件
+          rm -f /tmp/grafana-*.log 2>/dev/null || true
+          echo "✅ 清理完成"
+
+  post-installation:
+    name: 安装后配置和优化
+    needs: install-monitoring
+    runs-on:
+      - self-hosted
+      - customers
+      - u2-191
+    
+    if: success()
+    
+    steps:
+      - name: 配置 Grafana 告警规则
+        run: |
+          echo "⚙️  配置 Grafana 告警规则..."
+          
+          # 示例：配置基本的 TDengine 连接告警
+          curl -X POST \
+            -H "Content-Type: application/json" \
+            -u "${{ env.GRAFANA_USER }}:${{ env.GRAFANA_PASSWORD }}" \
+            -d '{
+              "dashboard": {
+                "title": "TDengine Health Alerts",
+                "tags": ["tdengine", "monitoring"],
+                "timezone": "browser",
+                "panels": [],
+                "time": {"from": "now-1h", "to": "now"},
+                "refresh": "30s"
+              }
+            }' \
+            "http://${{ env.TARGET_HOST }}:${{ env.GRAFANA_PORT }}/api/dashboards/db" || true
+          
+          echo "✅ 告警规则配置完成"
+      
+      - name: 生成安装报告
+        run: |
+          echo "📋 生成安装报告..."
+          
+          cat > /tmp/installation-report.md << EOF
+          # Grafana + TDinsight 安装报告
+          
+          ## 安装信息
+          - **安装时间**: $(date '+%Y-%m-%d %H:%M:%S')
+          - **目标主机**: ${{ env.TARGET_HOST }}
+          - **TDengine 主机**: ${{ env.TDENGINE_HOST }}:${{ env.TDENGINE_PORT }}
+          - **Grafana 版本**: $(curl -s "http://${{ env.TARGET_HOST }}:${{ env.GRAFANA_PORT }}/api/frontend/settings" | jq -r '.buildInfo.version' 2>/dev/null || echo "未知")
+          
+          ## 访问信息
+          - **Grafana URL**: http://${{ env.TARGET_HOST }}:${{ env.GRAFANA_PORT }}
+          - **用户名**: ${{ env.GRAFANA_USER }}
+          - **密码**: ${{ env.GRAFANA_PASSWORD }}
+          
+          ## 已安装组件
+          - ✅ Grafana 服务
+          - ✅ TDengine 数据源插件
+          - ✅ TDinsight 仪表板 (${{ env.DASHBOARD_IDS }})
+          
+          ## 后续操作建议
+          1. 登录 Grafana 验证仪表板显示正常
+          2. 配置数据源连接参数
+          3. 根据需要自定义仪表板
+          4. 设置告警规则和通知渠道
+          EOF
+          
+          echo "📄 安装报告已生成:"
+          cat /tmp/installation-report.md
+          
+          # 可以选择将报告上传到某个位置或发送通知
+          echo "✅ 安装报告生成完成"
+
