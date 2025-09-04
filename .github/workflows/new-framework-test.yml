@@ -131,7 +131,7 @@ jobs:
       - name: Build docker or repo
         run: python3 build.py
         env:
-          BUILD_TYPE: ${{ matrix.platform == 'macos' && 'repo' || 'docker' }}
+          BUILD_TYPE: ${{ matrix.platform == 'linux' && 'docker' || 'repo' }}
 
       - name: Run function returns with a null pointer scan testing
         if: >
