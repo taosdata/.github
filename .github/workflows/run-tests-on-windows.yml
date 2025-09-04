@@ -45,6 +45,9 @@ jobs:
       PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
       PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
       PR_NUMBER_PULL: ${{ github.event.pull_request.number }}
+      PYTHONIOENCODING: utf-8
+      PYTHONUTF8: 1
+      LANG: en_US.UTF-8
 
     steps:
     
