@@ -56,10 +56,9 @@ jobs:
     name: 安装 Grafana + TDinsight 监控方案
     
     # 指定运行在特定的 self-hosted runner
-    runs-on: 
-      - self-hosted
-      - customers  # group 标签
-      - u2-191     # 具体的 runner 标签
+    runs-on:
+      group: customers
+      labels: u2-191
     
     # 设置超时时间为30分钟
     timeout-minutes: 30
@@ -204,9 +203,8 @@ jobs:
     name: 安装后配置和优化
     needs: install-monitoring
     runs-on:
-      - self-hosted
-      - customers
-      - u2-191
+      group: customers
+      labels: u2-191
     
     if: success()
     
