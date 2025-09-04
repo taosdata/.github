@@ -60,8 +60,7 @@ class TestBuild:
         windows_cmds = [
             'time',
             f'cd {self.wk} && rm -rf debug && mkdir debug ',
-            f'call {self.win_vs_path} {self.win_cpu_type}',
-            f'set CL=/MP8 && cd {self.wk}/debug && cmake .. -G "NMake Makefiles JOM" -DBUILD_TEST=true -DBUILD_TOOLS=true ',
+            f'call {self.win_vs_path} {self.win_cpu_type} && set CL=/MP8 && cd {self.wk}/debug && cmake .. -G "NMake Makefiles JOM" -DBUILD_TEST=true -DBUILD_TOOLS=true ',
             'time',
             'jom -j6',
             'time'
