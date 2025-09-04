@@ -48,7 +48,7 @@ class TestRunner:
         ]
         wi_cmds = [
             "date",
-            f"cd {self.wkc}/test && python3 ci/run_win_cases.py ci/cases.task PR-{self.utils.get_env_var('PR_NUMBER')}_{self.utils.get_env_var('GITHUB_RUN_NUMBER')} ",
+            f"cd {self.wkc}/test && python3 ci/run_win_cases.py ci/cases.task c:\\workspace\ci-log\\PR-{self.utils.get_env_var('PR_NUMBER')}-{self.utils.get_env_var('GITHUB_RUN_NUMBER')} ",
             "date"
         ]        
         if self.platform == 'linux':
