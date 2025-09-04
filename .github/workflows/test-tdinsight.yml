@@ -70,7 +70,7 @@ jobs:
       
       - name: 显示运行环境信息
         run: |
-          echo "🚀 开始在 runner u2-191 上安装 Grafana + TDinsight"
+          echo "开始在 runner u2-191 上安装 Grafana + TDinsight"
           echo "目标主机: ${{ env.TARGET_HOST }}"
           echo "TDengine 主机: ${{ env.TDENGINE_HOST }}:${{ env.TDENGINE_PORT }}"
           echo "仪表板 IDs: ${{ env.DASHBOARD_IDS }}"
@@ -83,7 +83,7 @@ jobs:
       
       - name: 检查目标主机连通性
         run: |
-          echo "🔍 检查目标主机 ${{ env.TARGET_HOST }} 连通性..."
+          echo "检查目标主机 ${{ env.TARGET_HOST }} 连通性..."
           ping -c 3 ${{ env.TARGET_HOST }} || {
             echo "❌ 无法连接到目标主机 ${{ env.TARGET_HOST }}"
             exit 1
@@ -92,7 +92,7 @@ jobs:
       
       - name: 检查 TDengine 服务连通性
         run: |
-          echo "🔍 检查 TDengine 服务 ${{ env.TDENGINE_HOST }}:${{ env.TDENGINE_PORT }} 连通性..."
+          echo "检查 TDengine 服务 ${{ env.TDENGINE_HOST }}:${{ env.TDENGINE_PORT }} 连通性..."
           nc -z ${{ env.TDENGINE_HOST }} ${{ env.TDENGINE_PORT }} || {
             echo "❌ 无法连接到 TDengine 服务 ${{ env.TDENGINE_HOST }}:${{ env.TDENGINE_PORT }}"
             exit 1
@@ -108,7 +108,7 @@ jobs:
       
       - name: 等待 Grafana 服务启动
         run: |
-          echo "⏳ 等待 Grafana 服务完全启动..."
+          echo "等待 Grafana 服务完全启动..."
           max_attempts=30
           attempt=1
           
@@ -117,7 +117,7 @@ jobs:
               echo "✅ Grafana 服务已成功启动 (尝试 $attempt/$max_attempts)"
               break
             else
-              echo "⏳ Grafana 服务尚未就绪，等待中... (尝试 $attempt/$max_attempts)"
+              echo "Grafana 服务尚未就绪，等待中... (尝试 $attempt/$max_attempts)"
               sleep 10
               ((attempt++))
             fi
@@ -149,7 +149,7 @@ jobs:
       
       - name: 验证安装结果
         run: |
-          echo "🔍 验证 Grafana + TDinsight 安装结果..."
+          echo "验证 Grafana + TDinsight 安装结果..."
           
           # 检查 Grafana 服务状态
           echo "检查 Grafana 服务状态:"
@@ -168,14 +168,14 @@ jobs:
       
       - name: 生成访问信息
         run: |
-          echo "🎉 Grafana + TDinsight 安装完成!"
+          echo "Grafana + TDinsight 安装完成!"
           echo ""
-          echo "📊 访问信息:"
+          echo "访问信息:"
           echo "  Grafana URL: http://${{ env.TARGET_HOST }}:${{ env.GRAFANA_PORT }}"
           echo "  用户名: ${{ env.GRAFANA_USER }}"
           echo "  密码: ${{ env.GRAFANA_PASSWORD }}"
           echo ""
-          echo "📈 TDinsight 仪表板:"
+          echo "TDinsight 仪表板:"
           IFS=',' read -ra DASHBOARD_ARRAY <<< "${{ env.DASHBOARD_IDS }}"
           IFS=',' read -ra UID_ARRAY <<< "${{ env.DASHBOARD_UIDS }}"
           
@@ -188,14 +188,14 @@ jobs:
             fi
           done
           echo ""
-          echo "🔗 TDengine 连接信息:"
+          echo "TDengine 连接信息:"
           echo "  主机: ${{ env.TDENGINE_HOST }}"
           echo "  端口: ${{ env.TDENGINE_PORT }}"
       
       - name: 安装后清理
         if: always()
         run: |
-          echo "🧹 执行安装后清理..."
+          echo "执行安装后清理..."
           # 清理临时文件
           rm -f /tmp/grafana-*.log 2>/dev/null || true
           echo "✅ 清理完成"
@@ -213,7 +213,7 @@ jobs:
     steps:
       - name: 配置 Grafana 告警规则
         run: |
-          echo "⚙️  配置 Grafana 告警规则..."
+          echo "配置 Grafana 告警规则..."
           
           # 示例：配置基本的 TDengine 连接告警
           curl -X POST \
@@ -235,7 +235,7 @@ jobs:
       
       - name: 生成安装报告
         run: |
-          echo "📋 生成安装报告..."
+          echo "生成安装报告..."
           
           cat > /tmp/installation-report.md << EOF
           # Grafana + TDinsight 安装报告
@@ -263,9 +263,8 @@ jobs:
           4. 设置告警规则和通知渠道
           EOF
           
-          echo "📄 安装报告已生成:"
+          echo "安装报告已生成:"
           cat /tmp/installation-report.md
           
           # 可以选择将报告上传到某个位置或发送通知
           echo "✅ 安装报告生成完成"
-
