@@ -113,10 +113,6 @@ jobs:
       - name: 安装 Grafana TDengine 数据源插件
         uses: taosdata/.github/.github/actions/install-grafana-plugin@main
         with:
-          grafana-host: ${{ env.TARGET_HOST }}
-          grafana-port: ${{ env.GRAFANA_PORT }}
-          grafana-user: ${{ env.GRAFANA_USER }}
-          grafana-password: ${{ env.GRAFANA_PASSWORD }}
           monitor-ip: ${{ env.TDENGINE_HOST }}
           monitor-port: ${{ env.TDENGINE_PORT }}
       
@@ -124,8 +120,6 @@ jobs:
         uses: taosdata/.github/.github/actions/import-grafana-dashboard@main
         with:
           grafana-url: "http://${{ env.TARGET_HOST }}:${{ env.GRAFANA_PORT }}"
-          grafana-user: ${{ env.GRAFANA_USER }}
-          grafana-password: ${{ env.GRAFANA_PASSWORD }}
           dashboard-ids: ${{ env.DASHBOARD_IDS }}
           dashboard-uids: ${{ env.DASHBOARD_UIDS }}
       
