@@ -183,7 +183,8 @@ class TestPreparer:
         print("Starting preparation phase...")
         try:
             # update scripts of .github repository
-            self.output_environment_info()
+            if platform.system().lower() == 'linux':
+                self.output_environment_info()
             self.prepare_repositories()
             self.update_codes()
             self.update_submodules()
