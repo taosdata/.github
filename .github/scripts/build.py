@@ -59,14 +59,11 @@ class TestBuild:
             f'cd {self.wk}/debug && cmake .. -DBUILD_TEST=true -DBUILD_HTTPS=false  -DCMAKE_BUILD_TYPE=Release && make -j10'
         ]
         windows_cmds = [
-            'time',
             # removed Unix rm -rf; we'll handle dir cleanup in Python below
             # call vcvarsall then run cmake and jom from the debug directory
             # using cmd /c so "call" and "&&" work on Windows
             f'cd {self.wk}\\debug  && call "{self.win_vs_path}" {self.win_cpu_type} && set CL=/MP8 && cmake .. -G "NMake Makefiles JOM" -DBUILD_TEST=true -DBUILD_TOOLS=true',
-            'time',
-            'cd {self.wk}\\debug  && jom -j6',
-            'time'
+            f'cd {self.wk}\\debug  && jom -j6'
         ]
         if self.platform == 'linux':
             if install_dependencies:
