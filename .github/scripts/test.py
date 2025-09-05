@@ -48,7 +48,7 @@ class TestRunner:
         ]
         windows_cmds = [
             "time",
-            f"cd {self.wkc}/test && python3 ci/run_win_cases.py ci/cases.task c:\\workspace\ci-log\\PR-{self.utils.get_env_var('PR_NUMBER')}-{self.utils.get_env_var('GITHUB_RUN_NUMBER')}"
+            f"cd {self.wkc}/test && python3 ci/run_win_cases.py ci\\cases_win.task c:\\workspace\\ci-log\\PR-{self.utils.get_env_var('PR_NUMBER')}-{self.utils.get_env_var('GITHUB_RUN_NUMBER')}"
         ]
         if self.platform == 'linux':
             self.utils.run_commands(linux_cmds)
