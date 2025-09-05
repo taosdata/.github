@@ -19,16 +19,16 @@ class TestRunner:
         self.extra_param = self.utils.get_env_var('extra_param')
 
     def run_assert_test(self):
-        cmd = f"cd {self.wkc}/test/ci && ./run_check_assert_container.sh -d {self.wkdir}",
+        cmd = f"cd {self.wkc}/test/ci && ./run_check_assert_container.sh -d {self.wkdir}"
         self.utils.run_command(cmd, silent=False)
 
     def run_void_function_test(self):
-        cmd = f"cd {self.wkc}/test/ci && ./run_check_void_container.sh -d {self.wkdir}",
+        cmd = f"cd {self.wkc}/test/ci && ./run_check_void_container.sh -d {self.wkdir}"
         self.utils.run_command(cmd, silent=False, check=False)
 
     def run_function_return_test(self):
         print(f"PR number: {self.pr_number}, run number: {self.run_number}, extra param: {self.extra_param}")
-        cmd = f"cd {self.wkc}/test/ci && ./run_scan_container.sh -d {self.wkdir} -b {self.pr_number}_{self.run_number} -f {self.wkdir}/tmp/{self.pr_number}_{self.run_number}/docs_changed.txt {self.extra_param}",
+        cmd = f"cd {self.wkc}/test/ci && ./run_scan_container.sh -d {self.wkdir} -b {self.pr_number}_{self.run_number} -f {self.wkdir}/tmp/{self.pr_number}_{self.run_number}/docs_changed.txt {self.extra_param}"
         self.utils.run_command(cmd, silent=False)
 
     def run_function_test(self):
@@ -46,16 +46,14 @@ class TestRunner:
             f"cd {self.wkc}/test && source .venv/bin/activate && sudo TAOS_BIN_PATH={self.wk}/debug/build/bin WORK_DIR=`pwd`/yourtest DYLD_LIBRARY_PATH={self.wk}/debug/build/lib pytest --clean cases/01-DataTypes/test_datatype_bigint.py",
             "date"
         ]
-        windows_cmds = [
-            "time",
-            f"cd {self.wkc}/test && python3 ci/run_win_cases.py ci/cases.task c:\\workspace\ci-log\\PR-{self.utils.get_env_var('PR_NUMBER')}-{self.utils.get_env_var('GITHUB_RUN_NUMBER')}"
-        ]
+        windows_cmds = f"cd {self.wkc}/test && python3 ci/run_win_cases.py ci/cases_win.task c:/workspace/0/ci-log/PR-{self.utils.get_env_var('PR_NUMBER')}-{self.utils.get_env_var('GITHUB_RUN_NUMBER')}"
+
         if self.platform == 'linux':
             self.utils.run_commands(linux_cmds)
         elif self.platform == 'darwin':
             self.utils.run_commands(mac_cmds)
         elif self.platform == 'windows':
-            self.utils.run_commands(windows_cmds)
+            self.utils.run_command(windows_cmds)
 
     def run_tdgpt_test(self):
         print(f"timeout: {self.timeout}")

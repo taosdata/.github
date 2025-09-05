@@ -1,10 +1,11 @@
 import os
-import sys
-import select
+import re
+import shlex
 import json
 import platform
 import threading
 import subprocess
+import sys
 from pathlib import Path
 from typing import List, Union, Optional, Dict, Any
 
@@ -105,6 +106,7 @@ class Utils:
     # --------------------------
     def set_env_var(self, name: str, value: str, env_file: Optional[Union[str, Path]] = None) -> None:
         """Set environment variable in GitHub Actions format"""
+        os.environ[name] = str(value)
         if env_file:
             self.append_to_file(env_file, f"{name}={value}\n")
         elif self.is_windows:
@@ -137,15 +139,26 @@ class Utils:
     # --------------------------
     # Command Execution
     # --------------------------
-    def _stream_reader(self, stream, stream_type):
-        """Thread function to read stream and print output"""
+    def _stream_reader(self, stream, stream_type, silent=False, log_file=None):
+        """Thread function to read stream and print output or save to log."""
         try:
-            for line in iter(stream.readline, ''):
-                if line:
-                    if stream_type == "stderr":
-                        print(line, end="", file=sys.stderr)
-                    else:
-                        print(line, end="")
+            for line in iter(stream.readline, b''):
+                try:
+                    decoded_line = line.decode('utf-8')  # Try decoding as UTF-8
+                except UnicodeDecodeError:
+                    decoded_line = line.decode('latin-1')  # Fallback to Latin-1
+
+                if decoded_line:
+                    if log_file:
+                        with open(log_file, 'a', encoding='utf-8') as f:
+                            f.write(decoded_line)
+                    if not silent:
+                        if stream_type == "stderr":
+                            print(decoded_line, end="", file=sys.stderr)
+                        else:
+                            print(decoded_line, end="")
+        except Exception as e:
+            print(f"Error reading {stream_type}: {e}", file=sys.stderr)
         finally:
             stream.close()
 
@@ -158,87 +171,88 @@ class Utils:
         silent: bool = False
     ) -> subprocess.CompletedProcess:
         """
-        Execute a command with platform-specific handling
-        Args:
-            command: Command string or list of arguments
-            cwd: Working directory
-            env: Environment variables
-            check: Raise exception on failure
-            silent: Redirect output to null device
+        Execute a command cross-platform with real-time output and handle encoding issues.
+        - If `command` is a list -> run directly (shell=False).
+        - If `command` is a str -> on Windows run via ['cmd','/c', cmd_str] (so "&&" works),
+          on POSIX run with shell=True.
+        - If cwd is None, use current working directory.
         """
-        cwd = str(self.path(cwd)) if cwd else None
-        
-        # Prepare command
-        if isinstance(command, str):
-            if self.is_windows:
-                command = command.replace('/', '\\')
-        else:
-            command = [str(arg) for arg in command]
-        
-        # Prepare output redirection
-        stdout = subprocess.DEVNULL if silent else subprocess.PIPE
-        stderr = subprocess.DEVNULL if silent else subprocess.PIPE
-        
-        try:
-            process = subprocess.Popen(
-                command,
-                cwd=cwd,
-                env=env or os.environ,
-                shell=self.shell,
-                executable=self.shell_exec,
-                stdout=stdout,
-                stderr=stderr,
-                text=True,
-                bufsize=1,
-                universal_newlines=True
-            )
-            threads = []
-            if not silent:
-                if process.stdout:
-                    t = threading.Thread(
-                        target=self._stream_reader,
-                        args=(process.stdout, "stdout"),
-                        daemon=True
-                    )
-                    t.start()
-                    threads.append(t)
-                
-                if process.stderr:
-                    t = threading.Thread(
-                        target=self._stream_reader,
-                        args=(process.stderr, "stderr"),
-                        daemon=True
-                    )
-                    t.start()
-                    threads.append(t)
-                
-            process.wait()
-            # Wait for threads to finish
-            for t in threads:
-                t.join(timeout=0.5)
-                
-            if check and process.returncode != 0:
-                raise subprocess.CalledProcessError(process.returncode, command)
-            return subprocess.CompletedProcess(
-                args=command,
-                returncode=process.returncode,
-                stdout=None,
-                stderr=None
-            )
-        except subprocess.CalledProcessError as e:
-            if not silent:
-                print(f"Command failed: {e.cmd}")
-                if e.stdout:
-                    print(f"Stdout: {e.stdout}")
-                if e.stderr:
-                    print(f"Stderr: {e.stderr}")
-            raise
+        cwd = str(self.path(cwd)) if cwd else os.getcwd()
+        env_out = env or os.environ
 
-    def run_commands(self, commands: List[str], cwd: Optional[Union[str, Path]] = None) -> None:
-        """Run multiple commands sequentially"""
-        for cmd in commands:
-            print(f"Running command: {cmd}")
-            self.run_command(cmd, cwd=cwd)
+        if isinstance(command, list):
+            proc_args = [str(x) for x in command]
+            use_shell = False
+        else:
+            cmd_str = str(command)
+            # Normalize forward/back slashes for Windows paths embedded in command
+            if self.is_windows:
+                cmd_str = cmd_str.replace('/', '\\')
+                # use cmd.exe to support "&&" in older PowerShell/cmd contexts
+                proc_args = ['cmd', '/c', cmd_str]
+                use_shell = False
+            else:
+                proc_args = cmd_str
+                use_shell = True  # allow shell features on POSIX
+
+        print(f"Running command: {proc_args} (cwd={cwd})")
+        proc = subprocess.Popen(
+            proc_args,
+            cwd=cwd,
+            env=env_out,
+            shell=use_shell,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=False  # Disable text mode to handle raw bytes
+        )
+
+        stdout_thread = threading.Thread(target=self._stream_reader, args=(proc.stdout, "stdout", silent, "stdout.log"))
+        stderr_thread = threading.Thread(target=self._stream_reader, args=(proc.stderr, "stderr", silent, "stderr.log"))
+
+        stdout_thread.start()
+        stderr_thread.start()
+        stdout_thread.join()
+        stderr_thread.join()
+
+        proc.wait()
+
+        if check and proc.returncode != 0:
+            raise subprocess.CalledProcessError(proc.returncode, proc_args)
+
+        return subprocess.CompletedProcess(args=proc_args, returncode=proc.returncode)
+
+    def run_commands(self, commands: List[Union[str, List[str], tuple]], cwd: Optional[Union[str, Path]] = None) -> None:
+        """
+        Run multiple commands.
+        Supports items:
+          - "cd <path> && git reset --hard"         -> will extract path and run command in that cwd
+          - ("git reset --hard", "/path/to/repo")   -> explicit (cmd, cwd)
+          - ['git','reset','--hard']                -> list form
+        """
+        cd_pattern = re.compile(r'^\s*cd\s+("([^"]+)"|\'([^\']+)\'|([^&;]+))\s*&&\s*(.+)$', flags=re.I)
+        for item in commands:
+            item_cwd = cwd
+            cmd = item
+            if isinstance(item, (list, tuple)) and len(item) >= 2:
+                cmd = item[0]
+                item_cwd = item[1]
+            elif isinstance(item, str):
+                m = cd_pattern.match(item)
+                if m:
+                    path = m.group(2) or m.group(3) or m.group(4)
+                    item_cwd = path.strip()
+                    cmd = m.group(5).strip()
+            print(f"Running command: {cmd} (cwd={item_cwd or os.getcwd()})")
+            # If cmd is simple and can be split safely, prefer list form on Windows
+            if self.is_windows and isinstance(cmd, str):
+                # try simple split, fallback to string (cmd /c handled in run_command)
+                try:
+                    cmd_list = shlex.split(cmd, posix=False)
+                except Exception:
+                    cmd_list = cmd
+                self.run_command(cmd_list, cwd=item_cwd)
+            else:
+                self.run_command(cmd, cwd=item_cwd)
 
     # --------------------------
     # Process Management
@@ -252,18 +266,10 @@ class Utils:
             self.run_command(f"killall {process_name}", check=False)
 
     def process_exists(self, process_name: str) -> bool:
-        """Check if process is running"""
         if self.is_windows:
-            result = self.run_command(
-                f'tasklist /FI "IMAGENAME eq {process_name}"',
-                check=False,
-                silent=True
-            )
-            return process_name.lower() in result.stdout.lower()
+            result = self.run_command(f'tasklist /FI "IMAGENAME eq {process_name}"', check=False, silent=True)
+            stdout = (result.stdout or "").lower()
+            return process_name.lower() in stdout
         else:
-            result = self.run_command(
-                f'pgrep -f "{process_name}"',
-                check=False,
-                silent=True
-            )
+            result = self.run_command(f'pgrep -f "{process_name}"', check=False, silent=True)
             return result.returncode == 0
