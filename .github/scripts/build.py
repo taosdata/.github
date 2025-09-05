@@ -63,9 +63,9 @@ class TestBuild:
             # removed Unix rm -rf; we'll handle dir cleanup in Python below
             # call vcvarsall then run cmake and jom from the debug directory
             # using cmd /c so "call" and "&&" work on Windows
-            f'call "{self.win_vs_path}" {self.win_cpu_type} && set CL=/MP8 && cmake -S "{self.wk}" -B "{self.wk}\\debug" -G "NMake Makefiles JOM" -DBUILD_TEST=true -DBUILD_TOOLS=true',
+            f'cd {self.wk}\\debug  && call "{self.win_vs_path}" {self.win_cpu_type} && set CL=/MP8 && cmake .. -G "NMake Makefiles JOM" -DBUILD_TEST=true -DBUILD_TOOLS=true',
             'time',
-            'jom -C "{wk}\\debug" -j6'.format(wk=self.wk.replace('/', '\\')),
+            'cd {self.wk}\\debug  && jom -j6',
             'time'
         ]
         if self.platform == 'linux':
