@@ -65,6 +65,17 @@ class TestBuild:
         # build english doc
         self.utils.run_command(cmd, cwd=f'{self.wkdir}/{self.EN_DOC_REPO}')
 
+    def _vcvars_env(self, vcvars_path: str, arch: str) -> dict:
+        """Run vcvarsall in a new cmd session and capture the environment it emits."""
+        cmd = f'"{vcvars_path}" {arch} && set'
+        out = subprocess.check_output(['cmd', '/c', cmd], text=True, stderr=subprocess.STDOUT)
+        env = {}
+        for line in out.splitlines():
+            if '=' in line:
+                k, v = line.split('=', 1)
+                env[k] = v
+        return env
+    
     def repo_build(self, install_dependencies=False):
         linux_cmds = [
             f'cd {self.wk} && rm -rf debug && mkdir debug && cd debug',
@@ -96,30 +107,37 @@ class TestBuild:
                 self.utils.install_dependencies('macOS')
             self.utils.run_commands(mac_cmds)
         elif self.platform == 'windows':
-            
             debug_dir = os.path.join(self.wk, 'debug')
             if os.path.isdir(debug_dir):
                 shutil.rmtree(debug_dir)
             os.makedirs(debug_dir, exist_ok=True)
-            # locate vcvarsall.bat
+
             vcvars = self._find_vcvars()
             if not vcvars:
-                raise EnvironmentError(
-                    "vcvarsall.bat not found. Ensure Visual Studio with C++ workload is installed on the runner, "
-                    "or set TestBuild.win_vs_path to the correct path. You can locate it with vswhere: "
-                    r'"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath'
-                )
+                raise EnvironmentError("vcvarsall.bat not found. Ensure Visual Studio with C++ workload is installed on the runner.")
+
+            # capture environment produced by vcvarsall, merge into current env
+            try:
+                vs_env = self._vcvars_env(vcvars, self.win_cpu_type)
+            except subprocess.CalledProcessError as e:
+                raise RuntimeError(f"Failed to run vcvarsall to obtain VS env: {e}") from e
+
+            env = os.environ.copy()
+            env.update(vs_env)
+            env['CL'] = '/MP8'  # optional: control cl parallelism
+
+            # run cmake and build using the captured env (no need to use 'call' or 'set' in the same cmd)
+            cmake_cmd = [
+                'cmake', '..',
+                '-G', 'NMake Makefiles JOM',
+                '-DBUILD_TEST=true',
+                '-DBUILD_TOOLS=true'
+            ]
+            self.utils.run_command(cmake_cmd, cwd=debug_dir, env=env, check=True)
+
+            # run jom build
+            self.utils.run_command(['jom', '-j6'], cwd=debug_dir, env=env, check=True)
             
-            # set CL env for parallel compile; child processes inherit os.environ
-            os.environ['CL'] = '/MP8'
-
-            # Run vcvarsall and cmake in one cmd session (string -> run_command will use cmd /c)
-            cmd = f'call "{vcvars}" {self.win_cpu_type} && cmake .. -G "NMake Makefiles JOM" -DBUILD_TEST=true -DBUILD_TOOLS=true'
-            self.utils.run_command(cmd, cwd=debug_dir)
-
-            # build with jom
-            self.utils.run_command('jom -j6', cwd=debug_dir)
-
     def run(self):
         if self.build_type == 'docker':
             self.docker_build()
