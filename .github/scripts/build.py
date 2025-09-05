@@ -78,11 +78,7 @@ class TestBuild:
             if os.path.isdir(debug_dir):
                 shutil.rmtree(debug_dir)
             os.makedirs(debug_dir, exist_ok=True)
-
-            # run the prepared windows commands (strings will be executed via cmd /c)
-            for c in windows_cmds:
-                # use run_command with string so run_command will dispatch to cmd /c on Windows
-                self.utils.run_command(c, cwd=self.wk)
+            self.utils.run_commands(windows_cmds)
 
     def run(self):
         if self.build_type == 'docker':
