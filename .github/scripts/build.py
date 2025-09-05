@@ -78,7 +78,7 @@ class TestBuild:
                 k, v = line.split('=', 1)
                 env[k] = v
         return env
-    def set_win_dev_env():
+    def set_win_dev_env(self):
         output = os.popen('vcvarsall.bat x64 && set').read()
 
         for line in output.splitlines():
