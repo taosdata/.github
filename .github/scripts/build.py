@@ -66,8 +66,7 @@ class TestBuild:
         self.utils.run_command(cmd, cwd=f'{self.wkdir}/{self.EN_DOC_REPO}')
 
     def _vcvars_env(self, vcvars_path: str, arch: str) -> dict:
-        """Run vcvarsall in a new cmd session and capture the environment it emits."""
-        cmd = f'"{vcvars_path}" {arch} && set CL=/MP8 '
+        cmd = f'{vcvars_path} {arch} && set CL=/MP8'
         try:
             out = subprocess.check_output(['cmd', '/c', cmd], text=True, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as e:
