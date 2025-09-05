@@ -67,8 +67,12 @@ class TestBuild:
 
     def _vcvars_env(self, vcvars_path: str, arch: str) -> dict:
         """Run vcvarsall in a new cmd session and capture the environment it emits."""
-        cmd = f'"{vcvars_path}" {arch} && set'
-        out = subprocess.check_output(['cmd', '/c', cmd], text=True, stderr=subprocess.STDOUT)
+        cmd = f'"{vcvars_path}" {arch} && set CL=/MP8 '
+        try:
+            out = subprocess.check_output(['cmd', '/c', cmd], text=True, stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError as e:
+            print(f"vcvarsall.bat failed with output:\n{e.output}")
+            raise
         env = {}
         for line in out.splitlines():
             if '=' in line:
@@ -124,7 +128,6 @@ class TestBuild:
 
             env = os.environ.copy()
             env.update(vs_env)
-            env['CL'] = '/MP8'  # optional: control cl parallelism
 
             # run cmake and build using the captured env (no need to use 'call' or 'set' in the same cmd)
             cmake_cmd = [
