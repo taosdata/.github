@@ -139,15 +139,26 @@ class Utils:
     # --------------------------
     # Command Execution
     # --------------------------
-    def _stream_reader(self, stream, stream_type):
-        """Thread function to read stream and print output"""
+    def _stream_reader(self, stream, stream_type, silent=False, log_file=None):
+        """Thread function to read stream and print output or save to log."""
         try:
-            for line in iter(stream.readline, ''):
-                if line:
-                    if stream_type == "stderr":
-                        print(line, end="", file=sys.stderr)
-                    else:
-                        print(line, end="")
+            for line in iter(stream.readline, b''):
+                try:
+                    decoded_line = line.decode('utf-8')  # Try decoding as UTF-8
+                except UnicodeDecodeError:
+                    decoded_line = line.decode('latin-1')  # Fallback to Latin-1
+
+                if decoded_line:
+                    if log_file:
+                        with open(log_file, 'a', encoding='utf-8') as f:
+                            f.write(decoded_line)
+                    if not silent:
+                        if stream_type == "stderr":
+                            print(decoded_line, end="", file=sys.stderr)
+                        else:
+                            print(decoded_line, end="")
+        except Exception as e:
+            print(f"Error reading {stream_type}: {e}", file=sys.stderr)
         finally:
             stream.close()
 
@@ -160,7 +171,7 @@ class Utils:
         silent: bool = False
     ) -> subprocess.CompletedProcess:
         """
-        Execute a command cross-platform.
+        Execute a command cross-platform with real-time output and handle encoding issues.
         - If `command` is a list -> run directly (shell=False).
         - If `command` is a str -> on Windows run via ['cmd','/c', cmd_str] (so "&&" works),
           on POSIX run with shell=True.
@@ -168,10 +179,6 @@ class Utils:
         """
         cwd = str(self.path(cwd)) if cwd else os.getcwd()
         env_out = env or os.environ
-
-        # prepare stdout/stderr
-        stdout_stream = subprocess.DEVNULL if silent else subprocess.PIPE
-        stderr_stream = subprocess.DEVNULL if silent else subprocess.PIPE
 
         if isinstance(command, list):
             proc_args = [str(x) for x in command]
@@ -193,22 +200,25 @@ class Utils:
             cwd=cwd,
             env=env_out,
             shell=use_shell,
-            stdout=stdout_stream,
-            stderr=stderr_stream,
-            text=True
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=False  # Disable text mode to handle raw bytes
         )
-        out, err = proc.communicate()
 
-        if not silent:
-            if out:
-                print(out, end="")
-            if err:
-                print(err, end="", file=sys.stderr)
+        stdout_thread = threading.Thread(target=self._stream_reader, args=(proc.stdout, "stdout", silent, "stdout.log"))
+        stderr_thread = threading.Thread(target=self._stream_reader, args=(proc.stderr, "stderr", silent, "stderr.log"))
+
+        stdout_thread.start()
+        stderr_thread.start()
+        stdout_thread.join()
+        stderr_thread.join()
+
+        proc.wait()
 
         if check and proc.returncode != 0:
-            raise subprocess.CalledProcessError(proc.returncode, proc_args, output=out, stderr=err)
+            raise subprocess.CalledProcessError(proc.returncode, proc_args)
 
-        return subprocess.CompletedProcess(args=proc_args, returncode=proc.returncode, stdout=out, stderr=err)
+        return subprocess.CompletedProcess(args=proc_args, returncode=proc.returncode)
 
     def run_commands(self, commands: List[Union[str, List[str], tuple]], cwd: Optional[Union[str, Path]] = None) -> None:
         """
