@@ -195,6 +195,7 @@ class Utils:
                 proc_args = cmd_str
                 use_shell = True  # allow shell features on POSIX
 
+        print(f"Running command: {proc_args} (cwd={cwd})")
         proc = subprocess.Popen(
             proc_args,
             cwd=cwd,
