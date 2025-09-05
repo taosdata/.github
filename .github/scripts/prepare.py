@@ -119,7 +119,7 @@ class TestPreparer:
         repo_log_name = 'community' if 'community' in str(repo_path) else 'tdinternal'
         # 拉取最新代码
         cmds = [
-            f"cd {repo_path} && git pull >/dev/null"
+            f"cd {repo_path} && git pull"
         ]
         self.utils.run_commands(cmds)
         # 记录日志
