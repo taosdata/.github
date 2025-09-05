@@ -58,13 +58,6 @@ class TestBuild:
             'echo "PATH=/opt/homebrew/bin:$PATH" >> $GITHUB_ENV',
             f'cd {self.wk}/debug && cmake .. -DBUILD_TEST=true -DBUILD_HTTPS=false  -DCMAKE_BUILD_TYPE=Release && make -j10'
         ]
-        windows_cmds = [
-            # removed Unix rm -rf; we'll handle dir cleanup in Python below
-            # call vcvarsall then run cmake and jom from the debug directory
-            # using cmd /c so "call" and "&&" work on Windows
-            f'cd {self.wk}\\debug  && call "{self.win_vs_path}" {self.win_cpu_type} && set CL=/MP8 && cmake .. -G "NMake Makefiles JOM" -DBUILD_TEST=true -DBUILD_TOOLS=true',
-            f'cd {self.wk}\\debug  && jom -j6'
-        ]
         if self.platform == 'linux':
             if install_dependencies:
                 self.utils.install_dependencies('linux')
@@ -78,7 +71,11 @@ class TestBuild:
             if os.path.isdir(debug_dir):
                 shutil.rmtree(debug_dir)
             os.makedirs(debug_dir, exist_ok=True)
-            self.utils.run_commands(windows_cmds)
+            cmd = f'call "{self.win_vs_path}" {self.win_cpu_type} && set CL=/MP8 && cmake .. -G "NMake Makefiles JOM" -DBUILD_TEST=true -DBUILD_TOOLS=true'
+            # 直接以字符串传入，utils.run_command 会在 Windows 用 cmd /c 执行
+            self.utils.run_command(cmd, cwd=debug_dir)
+            # 然后运行 jom（也可以传为字符串或列表）
+            self.utils.run_command('jom -j6', cwd=debug_dir)
 
     def run(self):
         if self.build_type == 'docker':
