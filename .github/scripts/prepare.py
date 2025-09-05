@@ -73,14 +73,19 @@ class TestPreparer:
         if not repo_path.exists():
             raise FileNotFoundError(f"Repository path not found: {repo_path}")
 
-        cmds = [
-            f"cd {repo_path} && git reset --hard",
-            f"cd {repo_path} && git clean -f",
-            f"cd {repo_path} && git remote prune origin",
-            f"cd {repo_path} && git fetch",
-            f"cd {repo_path} && git checkout {branch}"
+        git_cmds = [
+            ['git', 'reset', '--hard'],
+            ['git', 'clean', '-f', '-d', '-x'],
+            ['git', 'remote', 'prune', 'origin'],
+            ['git', 'fetch'],
+            ['git', 'checkout', branch],
         ]
-        self.utils.run_commands(cmds)
+        for cmd in git_cmds:
+            try:
+                # run_command accepts list form and runs in the given cwd (cross-platform)
+                self.utils.run_command(cmd, cwd=str(repo_path), check=True)
+            except Exception as e:
+                raise RuntimeError(f"Failed to run {' '.join(cmd)} in {repo_path}: {e}")
 
     def update_submodules(self):
         cmd = "git submodule update --init --recursive"
