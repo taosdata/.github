@@ -2,6 +2,7 @@ import os
 import platform
 from utils import Utils
 import shutil
+import subprocess
 
 class TestBuild:
     """This class provides utility functions for building TDengine or TDinternal"""
@@ -19,6 +20,34 @@ class TestBuild:
         self.win_vs_path = "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat"
         self.win_cpu_type = "x64"
 
+    def _find_vcvars(self) -> str:
+        """Try to locate vcvarsall.bat using vswhere or common install paths"""
+        # explicit configured path first
+        if os.path.isfile(self.win_vs_path):
+            return self.win_vs_path
+
+        # try vswhere (Program Files x86)
+        vswhere = os.path.join(os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)"), "Microsoft Visual Studio", "Installer", "vswhere.exe")
+        try:
+            if os.path.isfile(vswhere):
+                out = subprocess.check_output([vswhere, "-latest", "-products", "*", "-requires", "Microsoft.VisualStudio.Component.VC.Tools.x86.x64", "-property", "installationPath"], text=True).strip()
+                if out:
+                    candidate = os.path.join(out, "VC", "Auxiliary", "Build", "vcvarsall.bat")
+                    if os.path.isfile(candidate):
+                        return candidate
+        except subprocess.CalledProcessError:
+            pass
+
+        # try other common paths
+        common = [
+            r"C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat",
+            r"C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvarsall.bat"
+        ]
+        for p in common:
+            if os.path.isfile(p):
+                return p
+        return None
+    
     def docker_build(self):
         """Build TDinternal repo in docker, just for linux platform"""
         cmds = [
@@ -67,14 +96,28 @@ class TestBuild:
                 self.utils.install_dependencies('macOS')
             self.utils.run_commands(mac_cmds)
         elif self.platform == 'windows':
+            
             debug_dir = os.path.join(self.wk, 'debug')
             if os.path.isdir(debug_dir):
                 shutil.rmtree(debug_dir)
             os.makedirs(debug_dir, exist_ok=True)
-            cmd = f'call "{self.win_vs_path}" {self.win_cpu_type} && set CL=/MP8 && cmake .. -G "NMake Makefiles JOM" -DBUILD_TEST=true -DBUILD_TOOLS=true'
-            # 直接以字符串传入，utils.run_command 会在 Windows 用 cmd /c 执行
+            # locate vcvarsall.bat
+            vcvars = self._find_vcvars()
+            if not vcvars:
+                raise EnvironmentError(
+                    "vcvarsall.bat not found. Ensure Visual Studio with C++ workload is installed on the runner, "
+                    "or set TestBuild.win_vs_path to the correct path. You can locate it with vswhere: "
+                    r'"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath'
+                )
+            
+            # set CL env for parallel compile; child processes inherit os.environ
+            os.environ['CL'] = '/MP8'
+
+            # Run vcvarsall and cmake in one cmd session (string -> run_command will use cmd /c)
+            cmd = f'call "{vcvars}" {self.win_cpu_type} && cmake .. -G "NMake Makefiles JOM" -DBUILD_TEST=true -DBUILD_TOOLS=true'
             self.utils.run_command(cmd, cwd=debug_dir)
-            # 然后运行 jom（也可以传为字符串或列表）
+
+            # build with jom
             self.utils.run_command('jom -j6', cwd=debug_dir)
 
     def run(self):
