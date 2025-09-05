@@ -1,6 +1,7 @@
 import os
 import platform
 from utils import Utils
+import shutil
 
 class TestBuild:
     """This class provides utility functions for building TDengine or TDinternal"""
@@ -59,10 +60,12 @@ class TestBuild:
         ]
         windows_cmds = [
             'time',
-            f'cd {self.wk} && rm -rf debug && mkdir debug ',
-            f'call {self.win_vs_path} {self.win_cpu_type} && set CL=/MP8 && cd {self.wk}/debug && cmake .. -G "NMake Makefiles JOM" -DBUILD_TEST=true -DBUILD_TOOLS=true ',
+            # removed Unix rm -rf; we'll handle dir cleanup in Python below
+            # call vcvarsall then run cmake and jom from the debug directory
+            # using cmd /c so "call" and "&&" work on Windows
+            f'call "{self.win_vs_path}" {self.win_cpu_type} && set CL=/MP8 && cmake -S "{self.wk}" -B "{self.wk}\\debug" -G "NMake Makefiles JOM" -DBUILD_TEST=true -DBUILD_TOOLS=true',
             'time',
-            'jom -j6',
+            'jom -C "{wk}\\debug" -j6'.format(wk=self.wk.replace('/', '\\')),
             'time'
         ]
         if self.platform == 'linux':
@@ -74,7 +77,15 @@ class TestBuild:
                 self.utils.install_dependencies('macOS')
             self.utils.run_commands(mac_cmds)
         elif self.platform == 'windows':
-            self.utils.run_commands(windows_cmds)
+            debug_dir = os.path.join(self.wk, 'debug')
+            if os.path.isdir(debug_dir):
+                shutil.rmtree(debug_dir)
+            os.makedirs(debug_dir, exist_ok=True)
+
+            # run the prepared windows commands (strings will be executed via cmd /c)
+            for c in windows_cmds:
+                # use run_command with string so run_command will dispatch to cmd /c on Windows
+                self.utils.run_command(c, cwd=self.wk)
 
     def run(self):
         if self.build_type == 'docker':
