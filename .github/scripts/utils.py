@@ -105,6 +105,7 @@ class Utils:
     # --------------------------
     def set_env_var(self, name: str, value: str, env_file: Optional[Union[str, Path]] = None) -> None:
         """Set environment variable in GitHub Actions format"""
+        os.environ[name] = str(value)
         if env_file:
             self.append_to_file(env_file, f"{name}={value}\n")
         elif self.is_windows:
@@ -167,72 +168,33 @@ class Utils:
             silent: Redirect output to null device
         """
         cwd = str(self.path(cwd)) if cwd else None
-        
-        # Prepare command
-        if isinstance(command, str):
-            if self.is_windows:
-                command = command.replace('/', '\\')
+        use_shell = isinstance(command, str)
+        if use_shell:
+            cmd = command.replace('/', '\\') if self.is_windows else command
+            executable = self.shell_exec if self.is_windows else None
         else:
-            command = [str(arg) for arg in command]
-        
-        # Prepare output redirection
-        stdout = subprocess.DEVNULL if silent else subprocess.PIPE
-        stderr = subprocess.DEVNULL if silent else subprocess.PIPE
-        
-        try:
-            process = subprocess.Popen(
-                command,
-                cwd=cwd,
-                env=env or os.environ,
-                shell=self.shell,
-                executable=self.shell_exec,
-                stdout=stdout,
-                stderr=stderr,
-                text=True,
-                bufsize=1,
-                universal_newlines=True
-            )
-            threads = []
-            if not silent:
-                if process.stdout:
-                    t = threading.Thread(
-                        target=self._stream_reader,
-                        args=(process.stdout, "stdout"),
-                        daemon=True
-                    )
-                    t.start()
-                    threads.append(t)
-                
-                if process.stderr:
-                    t = threading.Thread(
-                        target=self._stream_reader,
-                        args=(process.stderr, "stderr"),
-                        daemon=True
-                    )
-                    t.start()
-                    threads.append(t)
-                
-            process.wait()
-            # Wait for threads to finish
-            for t in threads:
-                t.join(timeout=0.5)
-                
-            if check and process.returncode != 0:
-                raise subprocess.CalledProcessError(process.returncode, command)
-            return subprocess.CompletedProcess(
-                args=command,
-                returncode=process.returncode,
-                stdout=None,
-                stderr=None
-            )
-        except subprocess.CalledProcessError as e:
-            if not silent:
-                print(f"Command failed: {e.cmd}")
-                if e.stdout:
-                    print(f"Stdout: {e.stdout}")
-                if e.stderr:
-                    print(f"Stderr: {e.stderr}")
-            raise
+            cmd = [str(arg) for arg in command]
+            executable = None
+
+        proc = subprocess.Popen(
+            cmd,
+            cwd=cwd,
+            env=(env or os.environ),
+            shell=use_shell,
+            executable=executable,
+            stdout=(subprocess.PIPE if not silent else subprocess.DEVNULL),
+            stderr=(subprocess.PIPE if not silent else subprocess.DEVNULL),
+            text=True
+        )
+        out, err = proc.communicate()
+        if not silent:
+            if out:
+                print(out, end="")
+            if err:
+                print(err, end="", file=sys.stderr)
+        if check and proc.returncode != 0:
+            raise subprocess.CalledProcessError(proc.returncode, cmd, output=out, stderr=err)
+        return subprocess.CompletedProcess(args=cmd, returncode=proc.returncode, stdout=out, stderr=err)
 
     def run_commands(self, commands: List[str], cwd: Optional[Union[str, Path]] = None) -> None:
         """Run multiple commands sequentially"""
@@ -252,18 +214,10 @@ class Utils:
             self.run_command(f"killall {process_name}", check=False)
 
     def process_exists(self, process_name: str) -> bool:
-        """Check if process is running"""
         if self.is_windows:
-            result = self.run_command(
-                f'tasklist /FI "IMAGENAME eq {process_name}"',
-                check=False,
-                silent=True
-            )
-            return process_name.lower() in result.stdout.lower()
+            result = self.run_command(f'tasklist /FI "IMAGENAME eq {process_name}"', check=False, silent=True)
+            stdout = (result.stdout or "").lower()
+            return process_name.lower() in stdout
         else:
-            result = self.run_command(
-                f'pgrep -f "{process_name}"',
-                check=False,
-                silent=True
-            )
+            result = self.run_command(f'pgrep -f "{process_name}"', check=False, silent=True)
             return result.returncode == 0
