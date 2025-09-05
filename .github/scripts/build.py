@@ -66,7 +66,7 @@ class TestBuild:
         self.utils.run_command(cmd, cwd=f'{self.wkdir}/{self.EN_DOC_REPO}')
 
     def _vcvars_env(self, vcvars_path: str, arch: str) -> dict:
-        cmd = f'{vcvars_path} {arch} && set CL=/MP8'
+        cmd = f'{vcvars_path} {arch} && set'
         try:
             out = subprocess.check_output(['cmd', '/c', cmd], text=True, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as e:
@@ -78,7 +78,14 @@ class TestBuild:
                 k, v = line.split('=', 1)
                 env[k] = v
         return env
-    
+    def set_win_dev_env():
+        output = os.popen('vcvarsall.bat x64 && set').read()
+
+        for line in output.splitlines():
+            pair = line.split("=", 1)
+            if (len(pair) >= 2):
+                os.environ[pair[0]] = pair[1]
+
     def repo_build(self, install_dependencies=False):
         linux_cmds = [
             f'cd {self.wk} && rm -rf debug && mkdir debug && cd debug',
@@ -115,19 +122,7 @@ class TestBuild:
                 shutil.rmtree(debug_dir)
             os.makedirs(debug_dir, exist_ok=True)
 
-            vcvars = self._find_vcvars()
-            if not vcvars:
-                raise EnvironmentError("vcvarsall.bat not found. Ensure Visual Studio with C++ workload is installed on the runner.")
-
-            # capture environment produced by vcvarsall, merge into current env
-            try:
-                vs_env = self._vcvars_env(vcvars, self.win_cpu_type)
-            except subprocess.CalledProcessError as e:
-                raise RuntimeError(f"Failed to run vcvarsall to obtain VS env: {e}") from e
-
-            env = os.environ.copy()
-            env.update(vs_env)
-
+            self.set_win_dev_env()
             # run cmake and build using the captured env (no need to use 'call' or 'set' in the same cmd)
             cmake_cmd = [
                 'cmake', '..',
@@ -135,11 +130,11 @@ class TestBuild:
                 '-DBUILD_TEST=true',
                 '-DBUILD_TOOLS=true'
             ]
-            self.utils.run_command(cmake_cmd, cwd=debug_dir, env=env, check=True)
+            self.utils.run_command(cmake_cmd, cwd=debug_dir, check=True)
 
             # run jom build
-            self.utils.run_command(['jom', '-j6'], cwd=debug_dir, env=env, check=True)
-            
+            self.utils.run_command(['jom', '-j6'], cwd=debug_dir, check=True)
+
     def run(self):
         if self.build_type == 'docker':
             self.docker_build()
