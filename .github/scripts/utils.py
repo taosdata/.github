@@ -195,11 +195,14 @@ class Utils:
                 proc_args = cmd_str
                 use_shell = True  # allow shell features on POSIX
 
+        executable = self.shell_exec if self.is_linux else None
+
         proc = subprocess.Popen(
             proc_args,
             cwd=cwd,
             env=env_out,
             shell=use_shell,
+            executable=executable,  # Only set for Linux
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=False  # Disable text mode to handle raw bytes
