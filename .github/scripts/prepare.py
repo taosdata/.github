@@ -106,7 +106,7 @@ class TestPreparer:
         # 拉取最新代码
         cmds = [
             f"cd {repo_path} && git remote prune origin",
-            f"cd {repo_path} && git pull > /dev/null"
+            f"cd {repo_path} && git pull "
         ]
         self.utils.run_commands(cmds)
         # 记录日志
@@ -194,7 +194,12 @@ class TestPreparer:
             print("Preparation phase completed successfully.")
             return True
         except Exception as e:
-            print(f"Error during preparation: {str(e)}")
+            import traceback
+            traceback.print_exc()  # prints full stack + exception
+            # If it's a CalledProcessError, also print captured stdout/stderr
+            if isinstance(e, subprocess.CalledProcessError):
+                print("Standard Output:", e.output)
+                print("Standard Error:", e.stderr)
             return False
 
 if __name__ == '__main__':
