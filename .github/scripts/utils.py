@@ -1,6 +1,6 @@
 import os
-import sys
-import select
+import re
+import shlex
 import json
 import platform
 import threading
@@ -159,48 +159,88 @@ class Utils:
         silent: bool = False
     ) -> subprocess.CompletedProcess:
         """
-        Execute a command with platform-specific handling
-        Args:
-            command: Command string or list of arguments
-            cwd: Working directory
-            env: Environment variables
-            check: Raise exception on failure
-            silent: Redirect output to null device
+        Execute a command cross-platform.
+        - If `command` is a list -> run directly (shell=False).
+        - If `command` is a str -> on Windows run via ['cmd','/c', cmd_str] (so "&&" works),
+          on POSIX run with shell=True.
+        - If cwd is None, use current working directory.
         """
-        cwd = str(self.path(cwd)) if cwd else None
-        use_shell = isinstance(command, str)
-        if use_shell:
-            cmd = command.replace('/', '\\') if self.is_windows else command
-            executable = self.shell_exec if self.is_windows else None
+        cwd = str(self.path(cwd)) if cwd else os.getcwd()
+        env_out = env or os.environ
+
+        # prepare stdout/stderr
+        stdout_stream = subprocess.DEVNULL if silent else subprocess.PIPE
+        stderr_stream = subprocess.DEVNULL if silent else subprocess.PIPE
+
+        if isinstance(command, list):
+            proc_args = [str(x) for x in command]
+            use_shell = False
         else:
-            cmd = [str(arg) for arg in command]
-            executable = None
+            cmd_str = str(command)
+            # Normalize forward/back slashes for Windows paths embedded in command
+            if self.is_windows:
+                cmd_str = cmd_str.replace('/', '\\')
+                # use cmd.exe to support "&&" in older PowerShell/cmd contexts
+                proc_args = ['cmd', '/c', cmd_str]
+                use_shell = False
+            else:
+                proc_args = cmd_str
+                use_shell = True  # allow shell features on POSIX
 
         proc = subprocess.Popen(
-            cmd,
+            proc_args,
             cwd=cwd,
-            env=(env or os.environ),
+            env=env_out,
             shell=use_shell,
-            executable=executable,
-            stdout=(subprocess.PIPE if not silent else subprocess.DEVNULL),
-            stderr=(subprocess.PIPE if not silent else subprocess.DEVNULL),
+            stdout=stdout_stream,
+            stderr=stderr_stream,
             text=True
         )
         out, err = proc.communicate()
+
         if not silent:
             if out:
                 print(out, end="")
             if err:
                 print(err, end="", file=sys.stderr)
-        if check and proc.returncode != 0:
-            raise subprocess.CalledProcessError(proc.returncode, cmd, output=out, stderr=err)
-        return subprocess.CompletedProcess(args=cmd, returncode=proc.returncode, stdout=out, stderr=err)
 
-    def run_commands(self, commands: List[str], cwd: Optional[Union[str, Path]] = None) -> None:
-        """Run multiple commands sequentially"""
-        for cmd in commands:
-            print(f"Running command: {cmd}")
-            self.run_command(cmd, cwd=cwd)
+        if check and proc.returncode != 0:
+            raise subprocess.CalledProcessError(proc.returncode, proc_args, output=out, stderr=err)
+
+        return subprocess.CompletedProcess(args=proc_args, returncode=proc.returncode, stdout=out, stderr=err)
+
+    def run_commands(self, commands: List[Union[str, List[str], tuple]], cwd: Optional[Union[str, Path]] = None) -> None:
+        """
+        Run multiple commands.
+        Supports items:
+          - "cd <path> && git reset --hard"         -> will extract path and run command in that cwd
+          - ("git reset --hard", "/path/to/repo")   -> explicit (cmd, cwd)
+          - ['git','reset','--hard']                -> list form
+        """
+        cd_pattern = re.compile(r'^\s*cd\s+("([^"]+)"|\'([^\']+)\'|([^&;]+))\s*&&\s*(.+)$', flags=re.I)
+        for item in commands:
+            item_cwd = cwd
+            cmd = item
+            if isinstance(item, (list, tuple)) and len(item) >= 2:
+                cmd = item[0]
+                item_cwd = item[1]
+            elif isinstance(item, str):
+                m = cd_pattern.match(item)
+                if m:
+                    path = m.group(2) or m.group(3) or m.group(4)
+                    item_cwd = path.strip()
+                    cmd = m.group(5).strip()
+            print(f"Running command: {cmd} (cwd={item_cwd or os.getcwd()})")
+            # If cmd is simple and can be split safely, prefer list form on Windows
+            if self.is_windows and isinstance(cmd, str):
+                # try simple split, fallback to string (cmd /c handled in run_command)
+                try:
+                    cmd_list = shlex.split(cmd, posix=False)
+                except Exception:
+                    cmd_list = cmd
+                self.run_command(cmd_list, cwd=item_cwd)
+            else:
+                self.run_command(cmd, cwd=item_cwd)
 
     # --------------------------
     # Process Management
