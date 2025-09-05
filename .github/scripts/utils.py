@@ -5,6 +5,7 @@ import json
 import platform
 import threading
 import subprocess
+import sys
 from pathlib import Path
 from typing import List, Union, Optional, Dict, Any
 
