@@ -108,7 +108,7 @@ delete_specific_version() {
         echo "Maven Package: $PACKAGE_NAME, target version: $target_version"
     else
         # NPM包删除hotfix版本，将最后的.0替换为-hotfix0
-        target_version=$(echo "$version_to_delete" | sed 's/\.0$/-hotfix0/')
+        target_version=$(echo "$version_to_delete" | sed 's/\.\([0-9]\+\)$/-hotfix\1/')
         echo "NPM Package: @${PACKAGE_SCOPE}/${PACKAGE_NAME}, target version: $target_version"
     fi
     echo "=================================================="
