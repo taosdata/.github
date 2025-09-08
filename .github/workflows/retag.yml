@@ -54,7 +54,13 @@ jobs:
       - name: Recreate Tag
         run: |
           # 拉取最新代码
-          git pull
+          echo "Pulling latest changes from ${{ inputs.ref }} branch"
+          git fetch origin ${{ inputs.ref }}
+          git reset --hard origin/${{ inputs.ref }}
+          
+          # 显示当前commit信息
+          echo "Current commit:"
+          git log -1 --oneline
           
           # 重新打 tag 触发 Release
           echo "Creating new tag: ${{ inputs.tag_name }}"
@@ -64,3 +70,4 @@ jobs:
           git push origin ${{ inputs.tag_name }}
           
           echo "Tag ${{ inputs.tag_name }} has been recreated successfully"
+          echo "Tag points to commit: $(git rev-parse HEAD)"
