@@ -1,0 +1,66 @@
+name: Tag Management Workflow
+
+on:
+  workflow_call:
+    inputs:
+      repository:
+        description: 'Target repository to manage tags'
+        required: true
+        type: string
+      tag_name:
+        description: 'Tag name to recreate'
+        required: true
+        type: string
+      ref:
+        description: 'Branch or commit to checkout'
+        required: false
+        type: string
+        default: 'main'
+    secrets:
+      workflow_pat:
+        description: 'GitHub PAT for repository access'
+        required: true
+
+jobs:
+  manage-tags:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.repository }}
+          ref: ${{ inputs.ref }}
+          token: ${{ secrets.workflow_pat }}
+          fetch-depth: 0
+
+      - name: Delete Local and Remote Tag
+        run: |
+          # 删除本地仓库的 tag
+          if git tag -l | grep -q "^${{ inputs.tag_name }}$"; then
+            echo "Deleting local tag: ${{ inputs.tag_name }}"
+            git tag --delete ${{ inputs.tag_name }}
+          else
+            echo "Local tag ${{ inputs.tag_name }} does not exist"
+          fi
+          
+          # 删除 GitHub 仓库的 tag
+          if git ls-remote --tags origin | grep -q "refs/tags/${{ inputs.tag_name }}"; then
+            echo "Deleting remote tag: ${{ inputs.tag_name }}"
+            git push origin --delete ${{ inputs.tag_name }}
+          else
+            echo "Remote tag ${{ inputs.tag_name }} does not exist"
+          fi
+
+      - name: Recreate Tag
+        run: |
+          # 拉取最新代码
+          git pull
+          
+          # 重新打 tag 触发 Release
+          echo "Creating new tag: ${{ inputs.tag_name }}"
+          git tag ${{ inputs.tag_name }}
+          
+          echo "Pushing new tag: ${{ inputs.tag_name }}"
+          git push origin ${{ inputs.tag_name }}
+          
+          echo "Tag ${{ inputs.tag_name }} has been recreated successfully"
