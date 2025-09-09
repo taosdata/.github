@@ -53,15 +53,15 @@ function remove_existing_tdengine() {
     echo "TDengine installation detected, proceeding with removal..."
     
     # Run rmtao if it exists
-    if command -v rmtao &> /dev/null; then
-        echo "Running rmtao to remove TDengine..."
+    if command -v rmtaos &> /dev/null; then
+        echo "Running rmtaos to remove TDengine..."
         # Provide both responses: 'y' and the confirmation text
         {
             echo "y"
             echo "I confirm that I would like to delete all data, log and configuration files"
-        } | rmtao
+        } | rmtaos
     else
-        echo "rmtao command not found"
+        echo "rmtaos command not found"
     fi
     
     echo "Existing TDengine installation and data removed."
