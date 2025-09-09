@@ -80,6 +80,7 @@ function construct_download_url() {
         else
             # Use old package name format for versions < 3.3.7.0
             echo "${DOWNLOAD_URL}/TDengine/${MAJOR_VERSION}/v${VERSION}/enterprise/TDengine-enterprise-${VERSION}-Linux-x64.tar.gz"
+        fi
     elif [[ "$DOWNLOAD_URL" == *"assets-download"* ]]; then
         if version_ge_3370 "$VERSION"; then
             echo "Not supported for assets-download URL for versions >=3.3.7.0. Please use download center."
