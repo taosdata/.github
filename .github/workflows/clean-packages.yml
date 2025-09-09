@@ -21,6 +21,11 @@ on:
         required: true
         type: string
         default: '10'
+      specific_version:
+        description: "Specific version to delete (optional)"
+        required: false
+        type: string
+        default: ''
     secrets:
       WORKFLOW_PAT:
         description: "GitHub PAT with packages permission"
@@ -43,13 +48,25 @@ jobs:
           PACKAGE_TYPE="${{ inputs.package_type }}"
           GROUP_ID="${{ inputs.group_id }}"
           KEEP_DAYS="${{ inputs.keep_days }}"
+          SPECIFIC_VERSION="${{ inputs.specific_version }}"
           chmod +x ./.github/scripts/clean_packages.sh
 
-          echo "Cleaning Package: @${PACKAGE_SCOPE}/${PACKAGE_NAME}"
-          ./.github/scripts/clean_packages.sh \
-              -t "$PACKAGE_TYPE" \
-              -g "$GROUP_ID" \
-              -n "$PACKAGE_NAME" \
-              -s "$PACKAGE_SCOPE" \
-              -d "$KEEP_DAYS" \
-              -a ${{ secrets.WORKFLOW_PAT }}
+          if [ -n "$SPECIFIC_VERSION" ]; then
+            echo "Deleting specific version: $SPECIFIC_VERSION"
+            ./.github/scripts/clean_packages.sh \
+                -t "$PACKAGE_TYPE" \
+                -g "$GROUP_ID" \
+                -n "$PACKAGE_NAME" \
+                -s "$PACKAGE_SCOPE" \
+                -a ${{ secrets.WORKFLOW_PAT }} \
+                -v "$SPECIFIC_VERSION"
+          else
+            echo "Cleaning Package: @${PACKAGE_SCOPE}/${PACKAGE_NAME}"
+            ./.github/scripts/clean_packages.sh \
+                -t "$PACKAGE_TYPE" \
+                -g "$GROUP_ID" \
+                -n "$PACKAGE_NAME" \
+                -s "$PACKAGE_SCOPE" \
+                -d "$KEEP_DAYS" \
+                -a ${{ secrets.WORKFLOW_PAT }}
+          fi
