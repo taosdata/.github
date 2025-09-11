@@ -168,7 +168,7 @@ center_json=$(cat <<EOF
 {
     "taosd": {
         "fqdn": ${cluster_fqdn},
-        "spec": {"firstEP": "${cluster_dnode_shell_array[0]}:6030","secondEp": "${cluster_dnode_shell_array[1]}:6030"}
+        "spec": {"firstEP": "${cluster_dnode_shell_array[0]}:6030"}
     },
     "taosadapter": {
         "fqdn": ${cluster_fqdn},
