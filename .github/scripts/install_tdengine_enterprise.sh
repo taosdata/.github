@@ -26,7 +26,7 @@ function display_help() {
 # Function to validate input parameters
 function validate_parameters() {
     if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
-        echo "::error ::Invalid number of parameters."
+        echo "::error::Invalid number of parameters."
         display_help
     fi
 }
@@ -95,7 +95,7 @@ function construct_download_url() {
             exit 1
         fi
     else
-        echo "::error ::Invalid download URL. It must contain either 'nas' or 'assets-download'."
+        echo "::error::Invalid download URL. It must contain either 'nas' or 'assets-download'."
         exit 1
     fi
 }
@@ -124,7 +124,7 @@ function download_tdengine() {
     fi
 
     if ! wget -O "$OUTPUT_FILE" "$URL"; then
-        echo "::error ::Failed to download TDengine from $URL"
+        echo "::error::Failed to download TDengine from $URL"
         exit 1
     fi
 
@@ -142,7 +142,7 @@ function extract_tdengine() {
     fi
     
     if ! tar -xzvf "$PACKAGE_FILE" -C ${WORK_DIR}; then
-        echo "::error ::Failed to extract TDengine archive"
+        echo "::error::Failed to extract TDengine archive"
         exit 1
     fi
 }
@@ -157,7 +157,7 @@ function install_tdengine() {
     fi
     
     cd "$INSTALL_DIR" || {
-        echo "::error ::Failed to enter TDengine directory"
+        echo "::error::Failed to enter TDengine directory"
         exit 1
     }
     ./install.sh -e no
