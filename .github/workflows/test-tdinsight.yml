@@ -5,15 +5,15 @@ on:
   workflow_dispatch:
     inputs:
       target_host:
-        description: '目标主机IP地址'
+        description: 'Grafana 主机 IP 地址'
         required: true
-        default: '192.168.1.100'
+        default: '192.168.1.230'
         type: string
       
       tdengine_host:
-        description: 'TDengine 服务器IP地址'
+        description: 'TDengine 服务器 IP 地址'
         required: true
-        default: '192.168.1.100'
+        default: '192.168.1.230'
         type: string
       
       tdengine_port:
