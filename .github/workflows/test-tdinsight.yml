@@ -31,13 +31,13 @@ on:
       dashboard_ids:
         description: 'TDinsight 仪表板 IDs (逗号分隔)'
         required: false
-        default: '15146,15155,15167'
+        default: '20631,18180'
         type: string
       
       dashboard_uids:
         description: 'TDinsight 仪表板 UIDs (逗号分隔)'
         required: false
-        default: 'tdinsight,tdinsight-cluster,tdinsight-alert'
+        default: 'td_ds_01,td_ds_02'
         type: string
 
 # 环境变量定义
@@ -56,10 +56,9 @@ jobs:
     name: 安装 Grafana + TDinsight 监控方案
     
     # 指定运行在特定的 self-hosted runner
-    runs-on: 
-      - self-hosted
-      - customers  # group 标签
-      - u2-191     # 具体的 runner 标签
+    runs-on:
+      group: customers
+      labels: u2-191
     
     # 设置超时时间为30分钟
     timeout-minutes: 30
@@ -81,23 +80,6 @@ jobs:
           pwd
           df -h
       
-      - name: 检查目标主机连通性
-        run: |
-          echo "检查目标主机 ${{ env.TARGET_HOST }} 连通性..."
-          ping -c 3 ${{ env.TARGET_HOST }} || {
-            echo "❌ 无法连接到目标主机 ${{ env.TARGET_HOST }}"
-            exit 1
-          }
-          echo "✅ 目标主机连通性检查通过"
-      
-      - name: 检查 TDengine 服务连通性
-        run: |
-          echo "检查 TDengine 服务 ${{ env.TDENGINE_HOST }}:${{ env.TDENGINE_PORT }} 连通性..."
-          nc -z ${{ env.TDENGINE_HOST }} ${{ env.TDENGINE_PORT }} || {
-            echo "❌ 无法连接到 TDengine 服务 ${{ env.TDENGINE_HOST }}:${{ env.TDENGINE_PORT }}"
-            exit 1
-          }
-          echo "✅ TDengine 服务连通性检查通过"
       
       - name: 安装 Grafana
         uses: taosdata/.github/.github/actions/install-grafana@main
@@ -131,10 +113,6 @@ jobs:
       - name: 安装 Grafana TDengine 数据源插件
         uses: taosdata/.github/.github/actions/install-grafana-plugin@main
         with:
-          grafana-host: ${{ env.TARGET_HOST }}
-          grafana-port: ${{ env.GRAFANA_PORT }}
-          grafana-user: ${{ env.GRAFANA_USER }}
-          grafana-password: ${{ env.GRAFANA_PASSWORD }}
           monitor-ip: ${{ env.TDENGINE_HOST }}
           monitor-port: ${{ env.TDENGINE_PORT }}
       
@@ -142,8 +120,6 @@ jobs:
         uses: taosdata/.github/.github/actions/import-grafana-dashboard@main
         with:
           grafana-url: "http://${{ env.TARGET_HOST }}:${{ env.GRAFANA_PORT }}"
-          grafana-user: ${{ env.GRAFANA_USER }}
-          grafana-password: ${{ env.GRAFANA_PASSWORD }}
           dashboard-ids: ${{ env.DASHBOARD_IDS }}
           dashboard-uids: ${{ env.DASHBOARD_UIDS }}
       
@@ -204,9 +180,8 @@ jobs:
     name: 安装后配置和优化
     needs: install-monitoring
     runs-on:
-      - self-hosted
-      - customers
-      - u2-191
+      group: customers
+      labels: u2-191
     
     if: success()
     
