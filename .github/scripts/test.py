@@ -24,7 +24,7 @@ class TestRunner:
 
     def run_void_function_test(self):
         cmd = f"cd {self.wkc}/test/ci && ./run_check_void_container.sh -d {self.wkdir}"
-        self.utils.run_command(cmd, silent=False, check=False)
+        self.utils.run_command(cmd, silent=False)
 
     def run_function_return_test(self):
         print(f"PR number: {self.pr_number}, run number: {self.run_number}, extra param: {self.extra_param}")
