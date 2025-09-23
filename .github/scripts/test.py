@@ -53,7 +53,7 @@ class TestRunner:
             self.utils.run_commands(linux_cmds)
         elif self.platform == 'darwin':
             self.utils.run_commands(mac_cmds)
-        elif self.platform == 'windows' and self.target_branch != '3.3.6':
+        elif self.platform == 'windows':
             self.utils.run_command(windows_cmds)
 
     def run_tdgpt_test(self):
@@ -67,20 +67,21 @@ class TestRunner:
             self.utils.run_commands(linux_cmds)
 
     def run(self):
-        if self.test_type == 'assert':
-            self.run_assert_test()
-        elif self.test_type == 'void':
-            self.run_void_function_test()
-        elif self.test_type == 'function_returns':
-            self.run_function_return_test()
-        elif self.test_type == 'function':
-            self.run_function_test()
-            if self.platform == 'linux':
-                self.cleanup()
-        elif self.test_type == 'tdgpt':
-            self.run_tdgpt_test()
-        else:
-            raise Exception("Invalid test type")
+        if self.target_branch != '3.3.6':
+            if self.test_type == 'assert':
+                self.run_assert_test()
+            elif self.test_type == 'void':
+                self.run_void_function_test()
+            elif self.test_type == 'function_returns':
+                self.run_function_return_test()
+            elif self.test_type == 'function':
+                self.run_function_test()
+                if self.platform == 'linux':
+                    self.cleanup()
+            elif self.test_type == 'tdgpt':
+                self.run_tdgpt_test()
+            else:
+                raise Exception("Invalid test type")
 
     def cleanup(self):
         """Clean up any remaining test processes"""

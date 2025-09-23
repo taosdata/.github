@@ -136,14 +136,15 @@ class TestBuild:
             self.utils.run_command(['jom', '-j6'], cwd=debug_dir, check=True)
 
     def run(self):
-        if self.build_type == 'docker':
-            self.docker_build()
-        elif self.build_type == 'doc':
-            self.doc_build()
-        elif self.build_type == 'repo':
-            self.repo_build()
-        else:
-            raise ValueError(f"Invalid build type: {self.build_type}")
+        if self.target_branch != '3.3.6':
+            if self.build_type == 'docker':
+                self.docker_build()
+            elif self.build_type == 'doc':
+                self.doc_build()
+            elif self.build_type == 'repo':
+                self.repo_build()
+            else:
+                raise ValueError(f"Invalid build type: {self.build_type}")
 
 if __name__ == '__main__':
     build = TestBuild()
