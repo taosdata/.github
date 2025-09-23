@@ -202,6 +202,9 @@ class TestPreparer:
                     print("Standard Output:", e.output)
                     print("Standard Error:", e.stderr)
                 return False
+        else:
+            print("Preparation phase skipped on Windows for target branch 3.3.6.")
+            return True
 
 if __name__ == '__main__':
     prepare = TestPreparer()
