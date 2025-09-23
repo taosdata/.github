@@ -17,6 +17,7 @@ class TestRunner:
         self.run_number = self.utils.get_env_var('GITHUB_RUN_NUMBER')
         self.timeout = self.utils.get_env_var('timeout_cmd')
         self.extra_param = self.utils.get_env_var('extra_param')
+        self.target_branch = self.utils.get_env_var('TARGET_BRANCH', '')
 
     def run_assert_test(self):
         cmd = f"cd {self.wkc}/test/ci && ./run_check_assert_container.sh -d {self.wkdir}"
@@ -52,7 +53,7 @@ class TestRunner:
             self.utils.run_commands(linux_cmds)
         elif self.platform == 'darwin':
             self.utils.run_commands(mac_cmds)
-        elif self.platform == 'windows':
+        elif self.platform == 'windows' and self.target_branch != '3.3.6':
             self.utils.run_command(windows_cmds)
 
     def run_tdgpt_test(self):

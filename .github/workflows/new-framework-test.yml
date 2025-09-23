@@ -108,7 +108,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: 'taosdata/.github'
-          ref: 'main'
+          ref: 'enh/remove-3.3.6-win-test'
           fetch-depth: 0
 
       - name: Prepare the environment
