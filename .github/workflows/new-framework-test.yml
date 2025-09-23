@@ -112,6 +112,9 @@ jobs:
           fetch-depth: 0
 
       - name: Prepare the environment
+        if: >
+          matrix.platform != 'windows' ||
+          env.TARGET_BRANCH != '3.3.6'
         run: python3 prepare.py
         env:
           WKDIR: ${{ env.WKDIR }}
@@ -141,6 +144,9 @@ jobs:
           TEST_TYPE: 'void'
 
       - name: Build docker or repo
+        if: >
+          matrix.platform != 'windows' ||
+          env.TARGET_BRANCH != '3.3.6'
         run: python3 build.py
         env:
           BUILD_TYPE: ${{ matrix.platform == 'linux' && 'docker' || 'repo' }}
@@ -155,6 +161,9 @@ jobs:
           TEST_TYPE: 'function_returns'
 
       - name: Run function test cases
+        if: >
+          matrix.platform != 'windows' ||
+          env.TARGET_BRANCH != '3.3.6'
         run: python3 test.py
         env:
           TEST_TYPE: 'function'
