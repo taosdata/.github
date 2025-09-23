@@ -112,9 +112,6 @@ jobs:
           fetch-depth: 0
 
       - name: Prepare the environment
-        if: >
-          matrix.platform != 'windows' ||
-          env.TARGET_BRANCH != '3.3.6'
         run: python3 prepare.py
         env:
           WKDIR: ${{ env.WKDIR }}

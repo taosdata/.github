@@ -181,7 +181,10 @@ class TestPreparer:
     def run(self):
         """Execute preparation steps"""
         print("Starting preparation phase...")
-        if platform.system().lower() != 'windows' or self.target_branch != '3.3.6':
+        if platform.system().lower() == 'windows' and self.target_branch == '3.3.6':
+            print("Preparation phase skipped on Windows for target branch 3.3.6.")
+            return True
+        else:
             try:
                 # update scripts of .github repository
                 if platform.system().lower() == 'linux':
@@ -202,9 +205,6 @@ class TestPreparer:
                     print("Standard Output:", e.output)
                     print("Standard Error:", e.stderr)
                 return False
-        else:
-            print("Preparation phase skipped on Windows for target branch 3.3.6.")
-            return True
 
 if __name__ == '__main__':
     prepare = TestPreparer()
