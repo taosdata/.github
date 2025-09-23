@@ -181,26 +181,27 @@ class TestPreparer:
     def run(self):
         """Execute preparation steps"""
         print("Starting preparation phase...")
-        try:
-            # update scripts of .github repository
-            if platform.system().lower() == 'linux':
-                self.output_environment_info()
-            self.prepare_repositories()
-            self.update_codes()
-            self.update_submodules()
-            if platform.system().lower() == 'linux':
-                self.outut_file_no_doc_change()
-                self.get_testing_params()
-            print("Preparation phase completed successfully.")
-            return True
-        except Exception as e:
-            import traceback
-            traceback.print_exc()  # prints full stack + exception
-            # If it's a CalledProcessError, also print captured stdout/stderr
-            if isinstance(e, subprocess.CalledProcessError):
-                print("Standard Output:", e.output)
-                print("Standard Error:", e.stderr)
-            return False
+        if platform.system().lower() != 'windows' or self.target_branch != '3.3.6':
+            try:
+                # update scripts of .github repository
+                if platform.system().lower() == 'linux':
+                    self.output_environment_info()
+                self.prepare_repositories()
+                self.update_codes()
+                self.update_submodules()
+                if platform.system().lower() == 'linux':
+                    self.outut_file_no_doc_change()
+                    self.get_testing_params()
+                print("Preparation phase completed successfully.")
+                return True
+            except Exception as e:
+                import traceback
+                traceback.print_exc()  # prints full stack + exception
+                # If it's a CalledProcessError, also print captured stdout/stderr
+                if isinstance(e, subprocess.CalledProcessError):
+                    print("Standard Output:", e.output)
+                    print("Standard Error:", e.stderr)
+                return False
 
 if __name__ == '__main__':
     prepare = TestPreparer()
