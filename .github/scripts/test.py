@@ -17,7 +17,6 @@ class TestRunner:
         self.run_number = self.utils.get_env_var('GITHUB_RUN_NUMBER')
         self.timeout = self.utils.get_env_var('timeout_cmd')
         self.extra_param = self.utils.get_env_var('extra_param')
-        self.target_branch = self.utils.get_env_var('TARGET_BRANCH', '')
 
     def run_assert_test(self):
         cmd = f"cd {self.wkc}/test/ci && ./run_check_assert_container.sh -d {self.wkdir}"
