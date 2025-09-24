@@ -168,3 +168,5 @@ jobs:
         run: python3 test.py
         env:
           TEST_TYPE: 'coverage'
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
