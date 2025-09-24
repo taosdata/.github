@@ -64,6 +64,24 @@ class TestRunner:
         ]
         if self.platform == 'linux':
             self.utils.run_commands(linux_cmds)
+            
+    def run_coverage_test(self):
+        print(f"PR number: {self.pr_number}, run number: {self.run_number}")
+        print(f"timeout: {self.timeout}")
+        
+        branch_id = f"PR-{self.pr_number}_{self.run_number}"
+        
+        cmd_parts = [
+            f"cd {self.wkc}/test/ci",
+            f"./run_coverage_container.sh",
+            f"-d {self.wkdir}",
+            f"-b {branch_id}"
+        ]
+        
+        cmd = " && ".join(cmd_parts[:2])
+        
+        print(f"Running coverage test with command: {cmd}")
+        self.utils.run_command(cmd, silent=False)
 
     def run(self):
         if self.test_type == 'assert':
@@ -78,6 +96,8 @@ class TestRunner:
                 self.cleanup()
         elif self.test_type == 'tdgpt':
             self.run_tdgpt_test()
+        elif self.test_type == 'coverage':
+            self.run_coverage_test()
         else:
             raise Exception("Invalid test type")
 
