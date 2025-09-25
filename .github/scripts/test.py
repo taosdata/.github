@@ -68,22 +68,25 @@ class TestRunner:
     def run_coverage_test(self):
         print(f"PR number: {self.pr_number}, run number: {self.run_number}")
         print(f"timeout: {self.timeout}")
+        print(f"extra param: {self.extra_param}")
         
         branch_id = f"PR-{self.pr_number}_{self.run_number}"
         
-        cmd_parts = [
+        cmd = [
             f"cd {self.wkc}/test/ci",
             f"./run_coverage_container.sh",
             f"-d {self.wkdir}",
             f"-b {branch_id}"
         ]
         
-        cmd = " && ".join(cmd_parts[:2])
+        if self.extra_param:
+            cmd += f" {self.extra_param}"
         
         print(f"Running coverage test with command: {cmd}")
         self.utils.run_command(cmd, silent=False)
 
     def run(self):
+        print(f"Test type: '{self.test_type}'") 
         if self.test_type == 'assert':
             self.run_assert_test()
         elif self.test_type == 'void':
@@ -99,7 +102,7 @@ class TestRunner:
         elif self.test_type == 'coverage':
             self.run_coverage_test()
         else:
-            raise Exception("Invalid test type")
+            raise Exception(f"Invalid test type: '{self.test_type}'")
 
     def cleanup(self):
         """Clean up any remaining test processes"""
