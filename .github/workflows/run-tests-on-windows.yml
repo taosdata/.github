@@ -227,8 +227,8 @@ jobs:
           cd %WIN_SYSTEM_TEST_ROOT%
           echo "testing ..."
           python3 test-win.py ci
-          if %ERRORLEVEL% == 8 (
-             echo "Test script returned error code 8"
+          if %ERRORLEVEL% neq 0 (
+             echo "Test script failed with error code %ERRORLEVEL%"
              exit 1
           )
           time /t
@@ -236,11 +236,13 @@ jobs:
           echo "testing ..."
           xcopy /e/y/i/f "%WIN_SYSTEM_TEST_ROOT%\\test-win.py" .
           python3 test-win.py ci
-          del /f /q test-win.py
-          if %ERRORLEVEL% == 8 (
-            echo "Test script returned error code 8"
+          if %ERRORLEVEL% neq 0 (
+            del /f /q test-win.py
+            echo "Test script failed with error code %ERRORLEVEL%"
+            time /t
             exit 1
           )
+          del /f /q test-win.py
           time /t
         shell: cmd
         
