@@ -68,7 +68,6 @@ class TestRunner:
     def run_coverage_test(self):
         print(f"PR number: {self.pr_number}, run number: {self.run_number}")
         print(f"timeout: {self.timeout}")
-        print(f"extra param: {self.extra_param}")
         
         branch_id = f"PR-{self.pr_number}_{self.run_number}"
         
