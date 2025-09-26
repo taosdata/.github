@@ -71,12 +71,7 @@ class TestRunner:
         
         branch_id = f"PR-{self.pr_number}_{self.run_number}"
         
-        cmd = [
-            f"cd {self.wkc}/test/ci",
-            f"./run_coverage_container.sh",
-            f"-d {self.wkdir}",
-            f"-b {branch_id}"
-        ]
+        cmd = f"cd {self.wkc}/test/ci && ./run_coverage_container.sh -d {self.wkdir} -b {branch_id}"
         
         print(f"Running coverage test with command: {cmd}")
         self.utils.run_command(cmd, silent=False)
