@@ -79,9 +79,6 @@ class TestRunner:
             f"-b {branch_id}"
         ]
         
-        if self.extra_param:
-            cmd += f" {self.extra_param}"
-        
         print(f"Running coverage test with command: {cmd}")
         self.utils.run_command(cmd, silent=False)
 
