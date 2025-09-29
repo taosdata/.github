@@ -46,7 +46,7 @@ class TestRunner:
             f"cd {self.wkc}/test && source .venv/bin/activate && sudo TAOS_BIN_PATH={self.wk}/debug/build/bin WORK_DIR=`pwd`/yourtest DYLD_LIBRARY_PATH={self.wk}/debug/build/lib pytest --clean cases/01-DataTypes/test_datatype_bigint.py",
             "date"
         ]
-        windows_cmds = f"cd {self.wkc}/test && python3 ci/run_win_cases.py ci/cases_win.task c:/workspace/0/ci-log/PR-{self.utils.get_env_var('PR_NUMBER')}-{self.utils.get_env_var('GITHUB_RUN_NUMBER')}"
+        windows_cmds = f"cd {self.wkc}/test && cp {self.wkc}/../debug/build/bin/taos.dll C:\Windows\System32 && cp {self.wkc}/../debug/build/bin/pthreadVC3.dll C:\Windows\System32 && cp {self.wkc}/../debug/build/bin/taosnative.dll C:\Windows\System32 && python3 ci/run_win_cases.py ci/cases_win.task c:/workspace/0/ci-log/PR-{self.utils.get_env_var('PR_NUMBER')}-{self.utils.get_env_var('GITHUB_RUN_NUMBER')}"
 
         if self.platform == 'linux':
             self.utils.run_commands(linux_cmds)
