@@ -27,7 +27,7 @@ jobs:
   run-tests-on-linux:
     runs-on: 
       group: CI
-      labels: [self-hosted, Linux, X64, new-framework]
+      labels: [self-hosted, Linux, X64, testing]
     
     timeout-minutes: 200
 
