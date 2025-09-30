@@ -242,7 +242,7 @@ class Utils:
                     path = m.group(2) or m.group(3) or m.group(4)
                     item_cwd = path.strip()
                     cmd = m.group(5).strip()
-            print(f"Running command: {cmd} (cwd={item_cwd or os.getcwd()})")
+            
             # If cmd is simple and can be split safely, prefer list form on Windows
             if self.is_windows and isinstance(cmd, str):
                 # try simple split, fallback to string (cmd /c handled in run_command)
