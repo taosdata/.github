@@ -68,10 +68,15 @@ class TestRunner:
     def run_coverage_test(self):
         print(f"PR number: {self.pr_number}, run number: {self.run_number}")
         print(f"timeout: {self.timeout}")
+        
+        test_log_id = f"PR-{self.pr_number}_{self.run_number}_{datetime.now().strftime('%Y%m%d-%H%M%S')}"
+        test_log_dir = f"{self.wkdir}/log/{test_log_id}"
+    
         branch_id = self.utils.get_env_var('TARGET_BRANCH')
         print(f"Target branch: {branch_id}")
+        print(f"Test log directory: {test_log_dir}")
         
-        cmd = f"cd {self.wkc}/test/ci && ./run_coverage_container.sh -d {self.wkdir} -b {branch_id}"
+        cmd = f"cd {self.wkc}/test/ci && ./run_coverage_container.sh -d {self.wkdir} -b {branch_id} -l {test_log_dir}"
         
         print(f"Running coverage test with command: {cmd}")
         self.utils.run_command(cmd, silent=False)
