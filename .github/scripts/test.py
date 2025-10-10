@@ -1,6 +1,8 @@
 import os
 import platform
 import json
+import glob
+from datetime import datetime
 from pathlib import Path
 from utils import Utils
 
@@ -65,12 +67,53 @@ class TestRunner:
         if self.platform == 'linux':
             self.utils.run_commands(linux_cmds)
             
+    def find_latest_test_log_dir(self):
+        log_base_dir = f"{self.wkdir}/log"
+        if not os.path.exists(log_base_dir):
+            print(f"No existing test log directory found: {log_base_dir}")
+            return None
+        
+        pattern1 = f"PR-{self.pr_number}_{self.run_number}_*"
+        search_pattern1 = os.path.join(log_base_dir, pattern1)
+        matching_dirs1 = glob.glob(search_pattern1)
+        
+        pattern2 = f"PR-{self.pr_number}_*"
+        search_pattern2 = os.path.join(log_base_dir, pattern2)
+        matching_dirs2 = glob.glob(search_pattern2)
+        
+        print(f"Pattern1 ({pattern1}): Found {len(matching_dirs1)} cases directory")
+        print(f"Pattern2 ({pattern2}): Found {len(matching_dirs2)} cases directory")
+        
+        matching_dirs = matching_dirs1 if matching_dirs1 else matching_dirs2
+        
+        if not matching_dirs:
+            print("No existing test log directory found")
+            return None
+        
+        matching_dirs.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+        
+        for i, dir_path in enumerate(matching_dirs):
+            mtime = os.path.getmtime(dir_path)
+            mtime_str = datetime.fromtimestamp(mtime).strftime('%Y-%m-%d %H:%M:%S')
+            cases_exists = os.path.exists(os.path.join(dir_path, "cases"))
+            print(f"  {i+1}. {os.path.basename(dir_path)} (data: {mtime_str}, cases dir: {'cases_exists' if cases_exists else 'cases_not_exists'})")
+        
+        latest_dir = matching_dirs[0]
+        print(f"latest_dir: {latest_dir}")
+        
+        return latest_dir
+            
     def run_coverage_test(self):
         print(f"PR number: {self.pr_number}, run number: {self.run_number}")
         print(f"timeout: {self.timeout}")
         
-        test_log_id = f"PR-{self.pr_number}_{self.run_number}_{datetime.now().strftime('%Y%m%d-%H%M%S')}"
-        test_log_dir = f"{self.wkdir}/log/{test_log_id}"
+        test_log_dir = self.find_latest_test_log_dir()
+        
+        if test_log_dir:
+            print(f"Found test log directory: {test_log_dir}")
+        else:
+            print("No existing test log directory found, coverage test will only use basic debug directory")
+            test_log_dir = ""
     
         branch_id = self.utils.get_env_var('TARGET_BRANCH')
         print(f"Target branch: {branch_id}")
