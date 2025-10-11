@@ -119,7 +119,7 @@ jobs:
       - name: Prepare the environment
         if: matrix.platform == 'windows'
         shell: cmd
-        run: python3 --version & python3 prepare.py
+        run: python3 --version
         env:
           WKDIR: ${{ env.WKDIR }}
           IS_TDINTERNAL: ${{ inputs.tdinternal }}
