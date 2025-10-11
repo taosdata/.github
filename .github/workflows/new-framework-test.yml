@@ -111,7 +111,7 @@ jobs:
           ref: 'fix/windows-policy'
           fetch-depth: 0
 
-      - name: Prepare the environment (Windows)
+      - name: Prepare the environment
         if: matrix.platform == 'windows'
         shell: cmd
         run: python3 prepare.py
