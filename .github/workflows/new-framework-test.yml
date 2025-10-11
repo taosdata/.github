@@ -111,6 +111,11 @@ jobs:
           ref: 'fix/windows-policy'
           fetch-depth: 0
 
+      - name: Check Python3 availability
+        if: matrix.platform == 'windows'
+        shell: cmd
+        run: where python3
+
       - name: Prepare the environment
         run: python3 --version && python3 prepare.py
         env:
