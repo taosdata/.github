@@ -111,15 +111,10 @@ jobs:
           ref: 'fix/windows-policy'
           fetch-depth: 0
 
-      - name: Check Python3 availability
+      - name: Prepare the environment(Windows)
         if: matrix.platform == 'windows'
         shell: cmd
-        run: where python3
-
-      - name: Prepare the environment
-        if: matrix.platform == 'windows'
-        shell: cmd
-        run: python3 --version
+        run:  python3 prepare.py
         env:
           WKDIR: ${{ env.WKDIR }}
           IS_TDINTERNAL: ${{ inputs.tdinternal }}
@@ -131,7 +126,7 @@ jobs:
       - name: Prepare the environment(Linux and MacOS)
         if: matrix.platform != 'windows'
         shell: bash
-        run: python3 --version && python3 prepare.py
+        run: python3 prepare.py
         env:
           WKDIR: ${{ env.WKDIR }}
           IS_TDINTERNAL: ${{ inputs.tdinternal }}
