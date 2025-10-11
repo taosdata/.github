@@ -111,6 +111,11 @@ jobs:
           ref: 'main'
           fetch-depth: 0
 
+      - name: Allow PowerShell scripts
+        if: matrix.platform == 'windows'
+        shell: powershell
+        run: Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+                  
       - name: Prepare the environment
         run: python3 prepare.py
         env:
