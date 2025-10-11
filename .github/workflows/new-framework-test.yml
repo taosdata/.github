@@ -125,7 +125,6 @@ jobs:
 
       - name: Prepare the environment(Linux and MacOS)
         if: matrix.platform != 'windows'
-        shell: bash
         run: python3 prepare.py
         env:
           WKDIR: ${{ env.WKDIR }}
