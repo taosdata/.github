@@ -79,6 +79,8 @@ jobs:
             WKDIR: 'C:\\workspace\\0'                 # adjust as needed for your windows runners
             WK: 'C:\\workspace\\0\\TDinternal'
             WKC: 'C:\\workspace\\TDinternal\\community'
+            shell: 'cmd'
+            
     runs-on:
       group: ${{ matrix.runner_group }}
       labels: ${{ matrix.runner_labels }}
