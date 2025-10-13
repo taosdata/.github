@@ -75,7 +75,7 @@ jobs:
             WKC: '/var/lib/jenkins/workspace/TDinternal/community'
           - platform: windows
             runner_group: CI
-            runner_labels: [self-hosted, Windows, X64, test-win, testing]
+            runner_labels: [self-hosted, Windows, X64,  testing]
             WKDIR: 'C:\\workspace\\0'                 # adjust as needed for your windows runners
             WK: 'C:\\workspace\\0\\TDinternal'
             WKC: 'C:\\workspace\\TDinternal\\community'
