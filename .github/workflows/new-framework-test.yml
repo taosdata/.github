@@ -134,6 +134,10 @@ jobs:
           GITHUB_EVENT: ${{ toJson(github.event) }}
           GITHUB_INPUTS: ${{ toJson(inputs) }}
 
+      - name: Set Execution Policy
+        shell: powershell
+        run: Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+
       - name: Check assert testing
         if: >
           env.IS_TDINTERNAL == 'false' &&
