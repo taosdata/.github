@@ -113,20 +113,7 @@ jobs:
           ref: 'fix/windows-policy'
           fetch-depth: 0
 
-      - name: Prepare the environment(Windows)
-        if: matrix.platform == 'windows'
-        shell: cmd
-        run:  python3 prepare.py
-        env:
-          WKDIR: ${{ env.WKDIR }}
-          IS_TDINTERNAL: ${{ inputs.tdinternal }}
-          GITHUB_RUN_NUMBER: ${{ github.run_number }}
-          CONTAINER_NAME: ${{ env.CONTAINER_NAME }}
-          GITHUB_EVENT: ${{ toJson(github.event) }}
-          GITHUB_INPUTS: ${{ toJson(inputs) }}
-
-      - name: Prepare the environment(Linux and MacOS)
-        if: matrix.platform != 'windows'
+      - name: Prepare the environment
         run: python3 prepare.py
         env:
           WKDIR: ${{ env.WKDIR }}
