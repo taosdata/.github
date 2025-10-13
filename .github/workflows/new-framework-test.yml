@@ -80,7 +80,7 @@ jobs:
             WK: 'C:\\workspace\\0\\TDinternal'
             WKC: 'C:\\workspace\\TDinternal\\community'
             shell: 'cmd'
-            
+
     runs-on:
       group: ${{ matrix.runner_group }}
       labels: ${{ matrix.runner_labels }}
@@ -136,9 +136,6 @@ jobs:
           GITHUB_EVENT: ${{ toJson(github.event) }}
           GITHUB_INPUTS: ${{ toJson(inputs) }}
 
-      - name: Set Execution Policy
-        shell: powershell
-        run: Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
 
       - name: Check assert testing
         if: >
