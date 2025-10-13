@@ -79,7 +79,6 @@ jobs:
             WKDIR: 'C:\\workspace\\0'                 # adjust as needed for your windows runners
             WK: 'C:\\workspace\\0\\TDinternal'
             WKC: 'C:\\workspace\\TDinternal\\community'
-            shell: 'cmd'
 
     runs-on:
       group: ${{ matrix.runner_group }}
@@ -104,6 +103,7 @@ jobs:
     defaults:
       run:
         working-directory: ${{ github.workspace }}/.github/scripts/
+        shell: ${{ matrix.platform == 'windows' && 'cmd' || 'bash' }}
 
     steps:
       - name: Checkout the repository
