@@ -17,14 +17,14 @@ class TestBuild:
 
         self.ZH_DOC_REPO = 'docs.taosdata.com'
         self.EN_DOC_REPO = 'docs.tdengine.com'
-        self.win_vs_path = "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat"
+        self.win_vs_bin = "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat"
         self.win_cpu_type = "x64"
 
     def _find_vcvars(self) -> str:
         """Try to locate vcvarsall.bat using vswhere or common install paths"""
         # explicit configured path first
-        if os.path.isfile(self.win_vs_path):
-            return self.win_vs_path
+        if os.path.isfile(self.win_vs_bin):
+            return self.win_vs_bin
 
         # try vswhere (Program Files x86)
         vswhere = os.path.join(os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)"), "Microsoft Visual Studio", "Installer", "vswhere.exe")
@@ -79,7 +79,7 @@ class TestBuild:
                 env[k] = v
         return env
     def set_win_dev_env(self):
-        output = os.popen('vcvarsall.bat x64 && set').read()
+        output = os.popen(f'{self.win_vs_bin} x64 && set').read()
 
         for line in output.splitlines():
             pair = line.split("=", 1)
