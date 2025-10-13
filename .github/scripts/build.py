@@ -79,7 +79,7 @@ class TestBuild:
                 env[k] = v
         return env
     def set_win_dev_env(self):
-        output = os.popen(f'{self.win_vs_bin} x64 && set').read()
+        output = os.popen(f'"{self.win_vs_bin}" x64 && set').read()
 
         for line in output.splitlines():
             pair = line.split("=", 1)
@@ -121,8 +121,9 @@ class TestBuild:
             if os.path.isdir(debug_dir):
                 shutil.rmtree(debug_dir)
             os.makedirs(debug_dir, exist_ok=True)
-
+            print("start to set env ")
             self.set_win_dev_env()
+            print("env set complete")
             # run cmake and build using the captured env (no need to use 'call' or 'set' in the same cmd)
             cmake_cmd = [
                 'cmake', '..',
