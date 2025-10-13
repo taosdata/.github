@@ -24,7 +24,6 @@ class TestBuild:
         """Try to locate vcvarsall.bat using vswhere or common install paths"""
         # explicit configured path first
         if os.path.isfile(self.win_vs_path):
-            print(f"Using configured vcvarsall.bat path: {self.win_vs_path}")
             return self.win_vs_path
 
         # try vswhere (Program Files x86)
@@ -67,8 +66,7 @@ class TestBuild:
         self.utils.run_command(cmd, cwd=f'{self.wkdir}/{self.EN_DOC_REPO}')
 
     def _vcvars_env(self, vcvars_path: str, arch: str) -> dict:
-        # 用引号包裹路径
-        cmd = f'"{vcvars_path}" {arch} && set'
+        cmd = f'{vcvars_path} {arch} && set'
         try:
             out = subprocess.check_output(['cmd', '/c', cmd], text=True, stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as e:
@@ -80,14 +78,8 @@ class TestBuild:
                 k, v = line.split('=', 1)
                 env[k] = v
         return env
-        
     def set_win_dev_env(self):
-        vcvars_path = self._find_vcvars()
-        print(f"Using vcvarsall.bat path: {vcvars_path}")
-        if not vcvars_path:
-            raise FileNotFoundError("Unable to find vcvarsall.bat")
-
-        output = os.popen(f'"{vcvars_path}" x64 && set').read()
+        output = os.popen('vcvarsall.bat x64 && set').read()
 
         for line in output.splitlines():
             pair = line.split("=", 1)
