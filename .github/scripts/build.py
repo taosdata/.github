@@ -79,7 +79,11 @@ class TestBuild:
                 env[k] = v
         return env
     def set_win_dev_env(self):
-        output = os.popen('vcvarsall.bat x64 && set').read()
+        vcvars_path = self._find_vcvars()
+        if not vcvars_path:
+            raise FileNotFoundError("Unable to find vcvarsall.bat")
+
+        output = os.popen(f'{vcvars_path} x64 && set').read()
 
         for line in output.splitlines():
             pair = line.split("=", 1)
