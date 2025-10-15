@@ -4,194 +4,171 @@ description: Reusable Workflow for taosd & taosc coverage test
 on:
   workflow_call:
     inputs:
-      specified_tdinternal_test_branch:
-        description: 'Enter the test branch of TDinternal'
+      tdinternal:
+        description: 'Is the PR from TDinternal?'
         required: true
+        type: boolean
+      specified_source_branch:
+        description: 'Enter the source branch name of TDengine'
+        required: false
+        default: 'unavailable'
         type: string
-      specified_tdengine_test_branch:
-        description: 'Enter the test branch of TDengine'
-        required: true
+      specified_target_branch:
+        description: 'Enter the target branch name of TDengine'
+        required: false
+        default: 'unavailable'
         type: string
-
-# 修改并发策略，使用运行编号来区分不同实例
-concurrency: 
-  group: ${{ github.workflow }}-${{ github.run_id }}
-  cancel-in-progress: false
+      specified_pr_number:
+        description: 'Enter the PR number of TDengine'
+        required: false
+        default: 'unavailable'
+        type: string
 
 jobs:
-  run-tests-coverage-on-linux:
-    # 修改运行策略，使用矩阵策略在可用的runner上分配任务
+  validate_tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+
+      - name: Get all changed case files
+        id: changed-case-files
+        uses: tj-actions/changed-files@v45
+        with:
+          files: |
+            test/cases/**/test_*.py
+
+      - name: Validate test files
+        if: steps.changed-case-files.outputs.any_changed == 'true'
+        env:
+          ALL_CHANGED_FILES: ${{ steps.changed-case-files.outputs.all_changed_files }}
+        run: |
+          EXIT_CODE=0
+          for file in ${ALL_CHANGED_FILES}; do
+            echo "$file was changed"
+            python .github/scripts/validate_tests.py "$file" || EXIT_CODE=1
+          done
+          exit $EXIT_CODE
+
+  run-tests:
     strategy:
       fail-fast: false
-      max-parallel: 3  # 最多同时运行3个实例
+      matrix:
+        platform: [linux, macos, windows]
+        include:
+          - platform: linux
+            runner_group: CI
+            runner_labels: [self-hosted, Linux, X64, new-framework]
+            WKDIR: '/var/lib/jenkins/workspace'
+            WK: '/var/lib/jenkins/workspace/TDinternal'
+            WKC: '/var/lib/jenkins/workspace/TDinternal/community'
+          - platform: macos
+            runner_group: CI
+            runner_labels: [self-hosted, macOS, X64, testing]
+            WKDIR: '/var/lib/jenkins/workspace'
+            WK: '/var/lib/jenkins/workspace/TDinternal'
+            WKC: '/var/lib/jenkins/workspace/TDinternal/community'
+          - platform: windows
+            runner_group: CI
+            runner_labels: [self-hosted, Windows, X64, test-win]
+            WKDIR: 'C:\\workspace\\0'                 # adjust as needed for your windows runners
+            WK: 'C:\\workspace\\0\\TDinternal'
+            WKC: 'C:\\workspace\\TDinternal\\community'
+    runs-on:
+      group: ${{ matrix.runner_group }}
+      labels: ${{ matrix.runner_labels }}
 
-    runs-on: 
-      group: CI
-      labels: [self-hosted, Linux, X64, testing]
-    
-    timeout-minutes: 300
+    needs: validate_tests
+
+    timeout-minutes: 200
 
     env:
       CONTAINER_NAME: 'taosd-test'
-      WKDIR: '/var/lib/jenkins/workspace'
-      WK: '/var/lib/jenkins/workspace/TDinternal'
-      WKC: '/var/lib/jenkins/workspace/TDinternal/community'
-      SOURCE_BRANCH_TDINTERNAL: ""
-      SOURCE_BRANCH_TDENGINE: ""
+      WKDIR: ${{ matrix.WKDIR }}
+      WK: ${{ matrix.WK }}
+      WKC: ${{ matrix.WKC }}
+      IS_TDINTERNAL: ${{ inputs.tdinternal }}
+      CURRENT_PLATFORM: ${{ matrix.platform }}
+      TARGET_BRANCH: ${{ inputs.specified_target_branch }}
+      PYTHONIOENCODING: utf-8
+      PYTHONUTF8: "1"
+      LANG: en_US.UTF-8      
+
+    defaults:
+      run:
+        working-directory: ${{ github.workspace }}/.github/scripts/
 
     steps:
-      - name: Set environment variables based on condition
-        run: |
-          echo "Setting SOURCE_BRANCH_TDENGINE and SOURCE_BRANCH_TDINTERNAL based on inputs..."
-          echo "SOURCE_BRANCH_TDINTERNAL=${{ inputs.specified_tdinternal_test_branch }}" >> $GITHUB_ENV
-          echo "SOURCE_BRANCH_TDENGINE=${{ inputs.specified_tdengine_test_branch }}" >> $GITHUB_ENV
-          echo "Current step debug (GITHUB_ENV content):"
-          cat $GITHUB_ENV
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+        with:
+          repository: 'taosdata/.github'
+          ref: 'test/td-37719'
+          fetch-depth: 0
 
-      - name: Output the environment information
-        run: |
-          echo "::group::Environment Info"
-          echo "Date and Time: $(date)"
-          echo "Hostname: $(hostname)"
-          echo "Environment Variables:"
-          env
-          echo "Runner: ${{ runner.name }}"
-          echo "Workspace: ${{ env.WKDIR }}"
-          echo "TDinternal Branch: ${{ env.SOURCE_BRANCH_TDINTERNAL }}"
-          echo "TDengine Branch: ${{ env.SOURCE_BRANCH_TDENGINE }}"
-          git --version
-          echo "${{ env.WKDIR }}/restore.sh -n ${{ github.run_number }} -c ${{ env.CONTAINER_NAME }}"
-          echo "::endgroup::"
+      - name: Prepare the environment
+        run: python3 prepare.py
+        env:
+          WKDIR: ${{ env.WKDIR }}
+          IS_TDINTERNAL: ${{ inputs.tdinternal }}
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+          CONTAINER_NAME: ${{ env.CONTAINER_NAME }}
+          GITHUB_EVENT: ${{ toJson(github.event) }}
+          GITHUB_INPUTS: ${{ toJson(inputs) }}
 
-      - name: Prepare TDinternal repository
-        run: |
-          echo "Preparing TDinternal repository..."
-          cd ${{ env.WK }}
-          git reset --hard
-          git clean -f
-          git remote prune origin
-          git fetch
-          if git rev-parse --verify origin/${{ env.SOURCE_BRANCH_TDINTERNAL }} >/dev/null 2>&1; then
-            git checkout ${{ env.SOURCE_BRANCH_TDINTERNAL }}
-          else
-            echo "Branch ${{ env.SOURCE_BRANCH_TDINTERNAL }} does not exist. Switching to default branch cover/3.0."
-            git switch -c cover/3.0 origin/cover/3.0
-          fi
-          echo "Pulling latest code from cover/3.0 branch..."
-          git pull || { echo "Failed to pull the latest code."; exit 1; }
-          #git pull origin 3.0 || { echo "Failed to pull from 3.0 branch"; exit 1; }
-          echo "Current branch: $(git branch --show-current)"
-          echo "Current commit:" && git log -1 --oneline  
+      - name: Check assert testing
+        if: >
+          env.IS_TDINTERNAL == 'false' &&
+          env.TARGET_BRANCH != '3.1' &&
+          matrix.platform == 'linux'
+        run: python3 test.py
+        env:
+          WKDIR: ${{ env.WKDIR }}
+          TEST_TYPE: 'assert'
+  
+      - name: Check void function testing
+        if: >
+          env.IS_TDINTERNAL == 'false' &&
+          env.TARGET_BRANCH != '3.1' &&
+          matrix.platform == 'linux'
+        run: python3 test.py
+        env:
+          TEST_TYPE: 'void'
 
-      - name: Prepare TDengine repository
-        run: |
-          echo "Preparing TDengine repository..."
-          cd ${{ env.WKC }}
-          git reset --hard
-          git clean -f
-          git remote prune origin
-          git fetch
-          if git rev-parse --verify origin/${{ env.SOURCE_BRANCH_TDENGINE }} >/dev/null 2>&1; then
-            git switch ${{ env.SOURCE_BRANCH_TDENGINE }}
-          else
-            echo "Branch ${{ env.SOURCE_BRANCH_TDENGINE }} does not exist. Switching to default branch cover/3.0."
-            git switch -c cover/3.0 origin/cover/3.0
-          fi
-          echo "Pulling latest code from cover/3.0 branch..."
-          git pull || { echo "Failed to pull the latest code."; exit 1; }
-          #git pull origin 3.0 || { echo "Failed to pull from 3.0 branch"; exit 1; }
-          echo "Current branch: $(git branch --show-current)"
-          echo "Current commit:" && git log -1 --oneline  
+      - name: Build docker or repo
+        run: python3 build.py
+        env:
+          BUILD_TYPE: ${{ matrix.platform == 'linux' && 'docker' || 'repo' }}
 
-      - name: Update submodule
-        run: |
-          cd ${{ env.WKC }}
-          git submodule update --init --recursive
- 
-      - name: Build docker container
-        run: |
-          date
-          rm -rf ${{ env.WKC }}/debug
-          cd ${{ env.WKC }}/tests/parallel_test
-          time ./container_build_coverage.sh -w ${{ env.WKDIR }} -e
-
-      - name: Get parameters for testing
-        id: get_param
-        run: |
-          log_server_file="/home/log_server.json"
-          timeout_cmd=""
-          extra_param=""
-
-          if [ -f "$log_server_file" ]; then
-            log_server_enabled=$(jq '.enabled' "$log_server_file")
-            timeout_param=$(jq '.timeout' "$log_server_file")
-            if [ "$timeout_param" != "null" ] && [ "$timeout_param" != "0" ]; then
-              timeout_cmd="timeout $timeout_param"
-            fi
-
-            if [ "$log_server_enabled" == "1" ]; then
-              log_server=$(jq '.server' "$log_server_file" | sed 's/\\\"//g')
-              if [ "$log_server" != "null" ] && [ "$log_server" != "" ]; then
-                extra_param="-w $log_server"
-              fi
-            fi
-          fi
-          echo "timeout_cmd=$timeout_cmd" >> $GITHUB_OUTPUT
-          echo "extra_param=$extra_param" >> $GITHUB_OUTPUT
+      - name: Run function returns with a null pointer scan testing
+        if: >
+          env.IS_TDINTERNAL == 'false' &&
+          env.TARGET_BRANCH != '3.1' &&
+          matrix.platform == 'linux'
+        run: python3 test.py
+        env:
+          TEST_TYPE: 'function_returns'
 
       - name: Run function test cases
-        run: |
-          cd ${{ env.WKC }}/tests/parallel_test
-          export DEFAULT_RETRY_TIME=1
-          date
-          chmod +x ${{ env.WKC }}/tests/parallel_test/run.sh
-          ${{ steps.get_param.outputs.timeout_cmd }} time ./run.sh -e -m /home/m.json -t cases.task -b COVER-${{ github.run_number }} -l ${{ env.WKDIR }}/log -o 1200 ${{ steps.get_param.outputs.extra_param }} || true
-          ${{ steps.get_param.outputs.timeout_cmd }} time ./run.sh -e -m /home/m.json -t longtimeruning_cases.task -b COVER-${{ github.run_number }} -l ${{ env.WKDIR }}/log -o 1800 ${{ steps.get_param.outputs.extra_param }} || true
-          #${{ steps.get_param.outputs.timeout_cmd }} time ./run.sh -e -m /home/m.json -t tdgpt_cases.task -b COVER-${{ github.run_number }} -l ${{ env.WKDIR }}/log -o 1200 ${{ steps.get_param.outputs.extra_param }} || true
-        continue-on-error: true  
-   
-      - name: Run TDengine coverage 
-        if: always() 
-        run: |
-          echo "::group::Run TDengine coverage"
-          cd ${{ env.WKC }}/tests/parallel_test
-          echo "Running coverage script at $(date)"
-          chmod +x ${{ env.WKC }}/tests/parallel_test/run_coverage_container.sh
-          ./run_coverage_container.sh -d ${{ env.WKC }} -b ${{ env.SOURCE_BRANCH_TDENGINE }} > coverage_tdengine.log 2>&1
-          if [ $? -ne 0 ]; then
-              echo "Coverage script failed. Check coverage_tdengine.log for details."
-          fi
-          echo "Coverage log line count:"
-          cat coverage_tdengine.log | wc -l
-          echo "Filtered coverage_tdengine log (excluding specific patterns):"
-          cat coverage_tdengine.log | grep -v FN | grep -v DA | grep -v LF | grep -v TN | grep -v end | grep -v LH | grep -v No | grep -v Lines | grep -v Branches | grep -v Taken | grep -v Calls | grep . || true
-          echo "::endgroup::"
-        continue-on-error: true
-   
-      - name: Run TDinternal coverage 
-        if: always() 
-        run: |
-          echo "::group::Run TDinternal coverage"
-          cd ${{ env.WKC }}/tests/parallel_test
-          echo "Running coverage script at $(date)"
-          chmod +x ${{ env.WKC }}/tests/parallel_test/run_coverage_container_internal.sh
-          ./run_coverage_container_internal.sh -d ${{ env.WK }} -b ${{ env.SOURCE_BRANCH_TDINTERNAL }} > coverage_tdinternal.log 2>&1
-          if [ $? -ne 0 ]; then
-              echo "Coverage script failed. Check coverage_tdinternal.log for details."
-          fi
-          echo "Coverage log line count:"
-          cat coverage_tdinternal.log | wc -l
-          echo "Filtered coverage_tdinternal log (excluding specific patterns):"
-          cat coverage_tdinternal.log | grep -v FN | grep -v DA | grep -v LF | grep -v TN | grep -v end | grep -v LH | grep -v No | grep -v Lines | grep -v Branches | grep -v Taken | grep -v Calls | grep . || true
-          echo "::endgroup::"
+        run: python3 test.py
+        env:
+          TEST_TYPE: 'function'
         continue-on-error: true
 
-      - name: Clearup the running cases
-        if: always()
-        run: |
-          pid=$(ps -ef | grep 'run_case.sh' | grep -v 'grep' | awk '{print $2}')
-          if [ -n "$pid" ]; then
-            ps -ef | grep 'run_case.sh'  | grep -v 'grep' | awk '{print $2}'| xargs kill -9
-          else
-              echo "No run_case.sh process is running."
-          fi
+      - name: Run coverage test 
+        if: >
+            env.IS_TDINTERNAL == 'false' &&
+            env.TARGET_BRANCH != '3.1' &&
+            env.TARGET_BRANCH != '3.3.6' &&
+            matrix.platform == 'linux'
+        run: python3 test.py
+        env:
+          TEST_TYPE: 'coverage'
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
