@@ -8,7 +8,6 @@ import subprocess
 from datetime import datetime
 import threading
 import concurrent.futures
-import paramiko
 from typing import List, Dict, Any
 import logging
 
@@ -229,6 +228,7 @@ class TestPreparer:
     def _execute_remote_command(self, host_config, command):
         """Execute a command on remote host via SSH"""
         try:
+            import paramiko
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             
@@ -513,7 +513,7 @@ class TestPreparer:
         if not self.host_configs:
             return True
             
-        logger.info(f"Processing {len(self.host_configs)} remote hosts...")
+        logger.info(f"Processing {len(self.host_configs)-1} remote hosts...")
         # Use ThreadPoolExecutor for parallel processing
         max_threads = max(1, min(len(self.host_configs), 10))  # Limit to 10 concurrent threads
         results = []
