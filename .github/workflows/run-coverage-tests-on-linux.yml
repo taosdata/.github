@@ -89,6 +89,8 @@ jobs:
       PYTHONIOENCODING: utf-8
       PYTHONUTF8: "1"
       LANG: en_US.UTF-8      
+      SOURCE_BRANCH_TDINTERNAL: ""
+      SOURCE_BRANCH_TDENGINE: ""
 
     defaults:
       run:
@@ -102,15 +104,79 @@ jobs:
           ref: 'test/td-37719'
           fetch-depth: 0
 
-      - name: Prepare the environment
-        run: python3 prepare.py
-        env:
-          WKDIR: ${{ env.WKDIR }}
-          IS_TDINTERNAL: ${{ inputs.tdinternal }}
-          GITHUB_RUN_NUMBER: ${{ github.run_number }}
-          CONTAINER_NAME: ${{ env.CONTAINER_NAME }}
-          GITHUB_EVENT: ${{ toJson(github.event) }}
-          GITHUB_INPUTS: ${{ toJson(inputs) }}
+      # - name: Prepare the environment
+      #   run: python3 prepare.py
+      #   env:
+      #     WKDIR: ${{ env.WKDIR }}
+      #     IS_TDINTERNAL: ${{ inputs.tdinternal }}
+      #     GITHUB_RUN_NUMBER: ${{ github.run_number }}
+      #     CONTAINER_NAME: ${{ env.CONTAINER_NAME }}
+      #     GITHUB_EVENT: ${{ toJson(github.event) }}
+      #     GITHUB_INPUTS: ${{ toJson(inputs) }}
+
+
+      - name: Set environment variables based on condition
+        run: |
+          echo "Setting SOURCE_BRANCH_TDENGINE and SOURCE_BRANCH_TDINTERNAL based on inputs..."
+          echo "SOURCE_BRANCH_TDINTERNAL=${{ inputs.specified_tdinternal_test_branch }}" >> $GITHUB_ENV
+          echo "SOURCE_BRANCH_TDENGINE=${{ inputs.specified_tdengine_test_branch }}" >> $GITHUB_ENV
+          echo "Current step debug (GITHUB_ENV content):"
+          cat $GITHUB_ENV
+
+      - name: Output the environment information
+        run: |
+          echo "::group::Environment Info"
+          echo "Date and Time: $(date)"
+          echo "Hostname: $(hostname)"
+          echo "Environment Variables:"
+          env
+          echo "Runner: ${{ runner.name }}"
+          echo "Workspace: ${{ env.WKDIR }}"
+          echo "TDinternal Branch: ${{ env.SOURCE_BRANCH_TDINTERNAL }}"
+          echo "TDengine Branch: ${{ env.SOURCE_BRANCH_TDENGINE }}"
+          git --version
+          echo "${{ env.WKDIR }}/restore.sh -n ${{ github.run_number }} -c ${{ env.CONTAINER_NAME }}"
+          echo "::endgroup::"
+
+      - name: Prepare TDinternal repository
+        run: |
+          echo "Preparing TDinternal repository..."
+          cd ${{ env.WK }}
+          git reset --hard
+          git clean -f
+          git remote prune origin
+          git fetch
+          if git rev-parse --verify origin/${{ env.SOURCE_BRANCH_TDINTERNAL }} >/dev/null 2>&1; then
+            git checkout ${{ env.SOURCE_BRANCH_TDINTERNAL }}
+          else
+            echo "Branch ${{ env.SOURCE_BRANCH_TDINTERNAL }} does not exist. Switching to default branch cover/3.0."
+            git switch -c cover/3.0 origin/cover/3.0
+          fi
+          echo "Pulling latest code from cover/3.0 branch..."
+          git pull || { echo "Failed to pull the latest code."; exit 1; }
+          #git pull origin 3.0 || { echo "Failed to pull from 3.0 branch"; exit 1; }
+          echo "Current branch: $(git branch --show-current)"
+          echo "Current commit:" && git log -1 --oneline  
+
+      - name: Prepare TDengine repository
+        run: |
+          echo "Preparing TDengine repository..."
+          cd ${{ env.WKC }}
+          git reset --hard
+          git clean -f
+          git remote prune origin
+          git fetch
+          if git rev-parse --verify origin/${{ env.SOURCE_BRANCH_TDENGINE }} >/dev/null 2>&1; then
+            git switch ${{ env.SOURCE_BRANCH_TDENGINE }}
+          else
+            echo "Branch ${{ env.SOURCE_BRANCH_TDENGINE }} does not exist. Switching to default branch cover/3.0."
+            git switch -c cover/3.0 origin/cover/3.0
+          fi
+          echo "Pulling latest code from cover/3.0 branch..."
+          git pull || { echo "Failed to pull the latest code."; exit 1; }
+          #git pull origin 3.0 || { echo "Failed to pull from 3.0 branch"; exit 1; }
+          echo "Current branch: $(git branch --show-current)"
+          echo "Current commit:" && git log -1 --oneline  
 
       - name: Check assert testing
         if: >
