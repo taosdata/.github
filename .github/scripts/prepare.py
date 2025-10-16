@@ -74,6 +74,10 @@ class TestPreparer:
                 with open(config_file, 'r', encoding='utf-8') as f:
                     configs = json.load(f)
                     logger.info(f"Loaded {len(configs)} host configurations")
+                    for config in configs:
+                        if config['host'] == self.local_ip:
+                            configs.remove(config)
+                            break
                     return configs
             else:
                 logger.info(f"Host config file {config_file} not found, using local execution only")
@@ -513,7 +517,7 @@ class TestPreparer:
         if not self.host_configs:
             return True
             
-        logger.info(f"Processing {len(self.host_configs)-1} remote hosts...")
+        logger.info(f"Processing {len(self.host_configs)} remote hosts...")
         # Use ThreadPoolExecutor for parallel processing
         max_threads = max(1, min(len(self.host_configs), 10))  # Limit to 10 concurrent threads
         results = []
