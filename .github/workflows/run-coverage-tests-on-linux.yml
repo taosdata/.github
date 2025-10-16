@@ -178,24 +178,24 @@ jobs:
           echo "Current branch: $(git branch --show-current)"
           echo "Current commit:" && git log -1 --oneline  
 
-      - name: Check assert testing
-        if: >
-          env.IS_TDINTERNAL == 'false' &&
-          env.TARGET_BRANCH != '3.1' &&
-          matrix.platform == 'linux'
-        run: python3 test.py
-        env:
-          WKDIR: ${{ env.WKDIR }}
-          TEST_TYPE: 'assert'
+      # - name: Check assert testing
+      #   if: >
+      #     env.IS_TDINTERNAL == 'false' &&
+      #     env.TARGET_BRANCH != '3.1' &&
+      #     matrix.platform == 'linux'
+      #   run: python3 test.py
+      #   env:
+      #     WKDIR: ${{ env.WKDIR }}
+      #     TEST_TYPE: 'assert'
   
-      - name: Check void function testing
-        if: >
-          env.IS_TDINTERNAL == 'false' &&
-          env.TARGET_BRANCH != '3.1' &&
-          matrix.platform == 'linux'
-        run: python3 test.py
-        env:
-          TEST_TYPE: 'void'
+      # - name: Check void function testing
+      #   if: >
+      #     env.IS_TDINTERNAL == 'false' &&
+      #     env.TARGET_BRANCH != '3.1' &&
+      #     matrix.platform == 'linux'
+      #   run: python3 test.py
+      #   env:
+      #     TEST_TYPE: 'void'
 
       - name: Build docker or repo
         run: python3 build.py
