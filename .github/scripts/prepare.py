@@ -226,7 +226,7 @@ class TestPreparer:
         self.utils.set_env_var("timeout_cmd", timeout_cmd, env_file=os.getenv('GITHUB_ENV', ''))
         self.utils.set_env_var("extra_param", extra_param, env_file=os.getenv('GITHUB_ENV', ''))
 
-    def _execute_remote_command(self, host_config: Dict[str, Any], command: str) -> tuple[bool, str]:
+    def _execute_remote_command(self, host_config, command):
         """Execute a command on remote host via SSH"""
         try:
             ssh = paramiko.SSHClient()
@@ -254,7 +254,7 @@ class TestPreparer:
         except Exception as e:
             return False, str(e)
 
-    def _prepare_repositories_remote(self, host_config: Dict[str, Any]) -> bool:
+    def _prepare_repositories_remote(self, host_config):
         """Prepare repositories on remote host"""
         host = host_config['host']
         workdir = host_config['workdir']
@@ -283,7 +283,7 @@ class TestPreparer:
             
         return True
 
-    def _update_codes_remote(self, host_config: Dict[str, Any]) -> bool:
+    def _update_codes_remote(self, host_config):
         """Update codes on remote host"""
         host = host_config['host']
         workdir = host_config['workdir']
@@ -311,7 +311,7 @@ class TestPreparer:
                 
         return True
 
-    def _update_latest_from_target_branch_remote(self, host_config: Dict[str, Any], repo_path: str) -> bool:
+    def _update_latest_from_target_branch_remote(self, host_config, repo_path):
         """Update latest code from target branch on remote host"""
         host = host_config['host']
         repo_log_name = 'community' if 'community' in repo_path else 'tdinternal'
@@ -332,7 +332,7 @@ class TestPreparer:
                 
         return True
 
-    def _update_latest_merge_from_pr_remote(self, host_config: Dict[str, Any], repo_path: str, pr_number: str, job_name: str = '') -> bool:
+    def _update_latest_merge_from_pr_remote(self, host_config, repo_path, pr_number, job_name=''):
         """Update latest codes and merge from PR on remote host"""
         host = host_config['host']
         repo_log_name = 'community' if 'community' in repo_path else 'tdinternal'
@@ -368,7 +368,7 @@ class TestPreparer:
                 
         return True
 
-    def _update_submodules_remote(self, host_config: Dict[str, Any]) -> bool:
+    def _update_submodules_remote(self, host_config):
         """Update submodules on remote host"""
         host = host_config['host']
         workdir = host_config['workdir']
@@ -380,7 +380,7 @@ class TestPreparer:
             return False
         return True
 
-    def _output_file_no_doc_change_remote(self, host_config: Dict[str, Any]) -> bool:
+    def _output_file_no_doc_change_remote(self, host_config):
         """Output file without doc changes on remote host"""
         host = host_config['host']
         workdir = host_config['workdir']
@@ -398,7 +398,7 @@ class TestPreparer:
             return False
         return True
 
-    def _get_testing_params_remote(self, host_config: Dict[str, Any]) -> bool:
+    def _get_testing_params_remote(self, host_config):
         """Get testing parameters on remote host"""
         host = host_config['host']
         workdir = host_config['workdir']
@@ -435,7 +435,7 @@ class TestPreparer:
             return False
         return True
 
-    def _process_single_host(self, host_config: Dict[str, Any]) -> bool:
+    def _process_single_host(self, host_config):
         """Process a single host - prepare and update repositories"""
         host = host_config['host']
         logger.info(f"Processing host: {host}")
@@ -508,7 +508,7 @@ class TestPreparer:
                 logger.error("Standard Error:", e.stderr)
             return False
 
-    def _process_remote_hosts(self) -> bool:
+    def _process_remote_hosts(self):
         """Process all remote hosts in parallel"""
         if not self.host_configs:
             return True
