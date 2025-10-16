@@ -49,7 +49,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        #platform: [linux, macos, windows]
         platform: [linux]
         include:
           - platform: linux
@@ -58,18 +57,6 @@ jobs:
             WKDIR: '/var/lib/jenkins/workspace'
             WK: '/var/lib/jenkins/workspace/TDinternal'
             WKC: '/var/lib/jenkins/workspace/TDinternal/community'
-          # - platform: macos
-          #   runner_group: CI
-          #   runner_labels: [self-hosted, macOS, X64, testing]
-          #   WKDIR: '/var/lib/jenkins/workspace'
-          #   WK: '/var/lib/jenkins/workspace/TDinternal'
-          #   WKC: '/var/lib/jenkins/workspace/TDinternal/community'
-          # - platform: windows
-          #   runner_group: CI
-          #   runner_labels: [self-hosted, Windows, X64, test-win]
-          #   WKDIR: 'C:\\workspace\\0'                 # adjust as needed for your windows runners
-          #   WK: 'C:\\workspace\\0\\TDinternal'
-          #   WKC: 'C:\\workspace\\TDinternal\\community'
     runs-on:
       group: ${{ matrix.runner_group }}
       labels: ${{ matrix.runner_labels }}
@@ -103,24 +90,6 @@ jobs:
           repository: 'taosdata/.github'
           ref: 'test_coverage'
           fetch-depth: 0
-
-      # - name: Checkout the repository
-      #   uses: actions/checkout@v4
-      #   with:
-      #     repository: 'taosdata/.github'
-      #     ref: 'test/td-37719'
-      #     fetch-depth: 0
-
-      # - name: Prepare the environment
-      #   run: python3 prepare.py
-      #   env:
-      #     WKDIR: ${{ env.WKDIR }}
-      #     IS_TDINTERNAL: ${{ inputs.tdinternal }}
-      #     GITHUB_RUN_NUMBER: ${{ github.run_number }}
-      #     CONTAINER_NAME: ${{ env.CONTAINER_NAME }}
-      #     GITHUB_EVENT: ${{ toJson(github.event) }}
-      #     GITHUB_INPUTS: ${{ toJson(inputs) }}
-
 
       - name: Set environment variables based on condition
         run: |
@@ -170,38 +139,10 @@ jobs:
           echo "Current branch: $(git branch --show-current)"
           echo "Current commit:" && git log -1 --oneline  
 
-      # - name: Check assert testing
-      #   if: >
-      #     env.IS_TDINTERNAL == 'false' &&
-      #     env.TARGET_BRANCH != '3.1' &&
-      #     matrix.platform == 'linux'
-      #   run: python3 test.py
-      #   env:
-      #     WKDIR: ${{ env.WKDIR }}
-      #     TEST_TYPE: 'assert'
-  
-      # - name: Check void function testing
-      #   if: >
-      #     env.IS_TDINTERNAL == 'false' &&
-      #     env.TARGET_BRANCH != '3.1' &&
-      #     matrix.platform == 'linux'
-      #   run: python3 test.py
-      #   env:
-      #     TEST_TYPE: 'void'
-
       - name: Build docker or repo
         run: python3 build.py
         env:
           BUILD_TYPE: ${{ matrix.platform == 'linux' && 'docker' || 'repo' }}
-
-      # - name: Run function returns with a null pointer scan testing
-      #   if: >
-      #     env.IS_TDINTERNAL == 'false' &&
-      #     env.TARGET_BRANCH != '3.1' &&
-      #     matrix.platform == 'linux'
-      #   run: python3 test.py
-      #   env:
-      #     TEST_TYPE: 'function_returns'
 
       - name: Run function test cases
         run: python3 test.py
