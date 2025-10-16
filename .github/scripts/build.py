@@ -53,7 +53,7 @@ class TestBuild:
         cmds = [
             'date',
             f'rm -rf {self.wkc}/debug',
-            f'cd {self.wkc}/test/ci && time ./container_build.sh -w {self.wkdir} -e -b {self.target_branch}'
+            f'cd {self.wkc}/test/ci && time ./container_build.sh -w {self.wkdir} -e -b 3.0' # -b {self.target_branch}
         ]
         self.utils.run_commands(cmds)
 
