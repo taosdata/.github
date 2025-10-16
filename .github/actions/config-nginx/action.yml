@@ -1,0 +1,37 @@
+name: 'Config Nginx'
+description: 'Config Nginx for taosadapter, taoskeeper and explorer'
+inputs:
+  adapter_hosts:
+    description: 'Comma-separated list of taosadapter ips'
+    required: true
+  adapter_port:
+    description: 'taosadapter port'
+    required: true
+  keeper_hosts:
+    description: 'Comma-separated list of taoskeeper hosts'
+    required: true
+  keeper_port:
+    description: 'taoskeeper port'
+    required: true
+  explorer_hosts:
+    description: 'Comma-separated list of explorer hosts'
+    required: true
+  explorer_port:
+    description: 'taosexplorer port'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Config Nginx
+      shell: bash
+      run: |
+        adapter_hosts_with_port=$(echo "${{ inputs.adapter_hosts }}" | awk -v port="${{ inputs.adapter_port }}" -F',' '{for (i=1; i<=NF; i++) printf "%s:%s,", $i, port; printf "\n"}' | sed 's/,$//')
+        keeper_hosts_with_port=$(echo "${{ inputs.keeper_hosts }}" | awk -v port="${{ inputs.keeper_port }}" -F',' '{for (i=1; i<=NF; i++) printf "%s:%s,", $i, port; printf "\n"}' | sed 's/,$//')
+        explorer_hosts_with_port=$(echo "${{ inputs.explorer_hosts }}" | awk -v port="${{ inputs.explorer_port }}" -F',' '{for (i=1; i<=NF; i++) printf "%s:%s,", $i, port; printf "\n"}' | sed 's/,$//')
+        echo "Adapter Hosts with Port: $adapter_hosts_with_port"
+        echo "Keeper Hosts with Port: $keeper_hosts_with_port"
+        echo "Explorer Hosts with Port: $explorer_hosts_with_port"
+        script_path=$(find $GITHUB_WORKSPACE/../../ -name config_nginx.sh 2>/dev/null | head -n 1)
+        chmod +x $script_path
+        $script_path "$adapter_hosts_with_port" "$keeper_hosts_with_port" "$explorer_hosts_with_port"

@@ -1,0 +1,16 @@
+name: Install Nginx
+description: Install Nginx And Start Service
+
+inputs:
+  nginx_port:
+    description: 'Listening port (default 80)'
+    required: false
+    default: '80'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install Nginx
+      shell: bash
+      run: |
+        sudo ${GITHUB_ACTION_PATH}/../../scripts/install_nginx.sh "${{ inputs.nginx_port }}"

@@ -1,0 +1,16 @@
+name: Install Mongodb
+description: Install Mongodb And Start Service
+
+inputs:
+  mongo_version:
+    description: 'MongoDB version to install, default is 6.0'
+    required: false
+    default: '6.0'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install Mongodb
+      shell: bash
+      run: |
+        sudo ${GITHUB_ACTION_PATH}/../../scripts/install_mongodb.sh "${{ inputs.mongo_version }}"

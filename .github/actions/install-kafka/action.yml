@@ -1,0 +1,32 @@
+name: Install kafka
+description: Install kafka and start the service
+inputs:
+  kafka_version:
+    description: 'Kafka version to install, default is 3.9.1'
+    required: false
+    default: '3.9.1'
+  deploy_model:
+    description: 'Deployment model for Kafka(options: kraft or zookeeper), default is kraft'
+    required: false
+    default: 'kraft'
+  server_ip:
+    required: false
+    description: 'The IP address of advertised.listeners in Kafka server.properties, default is ip of kafka server'
+    default: 'localhost'
+  download_url:
+    description: 'The download URL for Kafka, default is undefined which means it will use the official Apache Kafka download URL'
+    required: false
+    default: 'undefined'
+  backup_kafka:
+    description: 'Whether to backup existing Kafka installation, default is false'
+    required: false
+    default: 'false'
+
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install kafka
+      shell: bash
+      run: |
+        sudo ${GITHUB_ACTION_PATH}/../../scripts/install_kafka.sh "${{ inputs.kafka_version }}" "${{ inputs.deploy_model }}" "${{ inputs.server_ip }}" "${{ inputs.download_url }}" "${{ inputs.backup_kafka }}"

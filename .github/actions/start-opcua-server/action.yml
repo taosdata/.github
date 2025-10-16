@@ -1,0 +1,20 @@
+name: Start OPC UA Server
+description: Install OPC UA Server and start the service
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout the repository
+      uses: actions/checkout@v4
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+    - name: Start OPC UA Server
+      shell: bash
+      run: |
+        cd ${GITHUB_ACTION_PATH}/../../scripts/opc-server
+        npm install
+        npm server.js
+        nohup npm run server.js > server.log 2>&1 &
+        echo $! > server.pid

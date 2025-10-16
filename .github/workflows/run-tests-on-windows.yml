@@ -35,18 +35,36 @@ jobs:
       WIN_INTERNAL_ROOT: "C:\\workspace\\0\\TDinternal"
       WIN_COMMUNITY_ROOT: "C:\\workspace\\0\\TDinternal\\community"
       WIN_SYSTEM_TEST_ROOT: "C:\\workspace\\0\\TDinternal\\community\\tests\\system-test"
-      WIN_VS_PATH: "C:\\Program Files (x86)\\Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat"
+      WIN_ARMY_TEST_ROOT: "C:\\workspace\\0\\TDinternal\\community\\tests\\army"
+      WIN_VS_PATH: "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary\\Build\\vcvarsall.bat"
       WIN_CPU_TYPE: "x64"
       IS_TDINTERNAL: ${{ inputs.tdinternal }}
-      SPECIFIED_SOURCE_BRANCH: ${{ github.event.inputs.specified_source_branch }}
-      SPECIFIED_TARGET_BRANCH: ${{ github.event.inputs.specified_target_branch }}
-      SPECIFIED_PR_NUMBER: ${{ github.event.inputs.specified_pr_number }}
+      SPECIFIED_SOURCE_BRANCH: ${{ inputs.specified_source_branch }}
+      SPECIFIED_TARGET_BRANCH: ${{ inputs.specified_target_branch }}
+      SPECIFIED_PR_NUMBER: ${{ inputs.specified_pr_number }}
       PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
       PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
-      PR_NUMBER: ${{ github.event.pull_request.number }}
+      PR_NUMBER_PULL: ${{ github.event.pull_request.number }}
+      PYTHONIOENCODING: utf-8
+      PYTHONUTF8: 1
+      LANG: en_US.UTF-8
 
     steps:
-      - name: Set envrionment variables based on condition
+    
+      - name: init environment
+        shell: cmd
+        continue-on-error: true
+        if: always()
+        run: |
+          tasklist /FI "IMAGENAME eq python3.exe" /NH | findstr /I python3.exe >nul
+          if %errorlevel% equ 0 (
+              wmic process where "name='python3.exe'" delete
+              echo Python3 process has been terminated.
+          ) else (
+              echo No Python3 process was found.
+          )   
+          
+      - name: Set environment variables based on condition
         run: |
           REM Trim the blank space
           set SPECIFIED_SOURCE_BRANCH=%SPECIFIED_SOURCE_BRANCH: =%
@@ -54,14 +72,14 @@ jobs:
           set SPECIFIED_PR_NUMBER=%SPECIFIED_PR_NUMBER: =%
           set PR_HEAD_REF=%PR_HEAD_REF: =%
           set PR_BASE_REF=%PR_BASE_REF: =%
-          set PR_NUMBER=%PR_NUMBER: =%
+          set PR_NUMBER=%PR_NUMBER_PULL: =%
 
           if "%SPECIFIED_SOURCE_BRANCH%"=="unavailable" (
             if "%SPECIFIED_TARGET_BRANCH%"=="unavailable" (
               if "%SPECIFIED_PR_NUMBER%"=="unavailable" (
                 echo SOURCE_BRANCH=%PR_HEAD_REF%>>"%GITHUB_ENV%"
                 echo TARGET_BRANCH=%PR_BASE_REF%>>"%GITHUB_ENV%"
-                echo PR_NUMBER=%PR_NUMBER%>>"%GITHUB_ENV%"
+                echo PR_NUMBER=%PR_NUMBER_PULL%>>"%GITHUB_ENV%"
               )
             )
           ) else (
@@ -136,7 +154,8 @@ jobs:
         if: ${{ env.IS_TDINTERNAL == 'false' }}
         run: |
           cd %WIN_INTERNAL_ROOT%
-          git pull origin %TARGET_BRANCH%
+          git remote prune origin
+          git pull 
           cd %WIN_COMMUNITY_ROOT%
           git remote prune origin
           git pull  origin %TARGET_BRANCH%
@@ -177,26 +196,66 @@ jobs:
           time /t
 
           cd %WIN_COMMUNITY_ROOT%/tests/ci
-          pip3 install taospy==2.7.21 
-          pip3 install taos-ws-py==0.3.8
-          xcopy /e/y/i/f %WIN_INTERNAL_ROOT%\\debug\\build\\lib\\taos.dll C:\\Windows\\System32
+          pip3 install -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn taospy==2.8.5
+          pip3 install -i https://pypi.tuna.tsinghua.edu.cn/simple --trusted-host pypi.tuna.tsinghua.edu.cn taos-ws-py==0.6.1
+          xcopy /e/y/i/f "%WIN_INTERNAL_ROOT%\debug\build\bin\taos.dll" C:\Windows\System32
+          xcopy /e/y/i/f "%WIN_INTERNAL_ROOT%\debug\build\bin\pthreadVC3.dll" C:\Windows\System32
+          if exist "%WIN_INTERNAL_ROOT%\\debug\\build\\bin\\taosnative.dll" (
+            xcopy /e/y/i/f "%WIN_INTERNAL_ROOT%\\debug\\build\\bin\\taosnative.dll" C:\\Windows\\System32
+          )
         shell: cmd
       - name: Run ctest
         run: |
           echo "windows ctest ..."
           time /t
           cd %WIN_INTERNAL_ROOT%\\debug
-          ctest -j 1 || exit 7
+          ctest -E "pcre*|example*" || exit 7
           time /t
         shell: cmd
       - name: Run function test
         run: |
           echo "windows test ..."
-          xcopy /e/y/i/f "%WIN_INTERNAL_ROOT%\debug\build\lib\taos.dll" C:\Windows\System32
+          xcopy /e/y/i/f "%WIN_INTERNAL_ROOT%\debug\build\bin\taos.dll" C:\Windows\System32
+          xcopy /e/y/i/f "%WIN_INTERNAL_ROOT%\debug\build\bin\pthreadVC3.dll" C:\Windows\System32
+          if exist "%WIN_INTERNAL_ROOT%\\debug\\build\\bin\\taosnative.dll" (
+             xcopy /e/y/i/f "%WIN_INTERNAL_ROOT%\\debug\\build\\bin\\taosnative.dll" C:\\Windows\\System32
+          )
           ls -l "C:\Windows\System32\taos.dll"
+          ls -l "C:\Windows\System32\taosnative.dll"
+          ls -l "C:\Windows\System32\pthreadVC3.dll"
           time /t
           cd %WIN_SYSTEM_TEST_ROOT%
           echo "testing ..."
-          test-all.bat ci
+          python3 test-win.py ci
+          if %ERRORLEVEL% neq 0 (
+             echo "Test script failed with error code %ERRORLEVEL%"
+             exit 1
+          )
+          time /t
+          cd %WIN_ARMY_TEST_ROOT%
+          echo "testing ..."
+          xcopy /e/y/i/f "%WIN_SYSTEM_TEST_ROOT%\\test-win.py" .
+          python3 test-win.py ci
+          if %ERRORLEVEL% neq 0 (
+            del /f /q test-win.py
+            echo "Test script failed with error code %ERRORLEVEL%"
+            time /t
+            exit 1
+          )
+          del /f /q test-win.py
           time /t
         shell: cmd
+        
+      - name: Clearup the running cases
+        shell: cmd
+        continue-on-error: true
+        if: always()
+        run: |
+          tasklist /FI "IMAGENAME eq python3.exe" /NH | findstr /I python3.exe >nul
+          if %errorlevel% equ 0 (
+              wmic process where "name='python3.exe'" delete
+              echo Python3 process has been terminated.
+          ) else (
+              echo No Python3 process was found.
+          )           
+

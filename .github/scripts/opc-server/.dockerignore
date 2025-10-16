@@ -1,0 +1,17 @@
+# Docker 镜像构建和运行忽略文件
+node_modules
+npm-debug.log
+.git
+.gitignore
+.env
+.nyc_output
+coverage
+.nyc_output
+.vscode
+.DS_Store
+*.log
+.dockerignore
+test-config-expansion.js
+deploy.bat
+deploy.sh
+docker-compose.yml

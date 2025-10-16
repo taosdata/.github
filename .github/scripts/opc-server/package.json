@@ -1,0 +1,17 @@
+{
+  "name": "opcua-server",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "node-opcua": "^2.156.0",
+    "node-opcua-nodeid": "^2.153.0",
+    "node-opcua-types": "^2.155.0"
+  }
+}

@@ -1,0 +1,25 @@
+name: Import Grafana Dashboard
+description: Import Grafana Dashboard With IDs
+
+inputs:
+  grafana-url:
+    description: 'Url of Grafana'
+    required: true
+    default: http://127.0.0.1:3000
+  dashboard-ids:
+    required: true
+    default: "18180,20631"
+    description: 'dashboard ids'
+  dashboard-uids:
+    required: true
+    default: "td_ds_01,td_ds_02"
+    description: 'dashboard uids'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Import Grafana Dashboard With IDs
+      shell: bash
+      run: |
+        echo "🔄 Importing Grafana Dashboard..."
+        ${GITHUB_ACTION_PATH}/../../scripts/import_grafana_dashboard.sh "${{ inputs.grafana-url }}" "${{ inputs.dashboard-ids }}" "${{ inputs.dashboard-uids }}"
