@@ -116,49 +116,82 @@ class TestRunner:
             print(f"No existing test log directory found: {log_base_dir}")
             return None
         
-        pattern1 = f"PR-{self.pr_number}_{self.run_number}_*"
-        search_pattern1 = os.path.join(log_base_dir, pattern1)
-        matching_dirs1 = glob.glob(search_pattern1)
+        # 定义多种搜索模式来兼容不同的目录命名格式
+        patterns = [
+            f"PR-{self.pr_number}_{self.run_number}_*",           # PR-123_456_xxx
+            f"PR-{self.pr_number}_{self.run_number}*",            # PR-123_456xxx (包含时间戳)
+            f"PR-{self.pr_number}_*_{self.run_number}_*",         # PR-123_xxx_456_xxx
+            f"PR-{self.pr_number}_*",                             # PR-123_xxx
+            f"PR-unknown_{self.run_number}_*",                    # PR-unknown_456_xxx
+            f"PR-*_{self.run_number}_*",                          # PR-xxx_456_xxx
+        ]
         
-        pattern2 = f"PR-{self.pr_number}_*"
-        search_pattern2 = os.path.join(log_base_dir, pattern2)
-        matching_dirs2 = glob.glob(search_pattern2)
+        all_matching_dirs = []
         
-        print(f"Pattern1 ({pattern1}): Found {len(matching_dirs1)} cases directory")
-        print(f"Pattern2 ({pattern2}): Found {len(matching_dirs2)} cases directory")
+        for i, pattern in enumerate(patterns, 1):
+            search_pattern = os.path.join(log_base_dir, pattern)
+            matching_dirs = glob.glob(search_pattern)
+            
+            print(f"Pattern{i} ({pattern}): Found {len(matching_dirs)} directories")
+            
+            # 过滤掉重复的目录
+            for dir_path in matching_dirs:
+                if dir_path not in all_matching_dirs:
+                    all_matching_dirs.append(dir_path)
         
-        matching_dirs = matching_dirs1 if matching_dirs1 else matching_dirs2
-        
-        if not matching_dirs:
-            print("No existing test log directory found")
+        if not all_matching_dirs:
+            print("No existing test log directory found with any pattern")
             return None
         
-        matching_dirs.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+        # 按修改时间排序，最新的在前面
+        all_matching_dirs.sort(key=lambda x: os.path.getmtime(x), reverse=True)
         
-        for i, dir_path in enumerate(matching_dirs):
+        print(f"Total found {len(all_matching_dirs)} matching directories:")
+        for i, dir_path in enumerate(all_matching_dirs[:10]):  # 只显示前10个
             mtime = os.path.getmtime(dir_path)
             mtime_str = datetime.fromtimestamp(mtime).strftime('%Y-%m-%d %H:%M:%S')
             cases_exists = os.path.exists(os.path.join(dir_path, "cases"))
-            print(f"  {i+1}. {os.path.basename(dir_path)} (data: {mtime_str}, cases dir: {'cases_exists' if cases_exists else 'cases_not_exists'})")
+            dir_name = os.path.basename(dir_path)
+            print(f"  {i+1}. {dir_name} (modified: {mtime_str}, cases dir: {'exists' if cases_exists else 'not_exists'})")
         
-        latest_dir = matching_dirs[0]
-        print(f"latest_dir: {latest_dir}")
+        if len(all_matching_dirs) > 10:
+            print(f"  ... and {len(all_matching_dirs) - 10} more directories")
+        
+        # 优先选择包含 cases 目录的最新目录
+        for dir_path in all_matching_dirs:
+            cases_dir = os.path.join(dir_path, "cases")
+            if os.path.exists(cases_dir):
+                print(f"Selected directory with cases: {os.path.basename(dir_path)}")
+                return dir_path
+        
+        # 如果没有找到包含 cases 目录的，选择最新的目录
+        latest_dir = all_matching_dirs[0]
+        print(f"Selected latest directory (no cases dir found): {os.path.basename(latest_dir)}")
         
         return latest_dir
             
     def run_coverage_test(self):
         print(f"PR number: {self.pr_number}, run number: {self.run_number}")
         print(f"timeout: {self.timeout}")
-        
+        print(f"Searching for test logs with PR number: '{self.pr_number}', run number: '{self.run_number}'")
+
         test_log_dir = self.find_latest_test_log_dir()
         
         if test_log_dir:
-            print(f"Found test log directory: {test_log_dir}")
+            print(f"✓ Found test log directory: {test_log_dir}")
+            
+            # 验证目录内容
+            cases_dir = os.path.join(test_log_dir, "cases")
+            if os.path.exists(cases_dir):
+                case_count = len([f for f in os.listdir(cases_dir) if os.path.isdir(os.path.join(cases_dir, f))])
+                print(f"  - Cases directory contains {case_count} test case directories")
+            else:
+                print(f"  - Warning: No cases directory found in {test_log_dir}")
         else:
-            print("No existing test log directory found, coverage test will only use basic debug directory")
+            print("⚠ No existing test log directory found, coverage test will only use basic debug directory")
             test_log_dir = ""
     
-        branch_id = self.utils.get_env_var('TARGET_BRANCH')
+        branch_id = self.utils.get_env_var('TARGET_BRANCH') or 'cover/3.0'
         print(f"Target branch: {branch_id}")
         print(f"Test log directory: {test_log_dir}")
         
