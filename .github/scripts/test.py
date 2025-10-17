@@ -33,13 +33,55 @@ class TestRunner:
         cmd = f"cd {self.wkc}/test/ci && ./run_scan_container.sh -d {self.wkdir} -b {self.pr_number}_{self.run_number} -f {self.wkdir}/tmp/{self.pr_number}_{self.run_number}/docs_changed.txt {self.extra_param}"
         self.utils.run_command(cmd, silent=False)
 
+    def merge_task_files(self):
+        """合并 cases_others.task 到 cases.task"""
+        cases_task_path = os.path.join(self.wkc, 'test', 'ci', 'cases.task')
+        cases_others_task_path = os.path.join(self.wkc, 'test', 'ci', 'cases_others.task')
+        
+        if not os.path.exists(cases_task_path):
+            print(f"Warning: {cases_task_path} not found")
+            return False
+            
+        if not os.path.exists(cases_others_task_path):
+            print(f"Warning: {cases_others_task_path} not found")
+            return False
+        
+        try:
+            # 读取 cases_others.task 的内容
+            with open(cases_others_task_path, 'r', encoding='utf-8') as f:
+                others_content = f.read()
+            
+            # 追加到 cases.task
+            with open(cases_task_path, 'a', encoding='utf-8') as f:
+                # 确保有换行符分隔
+                f.write('\n' + others_content)
+            
+            print(f"Successfully merged {cases_others_task_path} into {cases_task_path}")
+            return True
+            
+        except Exception as e:
+            print(f"Error merging task files: {e}")
+            return False
+    
     def run_function_test(self):
         print(f"timeout: {self.timeout}")
+        
+        self.merge_task_files()
+        # 获取环境变量并提供默认值
+        pr_number = self.utils.get_env_var('PR_NUMBER') or 'unknown'
+        run_number = self.utils.get_env_var('GITHUB_RUN_NUMBER') or '0'
+        extra_param = self.utils.get_env_var('extra_param') or ''
+        
+        # 处理 None 值
+        if extra_param is None or extra_param == 'None':
+            extra_param = ''
+        
+        branch_id = f"PR-{pr_number}_{run_number}"
+    
         linux_cmds = [
             f"cd {self.wkc}/test/ci && export DEFAULT_RETRY_TIME=2",
             f"date",
-            f"cd {self.wkc}/test/ci && timeout 21000 time ./run.sh -e -m /home/m.json -t cases.task -b PR-{self.utils.get_env_var('PR_NUMBER')}_{self.utils.get_env_var('GITHUB_RUN_NUMBER')} -l {self.wkdir}/log -o 1230 {self.utils.get_env_var('extra_param')}",
-            f"cd {self.wkc}/test/ci && timeout 21000 time ./run.sh -e -m /home/m.json -t cases_others.task -b PR-{self.utils.get_env_var('PR_NUMBER')}_{self.utils.get_env_var('GITHUB_RUN_NUMBER')} -l {self.wkdir}/log -o 1230 {self.utils.get_env_var('extra_param')}",
+            f"cd {self.wkc}/test/ci && timeout 50000 time ./run.sh -e -m /home/m.json -t cases.task -b {branch_id} -l {self.wkdir}/log -o 1230 {self.utils.get_env_var('extra_param')}".strip(),
         ]
         mac_cmds = [
             "date",
