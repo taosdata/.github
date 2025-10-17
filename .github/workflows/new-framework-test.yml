@@ -63,7 +63,7 @@ jobs:
         include:
           - platform: linux
             runner_group: CI
-            runner_labels: [self-hosted, Linux, X64, new-framework]
+            runner_labels: [self-hosted, Linux, X64, multi_vm]
             WKDIR: '/var/lib/jenkins/workspace'
             WK: '/var/lib/jenkins/workspace/TDinternal'
             WKC: '/var/lib/jenkins/workspace/TDinternal/community'
