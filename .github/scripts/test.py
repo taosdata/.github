@@ -66,7 +66,7 @@ class TestRunner:
     def run_function_test(self):
         print(f"timeout: {self.timeout}")
         
-        # self.merge_task_files()
+        self.merge_task_files()
         # 获取环境变量并提供默认值
         pr_number = self.utils.get_env_var('PR_NUMBER') or 'unknown'
         run_number = self.utils.get_env_var('GITHUB_RUN_NUMBER') or '0'
