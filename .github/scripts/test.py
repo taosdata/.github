@@ -49,14 +49,19 @@ class TestRunner:
         try:
             # 读取 cases_others.task 的内容
             with open(cases_others_task_path, 'r', encoding='utf-8') as f:
-                others_content = f.read()
+                others_content = f.read().rstrip()  # 移除末尾的空白字符
             
             # 追加到 cases.task
             with open(cases_task_path, 'a', encoding='utf-8') as f:
-                # 确保有换行符分隔
-                f.write('\n' + others_content)
+                # 添加一个换行符作为分隔
+                f.write('\n')
+                # 添加内容
+                f.write(others_content)
+                # 强制添加两个换行符确保文件正确结束
+                f.write('\n\n')
             
             print(f"Successfully merged {cases_others_task_path} into {cases_task_path}")
+            print("Added proper line endings to prevent execution issues")
             return True
             
         except Exception as e:
