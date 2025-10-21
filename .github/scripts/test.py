@@ -34,7 +34,7 @@ class TestRunner:
     def run_function_test(self):
         print(f"timeout: {self.timeout}")
         linux_cmds = [
-            f"cd {self.wkc}/test/ci && export DEFAULT_RETRY_TIME=2",
+            f"cd {self.wkc}/test/ci && export DEFAULT_RETRY_TIME=1",
             f"date",
             f"cd {self.wkc}/test/ci && {self.timeout} time ./run.sh -e -m /home/m.json -t cases.task -b PR-{self.utils.get_env_var('PR_NUMBER')}_{self.utils.get_env_var('GITHUB_RUN_NUMBER')} -l {self.wkdir}/log -o 1230 {self.utils.get_env_var('extra_param')}",
         ]
