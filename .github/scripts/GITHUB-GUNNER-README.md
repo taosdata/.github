@@ -20,6 +20,7 @@
 - 完整的备份和回滚机制
 - 支持 root 和普通用户
 - 详细的日志输出
+- 默认禁用自动更新（可选启用）
 
 ## 前置要求
 
@@ -81,14 +82,10 @@
 ### 删除 Runner
 
 ```bash
-# 删除单个 runner
+# 删除 runner（从 GitHub 注销并删除本地文件）
 ./manage-github-runner.sh remove \
   --owner taosdata \
   --token ghp_xxxxxxxxxxxxxxxxxxxx \
-  --install-dir /opt/runner-01
-
-# 只删除本地（不从 GitHub 删除）
-./manage-github-runner.sh remove \
   --install-dir /opt/runner-01
 ```
 
@@ -133,6 +130,7 @@
 | `--version VERSION` | `2.329.0` | Runner 版本 |
 | `--os OS` | `linux` | 操作系统（linux/osx） |
 | `--arch ARCH` | `x64` | 架构（x64/arm64） |
+| `--enable-autoupdate` | 禁用 | 启用 GitHub 自动更新 |
 
 #### 示例
 
@@ -158,29 +156,24 @@
 
 | 参数 | 说明 |
 |------|------|
+| `--owner OWNER` | GitHub 组织或用户名 |
+| `--token TOKEN` | GitHub Personal Access Token |
 | `--install-dir DIR` | Runner 安装目录 |
-
-#### 可选参数
-
-| 参数 | 说明 |
-|------|------|
-| `--owner OWNER` | GitHub 组织（用于从 GitHub 删除） |
-| `--token TOKEN` | GitHub PAT（用于从 GitHub 删除） |
-
-**注意：** 如果不提供 `--owner` 和 `--token`，只会删除本地文件，不会从 GitHub 删除注册。
 
 #### 示例
 
 ```bash
-# 完整删除（包括 GitHub 注册）
+# 删除 runner（推荐做法：从 GitHub 注销并删除本地）
 ./manage-github-runner.sh remove \
   --owner taosdata \
   --token ghp_xxx \
   --install-dir /opt/runner-01
 
-# 仅删除本地
+# 批量删除
 ./manage-github-runner.sh remove \
-  --install-dir /opt/runner-01
+  --owner taosdata \
+  --token ghp_xxx \
+  --install-dir "/opt/runner-01;/opt/runner-02;/opt/runner-03"
 ```
 
 ### Upgrade 命令
@@ -198,12 +191,13 @@
 | 参数 | 默认值 | 说明 |
 |------|--------|------|
 | `--target-version VER` | 最新版本 | 目标版本号 |
+| `--enable-autoupdate` | 禁用 | 启用 GitHub 自动更新 |
 
 #### 升级特性
 
 - **自动备份**：升级前自动创建时间戳备份
 - **智能检测**：自动获取最新版本或指定版本
-- **配置保留**：完整保留所有配置文件
+- **配置保留**：完整保留所有配置文件（包括自动更新设置）
 - **失败回滚**：升级失败自动恢复原版本
 - **零中断**：等待当前任务完成后升级
 
@@ -351,6 +345,58 @@ cp -r /root/.cache/github-runner/* /home/username/.cache/github-runner/
 chown -R username:username /home/username/.cache
 ```
 
+### 自动更新控制
+
+**默认行为：禁用自动更新**
+
+脚本默认禁用 GitHub 的自动更新功能，让你完全控制升级时机：
+
+```bash
+# 默认安装（禁用自动更新）
+./manage-github-runner.sh install \
+  --owner taosdata \
+  --token ghp_xxx
+```
+
+**启用自动更新：**
+
+如果你希望让 GitHub 自动更新 runner，可以使用 `--enable-autoupdate` 参数：
+
+```bash
+# 启用自动更新
+./manage-github-runner.sh install \
+  --owner taosdata \
+  --token ghp_xxx \
+  --enable-autoupdate
+```
+
+**选择建议：**
+
+| 场景 | 建议 | 原因 |
+|------|------|------|
+| 生产环境 | 禁用（默认） | 可控的升级时机，避免意外中断 |
+| 测试环境 | 启用 | 自动保持最新，减少维护 |
+| 多 Runner | 禁用（默认） | 使用本脚本批量升级更可控 |
+| 单 Runner | 按需选择 | 根据业务需求决定 |
+
+**手动升级：**
+
+禁用自动更新后，使用 `upgrade` 命令手动升级：
+
+```bash
+# 升级到最新版本
+./manage-github-runner.sh upgrade \
+  --owner taosdata \
+  --token ghp_xxx \
+  --install-dir /opt/runner-01
+
+# 批量升级
+./manage-github-runner.sh upgrade \
+  --owner taosdata \
+  --token ghp_xxx \
+  --install-dir "/opt/r1;/opt/r2;/opt/r3"
+```
+
 ## Runner 管理
 
 ### 查看状态
@@ -413,13 +459,6 @@ sudo su - github-runner
   --token ghp_xxx
 ```
 
-### 网络安全
-
-- 确保 runner 机器防火墙配置正确
-- 限制对 runner 机器的访问
-- 使用 VPN 或专用网络
-- 定期更新系统和 runner 版本
-
 ## 实用场景
 
 ### 场景 1：生产环境多 Runner 部署
@@ -437,18 +476,7 @@ export GITHUB_TOKEN="ghp_xxx"
   --install-dir "/opt/runner-1;/opt/runner-2;/opt/runner-3"
 ```
 
-### 场景 2：GPU Runner 专用配置
-
-```bash
-./manage-github-runner.sh install \
-  --owner taosdata \
-  --token ghp_xxx \
-  --name gpu-runner-01 \
-  --labels gpu,cuda-12.0,nvidia-a100,ml \
-  --install-dir /opt/gpu-runner
-```
-
-### 场景 3：滚动升级生产 Runners
+### 场景 2：滚动升级生产 Runners
 
 ```bash
 #!/bin/bash
@@ -468,7 +496,7 @@ for runner in "${RUNNERS[@]}"; do
 done
 ```
 
-### 场景 4：测试特定版本
+### 场景 3：安装特定版本
 
 ```bash
 # 安装旧版本用于测试
@@ -580,69 +608,9 @@ sudo journalctl -u actions.runner.* -f
 - [ ] 用户有必要的权限
 - [ ] 安装目录不存在或为空
 
-## 📖 技术细节
-
-### 升级机制对比
-
-|  | GitHub 自动更新 | 本脚本升级 |
-|---|---|---|
-| **策略** | In-Place | In-Place + 备份 |
-| **控制权** | GitHub | 用户 |
-| **备份** |  |  自动时间戳备份 |
-| **回滚** |  |  失败自动回滚 |
-| **版本控制** | 仅最新 | 最新或指定版本 |
-| **批量升级** |  |  |
-| **停机时间** | 1-2分钟 | 1-2分钟 |
-
-### 自动更新说明
-
-GitHub Actions Runner 默认启用自动更新（In-Place 策略）：
-
-- 等待当前任务完成后自动更新
-- 保留配置文件
-- 无备份和回滚机制
-
-**禁用自动更新：**
-```bash
-./manage-github-runner.sh install \
-  --owner taosdata \
-  --token ghp_xxx \
-  # 手动在 config.sh 中添加 --disableupdate
-```
-
-**推荐策略：**
-- 多 runner 环境：启用自动更新
-- 单 runner 或关键环境：禁用自动更新，使用本脚本手动升级
-
-## 相关资源
+## 参考文档
 
 - [GitHub Actions 官方文档](https://docs.github.com/en/actions)
 - [Self-hosted Runner 管理](https://docs.github.com/en/actions/hosting-your-own-runners)
 - [Runner Releases](https://github.com/actions/runner/releases)
 - [GitHub REST API](https://docs.github.com/en/rest)
-
-## 更新日志
-
-### v2.0 (2025-10-22)
-- 重构为统一的管理脚本
-- 新增 install、remove、upgrade 三大命令
-- 支持批量操作
-- 新增升级功能（带备份回滚）
-- 改用命令行参数替代环境变量
-- 优化用户体验和错误处理
-
-### v1.0 (2025-10)
-- 初始版本
-- 基本的安装功能
-
-## 许可证
-
-MIT License
-
-## 贡献
-
-欢迎提交 Issue 和 Pull Request！
-
----
-
-**Made for GitHub Actions Community**

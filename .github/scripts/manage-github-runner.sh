@@ -82,6 +82,7 @@ RUNNER_VERSION="2.329.0"
 OS_TYPE="linux"
 ARCH="x64"
 TARGET_VERSION=""  # Empty means latest version
+DISABLE_AUTO_UPDATE="true"  # Disable automatic updates by default
 
 ################################################################################
 # Usage/Help function
@@ -119,6 +120,7 @@ Optional Arguments:
   --os OS                OS type: linux or osx (default: linux)
   --arch ARCH            Architecture: x64 or arm64 (default: x64)
   --target-version VER   Target version to upgrade to (default: latest)
+  --enable-autoupdate    Enable GitHub automatic updates (default: disabled)
   -h, --help             Show this help message
 
 Batch Deployment:
@@ -169,16 +171,13 @@ Install Examples:
     --install-dir "/opt/runner-01;/opt/runner-02;/opt/runner-03;/opt/runner-04;/opt/runner-05"
 
 Remove Examples:
-  # Remove a single runner
+  # Remove a single runner (removes from GitHub and deletes local files)
   $0 remove --owner taosdata --token ghp_xxx \\
     --install-dir /opt/runner-01
 
   # Batch remove - multiple runners
   $0 remove --owner taosdata --token ghp_xxx \\
     --install-dir "/opt/r1;/opt/r2;/opt/r3"
-
-  # Remove without GitHub token (local only)
-  $0 remove --install-dir /opt/runner-01
 
 Upgrade Examples:
   # Upgrade a single runner to latest version
@@ -257,6 +256,10 @@ parse_arguments() {
                 TARGET_VERSION="$2"
                 shift 2
                 ;;
+            --enable-autoupdate)
+                DISABLE_AUTO_UPDATE="false"
+                shift
+                ;;
             -h|--help)
                 show_usage
                 exit 0
@@ -316,18 +319,26 @@ validate_parameters() {
         exit 1
     fi
     
-    # For remove command, only install-dir is required
+    # For remove command, install-dir, owner and token are required
     if [ "$COMMAND" = "remove" ]; then
-        # Check if INSTALL_DIR was explicitly provided or is still the default
-        # We check against the literal default value before variable expansion
-        local default_dir="$HOME/actions-runner"
         if [ -z "$INSTALL_DIR" ]; then
             print_error "For remove command, --install-dir is required and must be explicitly specified."
             echo ""
             show_usage
             exit 1
         fi
-        # Token and owner are optional for remove (but helpful for GitHub cleanup)
+        if [ -z "$GITHUB_OWNER" ]; then
+            print_error "For remove command, --owner is required."
+            echo ""
+            show_usage
+            exit 1
+        fi
+        if [ -z "$GITHUB_TOKEN" ]; then
+            print_error "For remove command, --token is required."
+            echo ""
+            show_usage
+            exit 1
+        fi
         return 0
     fi
     
@@ -646,6 +657,14 @@ configure_runner() {
     # Add runner group for organization-level runners
     if [ -z "$GITHUB_REPO" ] && [ -n "$RUNNER_GROUP" ]; then
         config_args+=("--runnergroup" "${RUNNER_GROUP}")
+    fi
+    
+    # Disable automatic updates by default (unless --enable-autoupdate is specified)
+    if [ "$DISABLE_AUTO_UPDATE" = "true" ]; then
+        print_info "Disabling automatic updates (use --enable-autoupdate to enable)"
+        config_args+=("--disableupdate")
+    else
+        print_info "Automatic updates enabled"
     fi
     
     if ! "${config_args[@]}"; then
