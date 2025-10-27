@@ -139,7 +139,7 @@ class TestPreparer:
 
     def update_codes(self):
         """Update codes for TDengine or TDinternal"""
-        logger.info("is enterprise: ", self.enterprise)
+        logger.info(f"is enterprise: {self.enterprise}")
         if self.enterprise:
             logger.info("Updating codes for TDinternal...")
             job_name = 'TDinternalCI'
