@@ -112,26 +112,23 @@ yellow_echo() { echo -e "${YELLOW}$*${RESET}"; }
 function init() {
     SUB_VERSION=""
     if [ -f /etc/os-release ]; then
-        OS_ID=$(source /etc/os-release; echo $ID)
-        case $OS_ID in
+        # Safely extract OS information using grep instead of source
+        OS_ID=$(grep -E '^ID=' /etc/os-release | cut -d= -f2 | tr -d '"')
+        OS_VERSION=$(grep -E '^VERSION_ID=' /etc/os-release | cut -d= -f2 | tr -d '"')
+        
+        case "$OS_ID" in
             ubuntu|debian)
-                OS_ID=$(grep -E '^ID=' /etc/os-release | cut -d= -f2 | tr -d '"')
-                OS_VERSION=$(grep -E '^VERSION_ID=' /etc/os-release | cut -d= -f2 | tr -d '"')
                 PKG_MGR="apt"
                 PKG_CONFIRM="dpkg -l"
                 ;;
             centos|rhel|rocky|kylin)
-                OS_ID=$(grep -E '^ID=' /etc/os-release | cut -d= -f2 | tr -d '"')
-                OS_VERSION=$(grep -E '^VERSION_ID=' /etc/os-release | cut -d= -f2 | tr -d '"')
-                if [ "$OS_ID" = "kylin" ];then
+                if [ "$OS_ID" = "kylin" ]; then
                     SUB_VERSION="$(cat /etc/.productinfo | awk '/SP2/ {split($0,a,"/"); gsub(/[()]/,"",a[2]); print "SP2-"a[3]} /SP3/ {split($0,a,"/"); gsub(/[()]/,"",a[2]); print "SP3-"a[3]}' | paste -sd '_')-"
                 fi
                 PKG_MGR="yum"
                 PKG_CONFIRM="rpm -q"
                 ;;
             sles|opensuse*|suse)
-                OS_ID=$(grep -E '^ID=' /etc/os-release | cut -d= -f2 | tr -d '"')
-                OS_VERSION=$(grep -E '^VERSION_ID=' /etc/os-release | cut -d= -f2 | tr -d '"')
                 # Extract SP version for SLES
                 if [ "$OS_ID" = "sles" ]; then
                     SP_VERSION=$(grep -E '^VERSION=' /etc/os-release | cut -d= -f2 | tr -d '"' | sed -n 's/.*SP\([0-9]\+\).*/SP\1/p')
@@ -143,14 +140,14 @@ function init() {
                 PKG_CONFIRM="rpm -q"
                 ;;
             *)
-                red_echo "Unsupported OS and set OS_ID and OS_VERSION to unkown"
+                red_echo "Unsupported OS and set OS_ID and OS_VERSION to unknown"
                 OS_ID=unknown_os
                 OS_VERSION=""
                 PKG_MGR=""
                 PKG_CONFIRM=""
         esac
     else
-        red_echo "Cannot detect OS and set OS_ID and OS_VERSION to unkown"
+        red_echo "Cannot detect OS and set OS_ID and OS_VERSION to unknown"
         OS_ID=unknown_os
         OS_VERSION=""
     fi
@@ -205,6 +202,22 @@ function config_yum() {
     fi
 }
 
+function download_bpftrace_binary() {
+    local os_type="$1"  # e.g., "CentOS/RHEL" or "SUSE/SLES"
+    yellow_echo "Handling bpftrace specially for ${os_type}..."
+    
+    local BPFTRACE_URL="https://github.com/bpftrace/bpftrace/releases/download/v0.23.2/bpftrace"
+    mkdir -p "$offline_env_path/binary_tools"
+    
+    if ! wget -q "$BPFTRACE_URL" -O "$offline_env_path/binary_tools/bpftrace"; then
+        red_echo "Failed to download bpftrace binary"
+        exit 1
+    fi
+    
+    chmod +x "$offline_env_path/binary_tools/bpftrace"
+    green_echo "Successfully downloaded bpftrace binary for ${os_type}"
+}
+
 function install_system_packages() {
     if [ -n "$SYSTEM_PACKAGES" ]; then
         yellow_echo "Downloading system packages: $SYSTEM_PACKAGES"
@@ -223,14 +236,7 @@ function install_system_packages() {
             for pkg in $formated_system_packages;
             do
                 if [[ "$pkg" == "bpftrace" ]] && [ "$ID" = "centos" ]; then
-                    yellow_echo "Handling bpftrace specially for CentOS/RHEL..."
-                    BPFTRACE_URL="https://github.com/bpftrace/bpftrace/releases/download/v0.23.2/bpftrace"
-                    mkdir -p "$offline_env_path/binary_tools"
-                    if ! wget -q "$BPFTRACE_URL" -O "$offline_env_path/binary_tools/bpftrace"; then
-                        red_echo "Failed to download bpftrace binary"
-                        exit 1
-                    fi
-                    chmod +x "$offline_env_path/binary_tools/bpftrace"
+                    download_bpftrace_binary "CentOS/RHEL"
                     continue
                 else
                     $PKG_MGR install -q -y dnf-plugins-core
@@ -255,25 +261,30 @@ function install_system_packages() {
             yellow_echo "$PKG_MGR updating"
             $PKG_MGR update -qq -y
             $PKG_MGR install -qq -y apt-offline wget curl openssh-client apt-rdepends build-essential
-            apt-rdepends $formated_system_packages | grep -v "^ " > raw_deps.txt
+            
+            # Use temp files in system_packages_dir for better organization
+            raw_deps_file="$system_packages_dir/raw_deps.txt"
+            dependencies_file="$system_packages_dir/dependencies.txt"
+            
+            apt-rdepends $formated_system_packages | grep -v "^ " > "$raw_deps_file"
             # echo $(cat raw_deps.txt) | xargs -n 5 apt-cache policy | awk '
             #     /^[^ ]/ { pkg=$0 }
             #     /Candidate:/ && $2 == "(none)" { print pkg >> dependencies.txt }
             # '
-            cat raw_deps.txt | tr '\n' ' ' | xargs -n 20 apt-cache policy | awk '
+            cat "$raw_deps_file" | tr '\n' ' ' | xargs -n 20 apt-cache policy | awk -v depfile="$dependencies_file" '
                 /^[^ ]/ {
                     current_pkg = $0;
                     sub(/:$/, "", current_pkg)
                 }
                 /Candidate:/ && $2 != "(none)" {
-                    print current_pkg >> "/dependencies.txt"
+                    print current_pkg >> depfile
                 }
             '
             chown -R _apt:root "$system_packages_dir"
             chmod -R 700 "$system_packages_dir"
             cd "$system_packages_dir" || exit
             yellow_echo "Downloading offline pkgs......"
-            apt-get download $(cat /dependencies.txt)
+            apt-get download $(cat "$dependencies_file")
         elif [ -f /etc/SuSE-release ] || [ "$OS_ID" = "sles" ] || [ "$OS_ID" = "opensuse-leap" ] || [ "$OS_ID" = "suse" ]; then
             # SUSE/openSUSE systems using zypper
             yellow_echo "$PKG_MGR updating"
@@ -282,14 +293,7 @@ function install_system_packages() {
             for pkg in $formated_system_packages;
             do
                 if [[ "$pkg" == "bpftrace" ]] && [ "$OS_ID" = "sles" ]; then
-                    yellow_echo "Handling bpftrace specially for SUSE/SLES..."
-                    BPFTRACE_URL="https://github.com/bpftrace/bpftrace/releases/download/v0.23.2/bpftrace"
-                    mkdir -p "$offline_env_path/binary_tools"
-                    if ! wget -q "$BPFTRACE_URL" -O "$offline_env_path/binary_tools/bpftrace"; then
-                        red_echo "Failed to download bpftrace binary"
-                        exit 1
-                    fi
-                    chmod +x "$offline_env_path/binary_tools/bpftrace"
+                    download_bpftrace_binary "SUSE/SLES"
                     continue
                 else
                     yellow_echo "Downloading offline pkgs for $pkg......"
@@ -370,7 +374,6 @@ function install_system_packages() {
         fi
     else
         red_echo "No system packages to install."
-        exit 1
     fi
 }
 
@@ -592,7 +595,7 @@ case "$MODE" in
         run_test
         ;;
     *)
-        red_echo "[ERROR] Unkown mode: $MODE"
+        red_echo "[ERROR] unknown mode: $MODE"
         exit 1
         ;;
 esac
