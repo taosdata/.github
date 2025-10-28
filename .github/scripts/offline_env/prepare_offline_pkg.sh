@@ -12,12 +12,18 @@ PYTHON_PACKAGES=""
 PKG_LABEL=""
 BINARY_TOOLS=("bpftrace")
 TDGPT=""
+DOCKER_VERSION="latest"
+DOCKER_COMPOSE_VERSION="latest"
+INSTALL_DOCKER=""
+INSTALL_DOCKER_COMPOSE=""
 
 function show_usage() {
     echo "Usage:"
     echo "  Option      Mode: $0 [--build|--test] --system-packages=<pkgs> --python-version=<ver> --python-packages=<pkgs> --pkg-label=<label>"
+    echo "  Docker Options: [--install-docker] [--docker-version=<version>] [--install-docker-compose] [--docker-compose-version=<version>]"
     echo "Example:"
     echo "  $0 --build --system-packages=vim,ntp --python-version=3.10 --python-packages=fabric2,requests --pkg-label=1.0.20250409"
+    echo "  $0 --build --install-docker --docker-version=27.5.1 --install-docker-compose --docker-compose-version=v2.40.2 --pkg-label=test"
     exit 1
 }
 
@@ -45,6 +51,22 @@ while [[ $# -gt 0 ]]; do
             ;;
         --tdgpt=*)
             TDGPT="${1#*=}"
+            shift
+            ;;
+        --install-docker)
+            INSTALL_DOCKER="true"
+            shift
+            ;;
+        --docker-version=*)
+            DOCKER_VERSION="${1#*=}"
+            shift
+            ;;
+        --install-docker-compose)
+            INSTALL_DOCKER_COMPOSE="true"
+            shift
+            ;;
+        --docker-compose-version=*)
+            DOCKER_COMPOSE_VERSION="${1#*=}"
             shift
             ;;
         -h|--help)
@@ -81,8 +103,8 @@ function validate_params() {
     # [[ -z "$PKG_LABEL" ]] && missing_required+=("PKG_LABEL")
 
     # Check package logic: at least one exists
-    if [[ -z "$SYSTEM_PACKAGES" && -z "$PYTHON_PACKAGES" ]]; then
-        package_error="At least one of **SYSTEM_PACKAGES** or **PYTHON_PACKAGES** must be provided."
+    if [[ -z "$SYSTEM_PACKAGES" && -z "$PYTHON_PACKAGES" && -z "$INSTALL_DOCKER" && -z "$INSTALL_DOCKER_COMPOSE" ]]; then
+        package_error="At least one of **SYSTEM_PACKAGES**, **PYTHON_PACKAGES**, **INSTALL_DOCKER**, or **INSTALL_DOCKER_COMPOSE** must be provided."
     fi
 
     # Combined error message
@@ -216,6 +238,120 @@ function download_bpftrace_binary() {
     
     chmod +x "$offline_env_path/binary_tools/bpftrace"
     green_echo "Successfully downloaded bpftrace binary for ${os_type}"
+}
+
+function download_docker() {
+    if [ "$INSTALL_DOCKER" != "true" ]; then
+        return 0
+    fi
+    
+    yellow_echo "Downloading Docker..."
+    
+    # Detect system architecture
+    local arch
+    arch=$(uname -m)
+    case "$arch" in
+        x86_64)
+            arch="x86_64"
+            ;;
+        aarch64|arm64)
+            arch="aarch64"
+            ;;
+        *)
+            red_echo "Unsupported architecture: $arch"
+            exit 1
+            ;;
+    esac
+    
+    mkdir -p "$offline_env_path/docker"
+    
+    # Get latest version if not specified
+    if [ "$DOCKER_VERSION" = "latest" ]; then
+        yellow_echo "Fetching latest Docker version..."
+        DOCKER_VERSION=$(curl -s https://download.docker.com/linux/static/stable/$arch/ | \
+            grep -oP 'docker-[0-9]+\.[0-9]+\.[0-9]+\.tgz' | \
+            sed 's/docker-//' | sed 's/\.tgz//' | \
+            sort -V | tail -1)
+        if [ -z "$DOCKER_VERSION" ]; then
+            red_echo "Failed to fetch latest Docker version"
+            exit 1
+        fi
+        yellow_echo "Latest Docker version: $DOCKER_VERSION"
+    fi
+    
+    local DOCKER_URL="https://download.docker.com/linux/static/stable/$arch/docker-${DOCKER_VERSION}.tgz"
+    yellow_echo "Downloading from: $DOCKER_URL"
+    
+    if ! wget -q "$DOCKER_URL" -O "$offline_env_path/docker/docker-${DOCKER_VERSION}.tgz"; then
+        red_echo "Failed to download Docker ${DOCKER_VERSION}"
+        exit 1
+    fi
+    
+    # Save version info
+    echo "$DOCKER_VERSION" > "$offline_env_path/docker/version.txt"
+    echo "$arch" > "$offline_env_path/docker/arch.txt"
+    
+    green_echo "Successfully downloaded Docker ${DOCKER_VERSION} for ${arch}"
+}
+
+function download_docker_compose() {
+    if [ "$INSTALL_DOCKER_COMPOSE" != "true" ]; then
+        return 0
+    fi
+    
+    yellow_echo "Downloading Docker Compose..."
+    
+    # Detect system architecture
+    local arch
+    arch=$(uname -m)
+    case "$arch" in
+        x86_64)
+            arch="x86_64"
+            ;;
+        aarch64|arm64)
+            arch="aarch64"
+            ;;
+        *)
+            red_echo "Unsupported architecture: $arch"
+            exit 1
+            ;;
+    esac
+    
+    mkdir -p "$offline_env_path/docker_compose"
+    
+    # Get latest version if not specified
+    if [ "$DOCKER_COMPOSE_VERSION" = "latest" ]; then
+        yellow_echo "Fetching latest Docker Compose version..."
+        DOCKER_COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | \
+            grep '"tag_name":' | \
+            sed -E 's/.*"([^"]+)".*/\1/')
+        if [ -z "$DOCKER_COMPOSE_VERSION" ]; then
+            red_echo "Failed to fetch latest Docker Compose version"
+            exit 1
+        fi
+        yellow_echo "Latest Docker Compose version: $DOCKER_COMPOSE_VERSION"
+    fi
+    
+    # Ensure version starts with 'v'
+    if [[ ! "$DOCKER_COMPOSE_VERSION" =~ ^v ]]; then
+        DOCKER_COMPOSE_VERSION="v${DOCKER_COMPOSE_VERSION}"
+    fi
+    
+    local COMPOSE_URL="https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-linux-${arch}"
+    yellow_echo "Downloading from: $COMPOSE_URL"
+    
+    if ! wget -q "$COMPOSE_URL" -O "$offline_env_path/docker_compose/docker-compose"; then
+        red_echo "Failed to download Docker Compose ${DOCKER_COMPOSE_VERSION}"
+        exit 1
+    fi
+    
+    chmod +x "$offline_env_path/docker_compose/docker-compose"
+    
+    # Save version info
+    echo "$DOCKER_COMPOSE_VERSION" > "$offline_env_path/docker_compose/version.txt"
+    echo "$arch" > "$offline_env_path/docker_compose/arch.txt"
+    
+    green_echo "Successfully downloaded Docker Compose ${DOCKER_COMPOSE_VERSION} for ${arch}"
 }
 
 function install_system_packages() {
@@ -451,6 +587,8 @@ function summary() {
 function build_pkgs() {
     install_system_packages
     install_python_packages
+    download_docker
+    download_docker_compose
     summary
 }
 

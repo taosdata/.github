@@ -63,39 +63,198 @@ function install_binary_tools() {
     fi
 }
 
-function install_system_packages() {
-    yellow_echo "Installing offline pkgs ..."
-    if [ -f /etc/redhat-release ] || [ -f /etc/kylin-release ]; then
-        compare_field "ID" || exit 1
-        compare_field "VERSION_ID" || exit 1
-        for i in "$script_path/system_packages/"*.rpm;
-        do
-            rpm -ivh --nodeps "$i"  >/dev/null 2>&1
+function install_docker() {
+    if [ -d "$script_path/docker" ]; then
+        yellow_echo "Installing Docker..."
+        
+        # Read version and arch info
+        if [ -f "$script_path/docker/version.txt" ]; then
+            local docker_version
+            docker_version=$(cat "$script_path/docker/version.txt")
+            yellow_echo "Docker version: $docker_version"
+        fi
+        
+        # Extract Docker binaries
+        local docker_tgz
+        docker_tgz=$(find "$script_path/docker" -name "docker-*.tgz" -print -quit)
+        
+        if [ -z "$docker_tgz" ]; then
+            red_echo "Docker tarball not found"
+            return 1
+        fi
+        
+        # Extract to /tmp and move to /usr/bin
+        local temp_dir="/tmp/docker_install_$$"
+        mkdir -p "$temp_dir"
+        tar -xzf "$docker_tgz" -C "$temp_dir"
+        
+        # Backup existing docker binaries if they exist
+        for binary in "$temp_dir"/docker/*; do
+            local binary_name
+            binary_name=$(basename "$binary")
+            if [ -f "/usr/bin/$binary_name" ]; then
+                yellow_echo "Backing up existing $binary_name to /usr/bin/${binary_name}.bak"
+                mv "/usr/bin/$binary_name" "/usr/bin/${binary_name}.bak"
+            fi
         done
-        # rpm -Uvh --replacepkgs --nodeps "$script_path/system_packages/"*.rpm >/dev/null 2>&1
-        # yum localinstall -y "$script_path"/py_venv/system_packages/*.rpm >/dev/null 2>&1
-    elif [ -f /etc/debian_version ]; then
-        DEBIAN_FRONTEND=noninteractive dpkg -i "$script_path/system_packages/"*.deb >/dev/null 2>&1
-    elif [ -f /etc/SuSE-release ] || [ -f /etc/os-release ]; then
-        # Check if it's a SUSE system
-        if [ -f /etc/os-release ]; then
-            OS_ID=$(grep -E '^ID=' /etc/os-release | cut -d= -f2 | tr -d '"')
-            if [ "$OS_ID" = "sles" ] || [ "$OS_ID" = "opensuse-leap" ] || [ "$OS_ID" = "suse" ]; then
-                compare_field "ID" || exit 1
-                compare_field "VERSION_ID" || exit 1
-                # Install RPM packages on SUSE systems
-                for i in "$script_path/system_packages/"*.rpm;
-                do
-                    rpm -ivh --nodeps "$i" >/dev/null 2>&1
-                done
+        
+        # Install Docker binaries
+        cp "$temp_dir"/docker/* /usr/bin/
+        chmod +x /usr/bin/docker*
+        
+        # Cleanup
+        rm -rf "$temp_dir"
+        
+        # Create docker systemd service if not exists
+        if [ ! -f /etc/systemd/system/docker.service ]; then
+            yellow_echo "Creating Docker systemd service..."
+            cat > /etc/systemd/system/docker.service <<'EOF'
+[Unit]
+Description=Docker Application Container Engine
+Documentation=https://docs.docker.com
+After=network-online.target firewalld.service containerd.service
+Wants=network-online.target
+Requires=docker.socket containerd.service
+
+[Service]
+Type=notify
+ExecStart=/usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock
+ExecReload=/bin/kill -s HUP $MAINPID
+TimeoutSec=0
+RestartSec=2
+Restart=always
+StartLimitBurst=3
+StartLimitInterval=60s
+LimitNOFILE=infinity
+LimitNPROC=infinity
+LimitCORE=infinity
+TasksMax=infinity
+Delegate=yes
+KillMode=process
+OOMScoreAdjust=-500
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+            cat > /etc/systemd/system/docker.socket <<'EOF'
+[Unit]
+Description=Docker Socket for the API
+
+[Socket]
+ListenStream=/var/run/docker.sock
+SocketMode=0660
+SocketUser=root
+SocketGroup=docker
+
+[Install]
+WantedBy=sockets.target
+EOF
+
+            cat > /etc/systemd/system/containerd.service <<'EOF'
+[Unit]
+Description=containerd container runtime
+Documentation=https://containerd.io
+After=network.target local-fs.target
+
+[Service]
+ExecStartPre=-/sbin/modprobe overlay
+ExecStart=/usr/bin/containerd
+Type=notify
+Delegate=yes
+KillMode=process
+Restart=always
+RestartSec=5
+LimitNPROC=infinity
+LimitCORE=infinity
+LimitNOFILE=infinity
+TasksMax=infinity
+OOMScoreAdjust=-999
+
+[Install]
+WantedBy=multi-user.target
+EOF
+        fi
+        
+        # Create docker group if not exists
+        if ! getent group docker > /dev/null; then
+            groupadd docker
+        fi
+        
+        # Reload systemd and enable docker
+        systemctl daemon-reload
+        systemctl enable docker.service
+        systemctl enable containerd.service
+        
+        green_echo "Docker installed successfully. Start it with: systemctl start docker"
+    fi
+}
+
+function install_docker_compose() {
+    if [ -d "$script_path/docker_compose" ]; then
+        yellow_echo "Installing Docker Compose..."
+        
+        # Read version info
+        if [ -f "$script_path/docker_compose/version.txt" ]; then
+            local compose_version
+            compose_version=$(cat "$script_path/docker_compose/version.txt")
+            yellow_echo "Docker Compose version: $compose_version"
+        fi
+        
+        # Backup existing docker-compose if it exists
+        if [ -f /usr/local/bin/docker-compose ]; then
+            yellow_echo "Backing up existing docker-compose to /usr/local/bin/docker-compose.bak"
+            mv /usr/local/bin/docker-compose /usr/local/bin/docker-compose.bak
+        fi
+        
+        # Install docker-compose
+        mkdir -p /usr/local/bin
+        cp "$script_path/docker_compose/docker-compose" /usr/local/bin/docker-compose
+        chmod +x /usr/local/bin/docker-compose
+        
+        # Create symlink for docker compose plugin
+        mkdir -p /usr/local/lib/docker/cli-plugins
+        ln -sf /usr/local/bin/docker-compose /usr/local/lib/docker/cli-plugins/docker-compose
+        
+        green_echo "Docker Compose installed successfully at /usr/local/bin/docker-compose"
+    fi
+}
+
+function install_system_packages() {
+    if [ -d "$script_path/system_packages" ]; then
+        yellow_echo "Installing offline pkgs ..."
+        if [ -f /etc/redhat-release ] || [ -f /etc/kylin-release ]; then
+            compare_field "ID" || exit 1
+            compare_field "VERSION_ID" || exit 1
+            for i in "$script_path/system_packages/"*.rpm;
+            do
+                rpm -ivh --nodeps "$i"  >/dev/null 2>&1
+            done
+            # rpm -Uvh --replacepkgs --nodeps "$script_path/system_packages/"*.rpm >/dev/null 2>&1
+            # yum localinstall -y "$script_path"/py_venv/system_packages/*.rpm >/dev/null 2>&1
+        elif [ -f /etc/debian_version ]; then
+            DEBIAN_FRONTEND=noninteractive dpkg -i "$script_path/system_packages/"*.deb >/dev/null 2>&1
+        elif [ -f /etc/SuSE-release ] || [ -f /etc/os-release ]; then
+            # Check if it's a SUSE system
+            if [ -f /etc/os-release ]; then
+                OS_ID=$(grep -E '^ID=' /etc/os-release | cut -d= -f2 | tr -d '"')
+                if [ "$OS_ID" = "sles" ] || [ "$OS_ID" = "opensuse-leap" ] || [ "$OS_ID" = "suse" ]; then
+                    compare_field "ID" || exit 1
+                    compare_field "VERSION_ID" || exit 1
+                    # Install RPM packages on SUSE systems
+                    for i in "$script_path/system_packages/"*.rpm;
+                    do
+                        rpm -ivh --nodeps "$i" >/dev/null 2>&1
+                    done
+                else
+                    red_echo "Unsupported Linux distribution.. Please install the packages manually."
+                fi
             else
                 red_echo "Unsupported Linux distribution.. Please install the packages manually."
             fi
         else
             red_echo "Unsupported Linux distribution.. Please install the packages manually."
         fi
-    else
-        red_echo "Unsupported Linux distribution.. Please install the packages manually."
     fi
 }
 
@@ -103,6 +262,8 @@ function main() {
     if [ -f /etc/os-release ]; then
         install_venv
         install_binary_tools
+        install_docker
+        install_docker_compose
         install_system_packages
         green_echo "Install finished, please check your env"
         if [ $venv_label -eq 0 ];then
@@ -113,7 +274,7 @@ function main() {
             green_echo "No pyvenv activate"
         fi
     else
-        red_echo "Cannot detect OS and set OS_ID and OS_VERSION to unkown"
+        red_echo "Cannot detect OS and set OS_ID and OS_VERSION to unknown"
     fi
 }
 
