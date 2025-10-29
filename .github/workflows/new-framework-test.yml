@@ -42,6 +42,7 @@ jobs:
         with:
           files: |
             test/cases/**/test_*.py
+            test/cases/**/test_*.sh
 
       - name: Validate test files
         if: steps.changed-case-files.outputs.any_changed == 'true'
@@ -50,7 +51,6 @@ jobs:
         run: |
           EXIT_CODE=0
           for file in ${ALL_CHANGED_FILES}; do
-            echo "$file was changed"
             python .github/scripts/validate_tests.py "$file" || EXIT_CODE=1
           done
           exit $EXIT_CODE
