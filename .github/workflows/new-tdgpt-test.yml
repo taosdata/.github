@@ -100,7 +100,7 @@ jobs:
           fetch-depth: 0
 
       - name: Prepare the environment
-        run: python3 prepare.py
+        run: python3 prepare_test_env.py
         env:
           WKDIR: ${{ env.WKDIR }}
           IS_TDINTERNAL: ${{ inputs.tdinternal }}
@@ -114,7 +114,7 @@ jobs:
           env.IS_TDINTERNAL == 'false' &&
           env.TARGET_BRANCH != '3.1' &&
           matrix.platform == 'linux'
-        run: python3 test.py
+        run: python3 test_runner.py
         env:
           WKDIR: ${{ env.WKDIR }}
           TEST_TYPE: 'assert'
@@ -124,7 +124,7 @@ jobs:
           env.IS_TDINTERNAL == 'false' &&
           env.TARGET_BRANCH != '3.1' &&
           matrix.platform == 'linux'
-        run: python3 test.py
+        run: python3 test_runner.py
         env:
           TEST_TYPE: 'void'
 
@@ -138,11 +138,11 @@ jobs:
           env.IS_TDINTERNAL == 'false' &&
           env.TARGET_BRANCH != '3.1' &&
           matrix.platform == 'linux'
-        run: python3 test.py
+        run: python3 test_runner.py
         env:
           TEST_TYPE: 'function_returns'
 
       - name: Run function test cases
-        run: python3 test.py
+        run: python3 test_runner.py
         env:
           TEST_TYPE: 'tdgpt'
