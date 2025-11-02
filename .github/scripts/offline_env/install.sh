@@ -186,7 +186,37 @@ EOF
         systemctl enable docker.service
         systemctl enable containerd.service
         
-        green_echo "Docker installed successfully. Start it with: systemctl start docker"
+        # Start Docker service (systemd will automatically start containerd due to dependency)
+        yellow_echo "Starting Docker service..."
+        if systemctl start docker.service; then
+            green_echo "Docker service started successfully"
+        else
+            red_echo "Failed to start Docker service"
+            yellow_echo "You can check logs with: journalctl -xu docker"
+            return 1
+        fi
+        
+        # Wait for Docker to be ready
+        yellow_echo "Waiting for Docker to be ready..."
+        local max_attempts=10
+        local attempt=1
+        while [ $attempt -le $max_attempts ]; do
+            if docker info &>/dev/null; then
+                green_echo "Docker is ready!"
+                break
+            fi
+            if [ $attempt -eq $max_attempts ]; then
+                red_echo "Docker is not responding after $max_attempts attempts"
+                return 1
+            fi
+            echo "Waiting... (attempt $attempt/$max_attempts)"
+            sleep 2
+            ((attempt++))
+        done
+        
+        # Show Docker version and status
+        docker --version
+        green_echo "Docker installed and started successfully"
     fi
 }
 
