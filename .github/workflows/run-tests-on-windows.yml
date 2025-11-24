@@ -252,6 +252,6 @@ jobs:
         if: always()
         run: |
           taskkill /F /IM "python.exe" /IM "python3.exe" >nul 2>&1
-          if %ERRORLEVEL% EQU 0 (echo Python processes terminated) else (echo No Python processes found)
+          if %errorlevel% EQU 0 (echo Python processes terminated) else (echo No Python processes found)
           exit /b 0
 
