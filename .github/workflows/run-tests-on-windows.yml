@@ -252,5 +252,5 @@ jobs:
         if: always()
         run: |
           wmic process where "name='python.exe' or name='python3.exe'" delete >nul 2>&1
-          echo Python processes terminated || echo No Python processes found
+          if %errorlevel%==0 (echo Python processes terminated) else (echo No Python processes found)
 
