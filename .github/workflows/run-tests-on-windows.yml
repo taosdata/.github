@@ -251,6 +251,6 @@ jobs:
         continue-on-error: true
         if: always()
         run: |
-          wmic process where "name='python.exe' or name='python3.exe'" delete >nul 2>&1 && \
+          wmic process where "name='python.exe' or name='python3.exe'" delete >nul 2>&1
           echo Python processes terminated || echo No Python processes found
 
