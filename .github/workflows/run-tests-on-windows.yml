@@ -251,6 +251,7 @@ jobs:
         continue-on-error: true
         if: always()
         run: |
-          wmic process where "name='python.exe' or name='python3.exe'" delete >nul 2>&1
-          if %errorlevel%==0 (echo Python processes terminated) else (echo No Python processes found)
+          taskkill /F /IM "python.exe" /IM "python3.exe" >nul 2>&1
+          if %ERRORLEVEL% EQU 0 (echo Python processes terminated) else (echo No Python processes found)
+          exit /b 0
 
