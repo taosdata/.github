@@ -251,11 +251,7 @@ jobs:
         continue-on-error: true
         if: always()
         run: |
-          tasklist /FI "IMAGENAME eq python3.exe" /NH | findstr /I python3.exe >nul
-          if %errorlevel% equ 0 (
-              wmic process where "name='python3.exe'" delete
-              echo Python3 process has been terminated.
-          ) else (
-              echo No Python3 process was found.
-          )           
+          taskkill /F /IM "python.exe" /IM "python3.exe" /IM "taosd.exe" /IM "tmq_sim.exe" >nul 2>&1
+          if %errorlevel% EQU 0 (echo Processes terminated) else (echo No processes found)
+          exit /b 0
 
