@@ -317,9 +317,7 @@ function download_docker_compose() {
     # Get latest version if not specified
     if [ "$DOCKER_COMPOSE_VERSION" = "latest" ]; then
         yellow_echo "Fetching latest Docker Compose version..."
-        DOCKER_COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | \
-            grep '"tag_name":' | \
-            sed -E 's/.*"([^"]+)".*/\1/')
+        DOCKER_COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | jq -r '.tag_name')
         if [ -z "$DOCKER_COMPOSE_VERSION" ]; then
             red_echo "Failed to fetch latest Docker Compose version"
             exit 1
