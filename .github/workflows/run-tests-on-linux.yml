@@ -42,6 +42,13 @@ jobs:
       PR_NUMBER: ""
 
     steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4
+        with:
+          repository: 'taosdata/.github'
+          ref: 'enh/add-multi-vm'
+          fetch-depth: 0
+
       - name: Set envrionment variables based on condition
         run: |
           if [[ "${{ inputs.specified_source_branch }}" == 'unavailable' ]] && \
@@ -75,23 +82,19 @@ jobs:
 
       - name: Prepare repositories
         run: |
-          set -euo pipefail
-          prepare_environment() {
-            cd "$1"
-            git reset --hard
-            git clean -f
-            git remote prune origin
-            git fetch
-            git checkout "$2"
-          }
           if [[ "${{ inputs.specified_source_branch }}" == 'unavailable' ]] && \
             [[ "${{ inputs.specified_target_branch}}" == 'unavailable' ]] && \
             [[ "${{ inputs.specified_pr_number}}" == 'unavailable' ]]; then
-             prepare_environment "${{ env.WK }}" "$TARGET_BRANCH"
+            TDinternal_branch="$TARGET_BRANCH"
           else
-            prepare_environment "${{ env.WK }}" "$SOURCE_BRANCH"
+            TDinternal_branch="$SOURCE_BRANCH"
           fi
-          prepare_environment "${{ env.WKC }}" "$TARGET_BRANCH"
+          python3 prepare_test_env.py \
+            -c /home/m.json \
+            --pr ${{ env.PR_NUMBER }} \
+            ${{ env.IS_TDINTERNAL == 'true' && '--tdinternal' || '' }} \
+            --tdinternal-branch ${TDinternal_branch} \
+            --tdengine-branch ${TARGET_BRANCH}
 
       - name: Get latest codes and logs for TDinternal PR
         if: ${{ env.IS_TDINTERNAL == 'true' }}
@@ -111,6 +114,7 @@ jobs:
           git pull >/dev/null
           git log -5
           echo "community log: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
+
       - name: Get latest codes and logs for TDengine PR
         if: ${{ env.IS_TDINTERNAL == 'false' }}
         run: |
@@ -129,10 +133,8 @@ jobs:
           git pull >/dev/null
           git log -5
           echo "TDinternal log: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
-      - name: Update submodule
-        run: |
-          cd ${{ env.WKC }}
-          git submodule update --init --recursive
+
+
       - name: Output the 'file_no_doc_changed' information to the file
         if: ${{ env.IS_TDINTERNAL == 'false' && env.TARGET_BRANCH != '3.1' }}
         run: |
