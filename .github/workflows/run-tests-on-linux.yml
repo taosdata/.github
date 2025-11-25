@@ -84,60 +84,31 @@ jobs:
           echo "${{ env.WKDIR }}/restore.sh -p PR-${{ env.PR_NUMBER }} -n ${{ github.run_number }} -c ${{ env.CONTAINER_NAME }}"
           echo "::endgroup::"
 
-      - name: Prepare repositories
-        run: |
-          if [[ "${{ inputs.specified_source_branch }}" == 'unavailable' ]] && \
-            [[ "${{ inputs.specified_target_branch}}" == 'unavailable' ]] && \
-            [[ "${{ inputs.specified_pr_number}}" == 'unavailable' ]]; then
-            TDinternal_branch="$TARGET_BRANCH"
-          else
-            TDinternal_branch="$SOURCE_BRANCH"
-          fi
-          python3 prepare_test_env.py \
-            -c /home/m.json \
-            --pr ${{ env.PR_NUMBER }} \
-            ${{ env.IS_TDINTERNAL == 'true' && '--tdinternal' || '' }} \
-            --tdinternal-branch ${TDinternal_branch} \
-            --tdengine-branch ${TARGET_BRANCH}
+      - name: Prepare the environment
+        run: python3 prepare_test_env.py
+        env:
+          WKDIR: ${{ env.WKDIR }}
+          IS_TDINTERNAL: ${{ inputs.tdinternal }}
+          GITHUB_RUN_NUMBER: ${{ github.run_number }}
+          CONTAINER_NAME: ${{ env.CONTAINER_NAME }}
+          GITHUB_EVENT: ${{ toJson(github.event) }}
+          GITHUB_INPUTS: ${{ toJson(inputs) }}
 
-      - name: Get latest codes and logs for TDinternal PR
-        if: ${{ env.IS_TDINTERNAL == 'true' }}
-        run: |
-          cd ${{ env.WK }}
-          git pull >/dev/null
-          git log -5
-          echo "`date "+%Y%m%d-%H%M%S"` TDinternalCI/PR-${{ env.PR_NUMBER }}:${{ github.run_number }}:${{ env.TARGET_BRANCH }}" >>${{ env.WKDIR }}/jenkins.log
-          echo "CHANGE_BRANCH:${{ env.SOURCE_BRANCH }}" >>${{ env.WKDIR }}/jenkins.log
-          echo "TDinternal log: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
-          git fetch origin +refs/pull/${{ env.PR_NUMBER }}/merge
-          git checkout -qf FETCH_HEAD
-          git log -5
-          echo "TDinternal log merged: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
-          cd ${{ env.WKC }}
-          git remote prune origin
-          git pull >/dev/null
-          git log -5
-          echo "community log: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
-
-      - name: Get latest codes and logs for TDengine PR
-        if: ${{ env.IS_TDINTERNAL == 'false' }}
-        run: |
-          cd ${{ env.WKC }}
-          git remote prune origin
-          git pull >/dev/null
-          git log -5
-          echo "`date "+%Y%m%d-%H%M%S"` TDengineTest/PR-${{ env.PR_NUMBER }}:${{ github.run_number }}:${{ env.TARGET_BRANCH }}" >>${{ env.WKDIR }}/jenkins.log
-          echo "CHANGE_BRANCH:${{ env.SOURCE_BRANCH }}" >>${{ env.WKDIR }}/jenkins.log
-          echo "community log: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
-          git fetch origin +refs/pull/${{ env.PR_NUMBER }}/merge
-          git checkout -qf FETCH_HEAD
-          git log -5
-          echo "community log merged: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
-          cd ${{ env.WK }}
-          git pull >/dev/null
-          git log -5
-          echo "TDinternal log: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
-
+      # - name: Prepare repositories
+      #   run: |
+      #     if [[ "${{ inputs.specified_source_branch }}" == 'unavailable' ]] && \
+      #       [[ "${{ inputs.specified_target_branch}}" == 'unavailable' ]] && \
+      #       [[ "${{ inputs.specified_pr_number}}" == 'unavailable' ]]; then
+      #       TDinternal_branch="$TARGET_BRANCH"
+      #     else
+      #       TDinternal_branch="$SOURCE_BRANCH"
+      #     fi
+      #     python3 remote_test_runner.py \
+      #       -c /home/m.json \
+      #       --pr ${{ env.PR_NUMBER }} \
+      #       ${{ env.IS_TDINTERNAL == 'true' && '--tdinternal' || '' }} \
+      #       --tdinternal-branch ${TDinternal_branch} \
+      #       --tdengine-branch ${TARGET_BRANCH}
 
       - name: Output the 'file_no_doc_changed' information to the file
         if: ${{ env.IS_TDINTERNAL == 'false' && env.TARGET_BRANCH != '3.1' }}
