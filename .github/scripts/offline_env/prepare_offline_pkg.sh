@@ -131,6 +131,25 @@ red_echo() { echo -e "${RED}$*${RESET}"; }
 green_echo() { echo -e "${GREEN}$*${RESET}"; }
 yellow_echo() { echo -e "${YELLOW}$*${RESET}"; }
 
+# Detect system architecture and normalize to standard format
+# Returns: x86_64 or aarch64
+get_system_arch() {
+    local arch
+    arch=$(uname -m)
+    case "$arch" in
+        x86_64)
+            echo "x86_64"
+            ;;
+        aarch64|arm64)
+            echo "aarch64"
+            ;;
+        *)
+            red_echo "Unsupported architecture: $arch"
+            return 1
+            ;;
+    esac
+}
+
 function init() {
     SUB_VERSION=""
     if [ -f /etc/os-release ]; then
@@ -249,19 +268,7 @@ function download_docker() {
     
     # Detect system architecture
     local arch
-    arch=$(uname -m)
-    case "$arch" in
-        x86_64)
-            arch="x86_64"
-            ;;
-        aarch64|arm64)
-            arch="aarch64"
-            ;;
-        *)
-            red_echo "Unsupported architecture: $arch"
-            exit 1
-            ;;
-    esac
+    arch=$(get_system_arch) || exit 1
     
     mkdir -p "$offline_env_path/docker"
     
@@ -303,19 +310,7 @@ function download_docker_compose() {
     
     # Detect system architecture
     local arch
-    arch=$(uname -m)
-    case "$arch" in
-        x86_64)
-            arch="x86_64"
-            ;;
-        aarch64|arm64)
-            arch="aarch64"
-            ;;
-        *)
-            red_echo "Unsupported architecture: $arch"
-            exit 1
-            ;;
-    esac
+    arch=$(get_system_arch) || exit 1
     
     mkdir -p "$offline_env_path/docker_compose"
     

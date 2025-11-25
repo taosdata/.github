@@ -84,23 +84,24 @@ function install_docker() {
         fi
         
         # Extract to /tmp and move to /usr/bin
-        local temp_dir="/tmp/docker_install_$$"
-        mkdir -p "$temp_dir"
+        local temp_dir
+        temp_dir=$(mktemp -d)
         tar -xzf "$docker_tgz" -C "$temp_dir"
         
-        # Backup existing docker binaries if they exist
-        for binary in "$temp_dir"/docker/*; do
-            local binary_name
-            binary_name=$(basename "$binary")
-            if [ -f "/usr/bin/$binary_name" ]; then
-                yellow_echo "Backing up existing $binary_name to /usr/bin/${binary_name}.bak"
-                mv "/usr/bin/$binary_name" "/usr/bin/${binary_name}.bak"
-            fi
-        done
-        
-        # Install Docker binaries
-        cp "$temp_dir"/docker/* /usr/bin/
-        chmod +x /usr/bin/docker*
+        # Backup existing binaries and install new ones
+        if [ -d "$temp_dir/docker" ]; then
+            for binary in "$temp_dir"/docker/*; do
+                [ -e "$binary" ] || continue
+                local binary_name
+                binary_name=$(basename "$binary")
+                if [ -f "/usr/bin/$binary_name" ]; then
+                    yellow_echo "Backing up existing $binary_name to /usr/bin/${binary_name}.bak"
+                    mv -f "/usr/bin/$binary_name" "/usr/bin/${binary_name}.bak"
+                fi
+                cp "$binary" /usr/bin/
+                chmod +x "/usr/bin/$binary_name"
+            done
+        fi
         
         # Cleanup
         rm -rf "$temp_dir"
