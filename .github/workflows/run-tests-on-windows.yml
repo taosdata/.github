@@ -251,7 +251,13 @@ jobs:
         continue-on-error: true
         if: always()
         run: |
-          taskkill /F /IM "python.exe" /IM "python3.exe" /IM "taosd.exe" /IM "tmq_sim.exe" /IM "taosdump.exe" /IM "taosBenchmark.exe"  >nul 2>&1
+          taskkill /F ^
+            /IM "python.exe" ^
+            /IM "python3.exe" ^
+            /IM "taosd.exe" ^
+            /IM "tmq_sim.exe" ^
+            /IM "taosdump.exe" ^
+            /IM "taosBenchmark.exe" ^
+            >nul 2>&1
           if %errorlevel% EQU 0 (echo Processes terminated) else (echo No processes found)
           exit /b 0
-
