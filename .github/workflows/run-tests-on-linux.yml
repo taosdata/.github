@@ -94,22 +94,6 @@ jobs:
           GITHUB_EVENT: ${{ toJson(github.event) }}
           GITHUB_INPUTS: ${{ toJson(inputs) }}
 
-      # - name: Prepare repositories
-      #   run: |
-      #     if [[ "${{ inputs.specified_source_branch }}" == 'unavailable' ]] && \
-      #       [[ "${{ inputs.specified_target_branch}}" == 'unavailable' ]] && \
-      #       [[ "${{ inputs.specified_pr_number}}" == 'unavailable' ]]; then
-      #       TDinternal_branch="$TARGET_BRANCH"
-      #     else
-      #       TDinternal_branch="$SOURCE_BRANCH"
-      #     fi
-      #     python3 remote_test_runner.py \
-      #       -c /home/m.json \
-      #       --pr ${{ env.PR_NUMBER }} \
-      #       ${{ env.IS_TDINTERNAL == 'true' && '--tdinternal' || '' }} \
-      #       --tdinternal-branch ${TDinternal_branch} \
-      #       --tdengine-branch ${TARGET_BRANCH}
-
       - name: Output the 'file_no_doc_changed' information to the file
         if: ${{ env.IS_TDINTERNAL == 'false' && env.TARGET_BRANCH != '3.1' }}
         run: |
