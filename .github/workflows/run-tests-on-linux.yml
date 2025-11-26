@@ -49,8 +49,7 @@ jobs:
       - name: Checkout the repository
         uses: actions/checkout@v4
         with:
-          repository: 'taosdata/.github'
-          ref: 'enh/add-multi-vm'
+          ref: 'main'
           fetch-depth: 0
 
       - name: Set envrionment variables based on condition
