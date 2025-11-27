@@ -12,12 +12,18 @@ PYTHON_PACKAGES=""
 PKG_LABEL=""
 BINARY_TOOLS=("bpftrace")
 TDGPT=""
+DOCKER_VERSION="latest"
+DOCKER_COMPOSE_VERSION="latest"
+INSTALL_DOCKER=""
+INSTALL_DOCKER_COMPOSE=""
 
 function show_usage() {
     echo "Usage:"
     echo "  Option      Mode: $0 [--build|--test] --system-packages=<pkgs> --python-version=<ver> --python-packages=<pkgs> --pkg-label=<label>"
+    echo "  Docker Options: [--install-docker] [--docker-version=<version>] [--install-docker-compose] [--docker-compose-version=<version>]"
     echo "Example:"
     echo "  $0 --build --system-packages=vim,ntp --python-version=3.10 --python-packages=fabric2,requests --pkg-label=1.0.20250409"
+    echo "  $0 --build --install-docker --docker-version=27.5.1 --install-docker-compose --docker-compose-version=v2.40.2 --pkg-label=test"
     exit 1
 }
 
@@ -45,6 +51,22 @@ while [[ $# -gt 0 ]]; do
             ;;
         --tdgpt=*)
             TDGPT="${1#*=}"
+            shift
+            ;;
+        --install-docker)
+            INSTALL_DOCKER="true"
+            shift
+            ;;
+        --docker-version=*)
+            DOCKER_VERSION="${1#*=}"
+            shift
+            ;;
+        --install-docker-compose)
+            INSTALL_DOCKER_COMPOSE="true"
+            shift
+            ;;
+        --docker-compose-version=*)
+            DOCKER_COMPOSE_VERSION="${1#*=}"
             shift
             ;;
         -h|--help)
@@ -81,8 +103,8 @@ function validate_params() {
     # [[ -z "$PKG_LABEL" ]] && missing_required+=("PKG_LABEL")
 
     # Check package logic: at least one exists
-    if [[ -z "$SYSTEM_PACKAGES" && -z "$PYTHON_PACKAGES" ]]; then
-        package_error="At least one of **SYSTEM_PACKAGES** or **PYTHON_PACKAGES** must be provided."
+    if [[ -z "$SYSTEM_PACKAGES" && -z "$PYTHON_PACKAGES" && -z "$INSTALL_DOCKER" && -z "$INSTALL_DOCKER_COMPOSE" ]]; then
+        package_error="At least one of **SYSTEM_PACKAGES**, **PYTHON_PACKAGES**, **INSTALL_DOCKER**, or **INSTALL_DOCKER_COMPOSE** must be provided."
     fi
 
     # Combined error message
@@ -109,29 +131,45 @@ red_echo() { echo -e "${RED}$*${RESET}"; }
 green_echo() { echo -e "${GREEN}$*${RESET}"; }
 yellow_echo() { echo -e "${YELLOW}$*${RESET}"; }
 
+# Detect system architecture and normalize to standard format
+# Returns: x86_64 or aarch64
+get_system_arch() {
+    local arch
+    arch=$(uname -m)
+    case "$arch" in
+        x86_64)
+            echo "x86_64"
+            ;;
+        aarch64|arm64)
+            echo "aarch64"
+            ;;
+        *)
+            red_echo "Unsupported architecture: $arch"
+            return 1
+            ;;
+    esac
+}
+
 function init() {
     SUB_VERSION=""
     if [ -f /etc/os-release ]; then
-        OS_ID=$(source /etc/os-release; echo $ID)
-        case $OS_ID in
+        # Safely extract OS information using grep instead of source
+        OS_ID=$(grep -E '^ID=' /etc/os-release | cut -d= -f2 | tr -d '"')
+        OS_VERSION=$(grep -E '^VERSION_ID=' /etc/os-release | cut -d= -f2 | tr -d '"')
+        
+        case "$OS_ID" in
             ubuntu|debian)
-                OS_ID=$(grep -E '^ID=' /etc/os-release | cut -d= -f2 | tr -d '"')
-                OS_VERSION=$(grep -E '^VERSION_ID=' /etc/os-release | cut -d= -f2 | tr -d '"')
                 PKG_MGR="apt"
                 PKG_CONFIRM="dpkg -l"
                 ;;
             centos|rhel|rocky|kylin)
-                OS_ID=$(grep -E '^ID=' /etc/os-release | cut -d= -f2 | tr -d '"')
-                OS_VERSION=$(grep -E '^VERSION_ID=' /etc/os-release | cut -d= -f2 | tr -d '"')
-                if [ "$OS_ID" = "kylin" ];then
+                if [ "$OS_ID" = "kylin" ]; then
                     SUB_VERSION="$(cat /etc/.productinfo | awk '/SP2/ {split($0,a,"/"); gsub(/[()]/,"",a[2]); print "SP2-"a[3]} /SP3/ {split($0,a,"/"); gsub(/[()]/,"",a[2]); print "SP3-"a[3]}' | paste -sd '_')-"
                 fi
                 PKG_MGR="yum"
                 PKG_CONFIRM="rpm -q"
                 ;;
             sles|opensuse*|suse)
-                OS_ID=$(grep -E '^ID=' /etc/os-release | cut -d= -f2 | tr -d '"')
-                OS_VERSION=$(grep -E '^VERSION_ID=' /etc/os-release | cut -d= -f2 | tr -d '"')
                 # Extract SP version for SLES
                 if [ "$OS_ID" = "sles" ]; then
                     SP_VERSION=$(grep -E '^VERSION=' /etc/os-release | cut -d= -f2 | tr -d '"' | sed -n 's/.*SP\([0-9]\+\).*/SP\1/p')
@@ -143,14 +181,14 @@ function init() {
                 PKG_CONFIRM="rpm -q"
                 ;;
             *)
-                red_echo "Unsupported OS and set OS_ID and OS_VERSION to unkown"
+                red_echo "Unsupported OS and set OS_ID and OS_VERSION to unknown"
                 OS_ID=unknown_os
                 OS_VERSION=""
                 PKG_MGR=""
                 PKG_CONFIRM=""
         esac
     else
-        red_echo "Cannot detect OS and set OS_ID and OS_VERSION to unkown"
+        red_echo "Cannot detect OS and set OS_ID and OS_VERSION to unknown"
         OS_ID=unknown_os
         OS_VERSION=""
     fi
@@ -205,6 +243,110 @@ function config_yum() {
     fi
 }
 
+function download_bpftrace_binary() {
+    local os_type="$1"  # e.g., "CentOS/RHEL" or "SUSE/SLES"
+    yellow_echo "Handling bpftrace specially for ${os_type}..."
+    
+    local BPFTRACE_URL="https://github.com/bpftrace/bpftrace/releases/download/v0.23.2/bpftrace"
+    mkdir -p "$offline_env_path/binary_tools"
+    
+    if ! wget -q "$BPFTRACE_URL" -O "$offline_env_path/binary_tools/bpftrace"; then
+        red_echo "Failed to download bpftrace binary"
+        exit 1
+    fi
+    
+    chmod +x "$offline_env_path/binary_tools/bpftrace"
+    green_echo "Successfully downloaded bpftrace binary for ${os_type}"
+}
+
+function download_docker() {
+    if [ "$INSTALL_DOCKER" != "true" ]; then
+        return 0
+    fi
+    
+    yellow_echo "Downloading Docker..."
+    
+    # Detect system architecture
+    local arch
+    arch=$(get_system_arch) || exit 1
+    
+    mkdir -p "$offline_env_path/docker"
+    
+    # Get latest version if not specified
+    if [ "$DOCKER_VERSION" = "latest" ]; then
+        yellow_echo "Fetching latest Docker version..."
+        DOCKER_VERSION=$(curl -s https://download.docker.com/linux/static/stable/$arch/ | \
+            grep -oP 'docker-[0-9]+\.[0-9]+\.[0-9]+\.tgz' | \
+            sed 's/docker-//' | sed 's/\.tgz//' | \
+            sort -V | tail -1)
+        if [ -z "$DOCKER_VERSION" ]; then
+            red_echo "Failed to fetch latest Docker version"
+            exit 1
+        fi
+        yellow_echo "Latest Docker version: $DOCKER_VERSION"
+    fi
+    
+    local DOCKER_URL="https://download.docker.com/linux/static/stable/$arch/docker-${DOCKER_VERSION}.tgz"
+    yellow_echo "Downloading from: $DOCKER_URL"
+    
+    if ! wget -q "$DOCKER_URL" -O "$offline_env_path/docker/docker-${DOCKER_VERSION}.tgz"; then
+        red_echo "Failed to download Docker ${DOCKER_VERSION}"
+        exit 1
+    fi
+    
+    # Save version info
+    echo "$DOCKER_VERSION" > "$offline_env_path/docker/version.txt"
+    echo "$arch" > "$offline_env_path/docker/arch.txt"
+    
+    green_echo "Successfully downloaded Docker ${DOCKER_VERSION} for ${arch}"
+}
+
+function download_docker_compose() {
+    if [ "$INSTALL_DOCKER_COMPOSE" != "true" ]; then
+        return 0
+    fi
+    
+    yellow_echo "Downloading Docker Compose..."
+    
+    # Detect system architecture
+    local arch
+    arch=$(get_system_arch) || exit 1
+    
+    mkdir -p "$offline_env_path/docker_compose"
+    
+    # Get latest version if not specified
+    if [ "$DOCKER_COMPOSE_VERSION" = "latest" ]; then
+        yellow_echo "Fetching latest Docker Compose version..."
+        DOCKER_COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | jq -r '.tag_name')
+        if [ -z "$DOCKER_COMPOSE_VERSION" ]; then
+            red_echo "Failed to fetch latest Docker Compose version"
+            exit 1
+        fi
+        yellow_echo "Latest Docker Compose version: $DOCKER_COMPOSE_VERSION"
+    fi
+    
+    # Ensure version starts with 'v'
+    if [[ ! "$DOCKER_COMPOSE_VERSION" =~ ^v ]]; then
+        DOCKER_COMPOSE_VERSION="v${DOCKER_COMPOSE_VERSION}"
+    fi
+    
+    local COMPOSE_URL="https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-linux-${arch}"
+    yellow_echo "Downloading from: $COMPOSE_URL"
+    
+    if ! wget -q "$COMPOSE_URL" -O "$offline_env_path/docker_compose/docker-compose"; then
+        red_echo "Failed to download Docker Compose ${DOCKER_COMPOSE_VERSION}"
+        exit 1
+    fi
+    
+    chmod +x "$offline_env_path/docker_compose/docker-compose"
+    
+    # Save version info
+    echo "$DOCKER_COMPOSE_VERSION" > "$offline_env_path/docker_compose/version.txt"
+    echo "$arch" > "$offline_env_path/docker_compose/arch.txt"
+    
+    green_echo "Successfully downloaded Docker Compose ${DOCKER_COMPOSE_VERSION} for ${arch}"
+}
+
 function install_system_packages() {
     if [ -n "$SYSTEM_PACKAGES" ]; then
         yellow_echo "Downloading system packages: $SYSTEM_PACKAGES"
@@ -223,14 +365,7 @@ function install_system_packages() {
             for pkg in $formated_system_packages;
             do
                 if [[ "$pkg" == "bpftrace" ]] && [ "$ID" = "centos" ]; then
-                    yellow_echo "Handling bpftrace specially for CentOS/RHEL..."
-                    BPFTRACE_URL="https://github.com/bpftrace/bpftrace/releases/download/v0.23.2/bpftrace"
-                    mkdir -p "$offline_env_path/binary_tools"
-                    if ! wget -q "$BPFTRACE_URL" -O "$offline_env_path/binary_tools/bpftrace"; then
-                        red_echo "Failed to download bpftrace binary"
-                        exit 1
-                    fi
-                    chmod +x "$offline_env_path/binary_tools/bpftrace"
+                    download_bpftrace_binary "CentOS/RHEL"
                     continue
                 else
                     $PKG_MGR install -q -y dnf-plugins-core
@@ -255,25 +390,30 @@ function install_system_packages() {
             yellow_echo "$PKG_MGR updating"
             $PKG_MGR update -qq -y
             $PKG_MGR install -qq -y apt-offline wget curl openssh-client apt-rdepends build-essential
-            apt-rdepends $formated_system_packages | grep -v "^ " > raw_deps.txt
+            
+            # Use temp files in system_packages_dir for better organization
+            raw_deps_file="$system_packages_dir/raw_deps.txt"
+            dependencies_file="$system_packages_dir/dependencies.txt"
+            
+            apt-rdepends $formated_system_packages | grep -v "^ " > "$raw_deps_file"
             # echo $(cat raw_deps.txt) | xargs -n 5 apt-cache policy | awk '
             #     /^[^ ]/ { pkg=$0 }
             #     /Candidate:/ && $2 == "(none)" { print pkg >> dependencies.txt }
             # '
-            cat raw_deps.txt | tr '\n' ' ' | xargs -n 20 apt-cache policy | awk '
+            cat "$raw_deps_file" | tr '\n' ' ' | xargs -n 20 apt-cache policy | awk -v depfile="$dependencies_file" '
                 /^[^ ]/ {
                     current_pkg = $0;
                     sub(/:$/, "", current_pkg)
                 }
                 /Candidate:/ && $2 != "(none)" {
-                    print current_pkg >> "/dependencies.txt"
+                    print current_pkg >> depfile
                 }
             '
             chown -R _apt:root "$system_packages_dir"
             chmod -R 700 "$system_packages_dir"
             cd "$system_packages_dir" || exit
             yellow_echo "Downloading offline pkgs......"
-            apt-get download $(cat /dependencies.txt)
+            apt-get download $(cat "$dependencies_file")
         elif [ -f /etc/SuSE-release ] || [ "$OS_ID" = "sles" ] || [ "$OS_ID" = "opensuse-leap" ] || [ "$OS_ID" = "suse" ]; then
             # SUSE/openSUSE systems using zypper
             yellow_echo "$PKG_MGR updating"
@@ -282,14 +422,7 @@ function install_system_packages() {
             for pkg in $formated_system_packages;
             do
                 if [[ "$pkg" == "bpftrace" ]] && [ "$OS_ID" = "sles" ]; then
-                    yellow_echo "Handling bpftrace specially for SUSE/SLES..."
-                    BPFTRACE_URL="https://github.com/bpftrace/bpftrace/releases/download/v0.23.2/bpftrace"
-                    mkdir -p "$offline_env_path/binary_tools"
-                    if ! wget -q "$BPFTRACE_URL" -O "$offline_env_path/binary_tools/bpftrace"; then
-                        red_echo "Failed to download bpftrace binary"
-                        exit 1
-                    fi
-                    chmod +x "$offline_env_path/binary_tools/bpftrace"
+                    download_bpftrace_binary "SUSE/SLES"
                     continue
                 else
                     yellow_echo "Downloading offline pkgs for $pkg......"
@@ -370,7 +503,6 @@ function install_system_packages() {
         fi
     else
         red_echo "No system packages to install."
-        exit 1
     fi
 }
 
@@ -448,6 +580,8 @@ function summary() {
 function build_pkgs() {
     install_system_packages
     install_python_packages
+    download_docker
+    download_docker_compose
     summary
 }
 
@@ -592,7 +726,7 @@ case "$MODE" in
         run_test
         ;;
     *)
-        red_echo "[ERROR] Unkown mode: $MODE"
+        red_echo "[ERROR] unknown mode: $MODE"
         exit 1
         ;;
 esac
