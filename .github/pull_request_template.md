@@ -1,8 +1,10 @@
 # Description
 
-Please briefly describe the code changes in this pull request.
+<!-- Please briefly describe the code changes in this pull request. -->
 
-<Close/close/Fix/fix/Resolve/resolve>: <Issue Link>
+# Issue(s)
+
+- Close/close/Fix/fix/Resolve/resolve: Issue Link
 
 # Checklist
 
