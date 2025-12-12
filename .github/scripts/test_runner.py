@@ -49,6 +49,7 @@ class TestRunner:
             f"cd {self.wkc}/test && source .venv/bin/activate && pip install --upgrade pip",
             f"cd {self.wkc}/test && source .venv/bin/activate && pip install -r requirements.txt",
             f"cd {self.wkc}/test && source .venv/bin/activate && TAOS_BIN_PATH={self.wk}/debug/build/bin WORK_DIR=`pwd`/yourtest DYLD_LIBRARY_PATH={self.wk}/debug/build/lib pytest --clean cases/01-DataTypes/test_datatype_bigint.py",
+            f"cd {self.wkc}/test && source .venv/bin/activate && TAOS_BIN_PATH={self.wk}/debug/build/bin WORK_DIR=`pwd`/yourtest DYLD_LIBRARY_PATH={self.wk}/debug/build/lib pytest --clean cases/81-Tools/03-Benchmark/test_benchmark_taosc.py",
             "date",
         ]
         windows_copy_dll_cmd = f"copy {self.wkc}\\..\\debug\\build\\bin\\taos.dll C:\\Windows\\System32 && copy {self.wkc}\\..\\debug\\build\\bin\\pthreadVC3.dll C:\\Windows\\System32 && copy {self.wkc}\\..\\debug\\build\\bin\\taosnative.dll C:\\Windows\\System32"
