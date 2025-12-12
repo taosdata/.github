@@ -106,7 +106,7 @@ class TestBuild:
             f'cd {self.wk} && rm -rf debug && mkdir debug && cd {self.wk}/debug',
             'echo $PATH',
             'echo "PATH=/opt/homebrew/bin:$PATH" >> $GITHUB_ENV',
-            f'cd {self.wk}/debug && cmake .. -DBUILD_TEST=true -DBUILD_HTTPS=false  -DCMAKE_BUILD_TYPE=Release && make -j10'
+            f'cd {self.wk}/debug && cmake .. -DBUILD_TEST=true -DBUILD_HTTPS=false -DBUILD_TOOLS=true -DCMAKE_BUILD_TYPE=Release && make -j10'
         ]
         if self.platform == 'linux':
             if install_dependencies:
