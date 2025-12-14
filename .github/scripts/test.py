@@ -34,21 +34,21 @@ class TestRunner:
         self.utils.run_command(cmd, silent=False)
 
     def merge_task_files(self):
-        """合并 cases_others.task 到 cases.task"""
+        """合并 cov.task 到 cases.task"""
         cases_task_path = os.path.join(self.wkc, 'test', 'ci', 'cases.task')
-        cases_others_task_path = os.path.join(self.wkc, 'test', 'ci', 'cases_others.task')
+        cov_cases_task_path = os.path.join(self.wkc, 'test', 'ci', 'cov', 'cov.task')
         
         if not os.path.exists(cases_task_path):
             print(f"Warning: {cases_task_path} not found")
             return False
             
-        if not os.path.exists(cases_others_task_path):
-            print(f"Warning: {cases_others_task_path} not found")
+        if not os.path.exists(cov_cases_task_path):
+            print(f"Warning: {cov_cases_task_path} not found")
             return False
         
         try:
-            # 读取 cases_others.task 的内容
-            with open(cases_others_task_path, 'r', encoding='utf-8') as f:
+            # 读取 cov_cases.task 的内容
+            with open(cov_cases_task_path, 'r', encoding='utf-8') as f:
                 others_content = f.read().rstrip()  # 移除末尾的空白字符
             
             # 追加到 cases.task
@@ -60,7 +60,7 @@ class TestRunner:
                 # 强制添加两个换行符确保文件正确结束
                 f.write('\n\n')
             
-            print(f"Successfully merged {cases_others_task_path} into {cases_task_path}")
+            print(f"Successfully merged {cov_cases_task_path} into {cases_task_path}")
             print("Added proper line endings to prevent execution issues")
             return True
             
@@ -86,7 +86,7 @@ class TestRunner:
         linux_cmds = [
             f"cd {self.wkc}/test/ci && export DEFAULT_RETRY_TIME=2",
             f"date",
-            f"cd {self.wkc}/test/ci && timeout 36000 time ./run.sh -e -m /home/m.json -t cases.task -b {branch_id} -l {self.wkdir}/log -o 1230 {self.utils.get_env_var('extra_param')}".strip(),
+            f"cd {self.wkc}/test/ci && timeout 36000 time ./cov/run_coverage_func.sh -e -m /home/m.json -t cases.task -b {branch_id} -l {self.wkdir}/log -o 1230 {self.utils.get_env_var('extra_param')}".strip(),
         ]
         mac_cmds = [
             "date",
@@ -110,7 +110,7 @@ class TestRunner:
         linux_cmds = [
             f"cd {self.wkc}/test/ci && export DEFAULT_RETRY_TIME=2",
             f"date",
-            f"cd {self.wkc}/test/ci && timeout 900 time ./run.sh -e -m /home/m.json -t tdgpt_cases.task -b PR-{self.utils.get_env_var('PR_NUMBER')}_{self.utils.get_env_var('GITHUB_RUN_NUMBER')} -l {self.wkdir}/log -o 900 {self.utils.get_env_var('extra_param')}",
+            f"cd {self.wkc}/test/ci && timeout 900 time ./cov/run_coverage_func.sh -e -m /home/m.json -t tdgpt_cases.task -b PR-{self.utils.get_env_var('PR_NUMBER')}_{self.utils.get_env_var('GITHUB_RUN_NUMBER')} -l {self.wkdir}/log -o 900 {self.utils.get_env_var('extra_param')}",
         ]
         if self.platform == 'linux':
             self.utils.run_commands(linux_cmds)
@@ -196,11 +196,11 @@ class TestRunner:
             print("⚠ No existing test log directory found, coverage test will only use basic debug directory")
             test_log_dir = ""
     
-        branch_id = self.utils.get_env_var('TARGET_BRANCH') or 'cover/3.0'
+        branch_id = self.utils.get_env_var('TARGET_BRANCH') or '3.0'
         print(f"Target branch: {branch_id}")
         print(f"Test log directory: {test_log_dir}")
         
-        cmd = f"cd {self.wkc}/test/ci && ./run_coverage_container.sh -d {self.wkdir} -b {branch_id} -l {test_log_dir}"
+        cmd = f"cd {self.wkc}/test/ci && ./cov/run_coverage_container.sh -d {self.wkdir} -b {branch_id} -l {test_log_dir}"
         
         print(f"Running coverage test with command: {cmd}")
         self.utils.run_command(cmd, silent=False)
