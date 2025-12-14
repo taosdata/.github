@@ -34,21 +34,21 @@ class TestRunner:
         self.utils.run_command(cmd, silent=False)
 
     def merge_task_files(self):
-        """合并 cov.task 到 cases.task"""
+        """合并 coverage.task 到 cases.task"""
         cases_task_path = os.path.join(self.wkc, 'test', 'ci', 'cases.task')
-        cov_cases_task_path = os.path.join(self.wkc, 'test', 'ci', 'cov', 'cov.task')
+        coverage_cases_task_path = os.path.join(self.wkc, 'test', 'ci', 'cov', 'coverage.task')
         
         if not os.path.exists(cases_task_path):
             print(f"Warning: {cases_task_path} not found")
             return False
             
-        if not os.path.exists(cov_cases_task_path):
-            print(f"Warning: {cov_cases_task_path} not found")
+        if not os.path.exists(coverage_cases_task_path):
+            print(f"Warning: {coverage_cases_task_path} not found")
             return False
         
         try:
-            # 读取 cov_cases.task 的内容
-            with open(cov_cases_task_path, 'r', encoding='utf-8') as f:
+            # 读取 coverage.task 的内容
+            with open(coverage_cases_task_path, 'r', encoding='utf-8') as f:
                 others_content = f.read().rstrip()  # 移除末尾的空白字符
             
             # 追加到 cases.task
@@ -60,7 +60,7 @@ class TestRunner:
                 # 强制添加两个换行符确保文件正确结束
                 f.write('\n\n')
             
-            print(f"Successfully merged {cov_cases_task_path} into {cases_task_path}")
+            print(f"Successfully merged {coverage_cases_task_path} into {cases_task_path}")
             print("Added proper line endings to prevent execution issues")
             return True
             
