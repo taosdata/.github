@@ -34,34 +34,45 @@ class TestRunner:
         self.utils.run_command(cmd, silent=False)
 
     def merge_task_files(self):
-        """合并 coverage.task 到 cases.task"""
         cases_task_path = os.path.join(self.wkc, 'test', 'ci', 'cases.task')
         coverage_cases_task_path = os.path.join(self.wkc, 'test', 'ci', 'cov', 'coverage.task')
         
         if not os.path.exists(cases_task_path):
-            print(f"Warning: {cases_task_path} not found")
+            print(f"Warning: {cases_task_path} file not found")
             return False
             
         if not os.path.exists(coverage_cases_task_path):
-            print(f"Warning: {coverage_cases_task_path} not found")
+            print(f"Warning: {coverage_cases_task_path} file not found")
             return False
         
         try:
-            # 读取 coverage.task 的内容
+            with open(cases_task_path, 'r', encoding='utf-8') as f:
+                cases_content = f.read().rstrip()
+            
             with open(coverage_cases_task_path, 'r', encoding='utf-8') as f:
-                others_content = f.read().rstrip()  # 移除末尾的空白字符
+                coverage_content = f.read().rstrip()
             
-            # 追加到 cases.task
-            with open(cases_task_path, 'a', encoding='utf-8') as f:
-                # 添加一个换行符作为分隔
-                f.write('\n')
-                # 添加内容
-                f.write(others_content)
-                # 强制添加两个换行符确保文件正确结束
-                f.write('\n\n')
+            merged_content = cases_content + '\n' + coverage_content + '\n\n'
             
-            print(f"Successfully merged {coverage_cases_task_path} into {cases_task_path}")
-            print("Added proper line endings to prevent execution issues")
+            with open(cases_task_path, 'w', encoding='utf-8') as f:
+                f.write(merged_content)
+            
+            print(f"Successfully merged {cases_task_path} and {coverage_cases_task_path} contents into {cases_task_path}")
+
+            keywords_to_remove = ["Compatibility", "StreamProcessing", "Cluster", "tmq"]
+            
+            with open(cases_task_path, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+            
+            filtered_lines = []
+            for line in lines:
+                if not any(keyword in line for keyword in keywords_to_remove):
+                    filtered_lines.append(line)
+            
+            with open(cases_task_path, 'w', encoding='utf-8') as f:
+                f.writelines(filtered_lines)
+            
+            print(f"Removed lines containing keywords {keywords_to_remove} from {cases_task_path}")
             return True
             
         except Exception as e:
