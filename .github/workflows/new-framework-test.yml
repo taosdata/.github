@@ -143,8 +143,10 @@ jobs:
 
       - name: Build docker or repo
         if: >
-          matrix.platform != 'windows' ||
-          env.TARGET_BRANCH != '3.3.6'
+          !(
+            (matrix.platform == 'windows' || matrix.platform == 'macos')
+            && env.TARGET_BRANCH == '3.3.6'
+          )
         run: python3 build.py
         env:
           BUILD_TYPE: ${{ matrix.platform == 'linux' && 'docker' || 'repo' }}
@@ -160,8 +162,10 @@ jobs:
 
       - name: Run function test cases
         if: >
-          matrix.platform != 'windows' ||
-          env.TARGET_BRANCH != '3.3.6'
+          !(
+            (matrix.platform == 'windows' || matrix.platform == 'macos')
+            && env.TARGET_BRANCH == '3.3.6'
+          )
         run: python3 test_runner.py
         env:
           TEST_TYPE: 'function'
