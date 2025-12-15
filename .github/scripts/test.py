@@ -59,7 +59,7 @@ class TestRunner:
             
             print(f"Successfully merged {cases_task_path} and {coverage_cases_task_path} contents into {cases_task_path}")
 
-            keywords_to_remove = ["Compatibility", "StreamProcessing", "Cluster", "tmq"]
+            keywords_to_remove = ["Compatibility"]
             
             with open(cases_task_path, 'r', encoding='utf-8') as f:
                 lines = f.readlines()
