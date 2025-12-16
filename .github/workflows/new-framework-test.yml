@@ -94,7 +94,7 @@ jobs:
       WKC: ${{ matrix.WKC }}
       IS_TDINTERNAL: ${{ inputs.tdinternal }}
       CURRENT_PLATFORM: ${{ matrix.platform }}
-      TARGET_BRANCH: ${{ inputs.specified_target_branch }}
+      TARGET_BRANCH: ${{ inputs.specified_target_branch != 'unavailable' && inputs.specified_target_branch || github.event.pull_request.base.ref || github.ref_name }}
       PYTHONIOENCODING: utf-8
       PYTHONUTF8: "1"
       LANG: en_US.UTF-8      
