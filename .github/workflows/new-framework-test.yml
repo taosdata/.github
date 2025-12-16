@@ -112,6 +112,11 @@ jobs:
           ref: 'fix/del-3.3.6-macos-test'
           fetch-depth: 0
 
+      - name: Debug env
+        run: |
+          echo "platform=${{ matrix.platform }}"
+          echo "TARGET_BRANCH=${{ env.TARGET_BRANCH }}"
+
       - name: Prepare the environment
         if: >
           matrix.platform == 'linux' || env.TARGET_BRANCH != '3.3.6'
