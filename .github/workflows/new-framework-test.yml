@@ -109,7 +109,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: 'taosdata/.github'
-          ref: 'main'
+          ref: 'fix/del-3.3.6-macos-test'
           fetch-depth: 0
 
       - name: Prepare the environment
