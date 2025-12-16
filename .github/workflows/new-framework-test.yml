@@ -117,7 +117,7 @@ jobs:
           !(
             (matrix.platform == 'windows' || matrix.platform == 'macos')
             && env.TARGET_BRANCH == '3.3.6'
-          )      
+          )
         run: python3 prepare_test_env.py
         env:
           WKDIR: ${{ env.WKDIR }}
