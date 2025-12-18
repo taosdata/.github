@@ -94,7 +94,7 @@ jobs:
       WKC: ${{ matrix.WKC }}
       IS_TDINTERNAL: ${{ inputs.tdinternal }}
       CURRENT_PLATFORM: ${{ matrix.platform }}
-      TARGET_BRANCH: ${{ inputs.specified_target_branch }}
+      TARGET_BRANCH: ${{ inputs.specified_target_branch != 'unavailable' && inputs.specified_target_branch || github.event.pull_request.base.ref || github.ref_name }}
       PYTHONIOENCODING: utf-8
       PYTHONUTF8: "1"
       LANG: en_US.UTF-8      
@@ -112,7 +112,13 @@ jobs:
           ref: 'main'
           fetch-depth: 0
 
+      - name: Debug env
+        run: |
+          echo "platform=${{ matrix.platform }}"
+          echo "TARGET_BRANCH=${{ env.TARGET_BRANCH }}"
+
       - name: Prepare the environment
+        if: matrix.platform == 'linux' || env.TARGET_BRANCH != '3.3.6'
         run: python3 prepare_test_env.py
         env:
           WKDIR: ${{ env.WKDIR }}
@@ -142,9 +148,7 @@ jobs:
           TEST_TYPE: 'void'
 
       - name: Build docker or repo
-        if: >
-          matrix.platform != 'windows' ||
-          env.TARGET_BRANCH != '3.3.6'
+        if: matrix.platform == 'linux' || env.TARGET_BRANCH != '3.3.6'
         run: python3 build.py
         env:
           BUILD_TYPE: ${{ matrix.platform == 'linux' && 'docker' || 'repo' }}
@@ -159,9 +163,7 @@ jobs:
           TEST_TYPE: 'function_returns'
 
       - name: Run function test cases
-        if: >
-          matrix.platform != 'windows' ||
-          env.TARGET_BRANCH != '3.3.6'
+        if: matrix.platform == 'linux' || env.TARGET_BRANCH != '3.3.6'
         run: python3 test_runner.py
         env:
           TEST_TYPE: 'function'
