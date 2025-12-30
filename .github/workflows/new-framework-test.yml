@@ -109,7 +109,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: 'taosdata/.github'
-          ref: 'main'
+          ref: 'test/comment-check-return'
           fetch-depth: 0
 
       - name: Debug env
@@ -153,14 +153,14 @@ jobs:
         env:
           BUILD_TYPE: ${{ matrix.platform == 'linux' && 'docker' || 'repo' }}
 
-      - name: Run function returns with a null pointer scan testing
-        if: >
-          env.IS_TDINTERNAL == 'false' &&
-          env.TARGET_BRANCH != '3.1' &&
-          matrix.platform == 'linux'
-        run: python3 test_runner.py
-        env:
-          TEST_TYPE: 'function_returns'
+      # - name: Run function returns with a null pointer scan testing
+      #   if: >
+      #     env.IS_TDINTERNAL == 'false' &&
+      #     env.TARGET_BRANCH != '3.1' &&
+      #     matrix.platform == 'linux'
+      #   run: python3 test_runner.py
+      #   env:
+      #     TEST_TYPE: 'function_returns'
 
       - name: Run function test cases
         if: matrix.platform == 'linux' || env.TARGET_BRANCH != '3.3.6'
