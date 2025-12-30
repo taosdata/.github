@@ -115,11 +115,11 @@ jobs:
             if "%SPECIFIED_SOURCE_BRANCH%"=="unavailable" (
               if "%SPECIFIED_TARGET_BRANCH%"=="unavailable" (
                 if "%SPECIFIED_PR_NUMBER%"=="unavailable" (
-                  git checkout "%TARGET_BRANCH%"
+                  git checkout -f "%TARGET_BRANCH%"
                 )
               )
             ) else (
-              git checkout "%SOURCE_BRANCH%"
+              git checkout -f "%SOURCE_BRANCH%"
             )
           ) else (
             echo Directory does not exist: "%WIN_INTERNAL_ROOT%"
@@ -133,7 +133,7 @@ jobs:
             git clean -f
             git remote prune origin
             git fetch
-            git checkout "%TARGET_BRANCH%"
+            git checkout -f "%TARGET_BRANCH%"
           ) else (
             echo Directory does not exist: "%WIN_COMMUNITY_ROOT%"
             exit 1
@@ -145,7 +145,7 @@ jobs:
           cd %WIN_INTERNAL_ROOT%
           git pull origin %TARGET_BRANCH%
           git fetch origin +refs/pull/%PR_NUMBER%/merge
-          git checkout -qf FETCH_HEAD
+          git checkout -f FETCH_HEAD
           cd %WIN_COMMUNITY_ROOT%
           git remote prune origin
           git pull
@@ -160,7 +160,7 @@ jobs:
           git remote prune origin
           git pull  origin %TARGET_BRANCH%
           git fetch origin +refs/pull/%PR_NUMBER%/merge
-          git checkout -qf FETCH_HEAD
+          git checkout -f FETCH_HEAD
         shell: cmd
       - name: Output branch and log information
         run: |
