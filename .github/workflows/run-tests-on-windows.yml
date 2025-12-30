@@ -145,7 +145,7 @@ jobs:
           cd %WIN_INTERNAL_ROOT%
           git pull origin %TARGET_BRANCH%
           git fetch origin +refs/pull/%PR_NUMBER%/merge
-          git checkout -qf FETCH_HEAD
+          git checkout -f FETCH_HEAD
           cd %WIN_COMMUNITY_ROOT%
           git remote prune origin
           git pull
