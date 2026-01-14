@@ -207,7 +207,7 @@ class TestPreparer:
         with open(f"{self.wkdir}/jenkins.log", "a") as f:
             f.write(f"{repo_log_name} log merged: {log_merged}\n")
 
-    def outut_file_no_doc_change(self):
+    def output_file_no_doc_change(self):
         cmds = [
             f"mkdir -p {self.wkdir}/tmp/{self.pr_number}_{self.run_number}",
             f"""
@@ -564,7 +564,7 @@ class TestPreparer:
             self.update_codes()
             # self.update_submodules()
             if platform.system().lower() == "linux":
-                self.outut_file_no_doc_change()
+                self.output_file_no_doc_change()
                 self.get_testing_params()
 
             logger.info("Preparation phase completed successfully.")
@@ -576,8 +576,8 @@ class TestPreparer:
             traceback.print_exc()  # prints full stack + exception
             # If it's a CalledProcessError, also print captured stdout/stderr
             if isinstance(e, subprocess.CalledProcessError):
-                logger.error("Standard Output:", e.output)
-                logger.error("Standard Error:", e.stderr)
+                logger.error(f"Standard Output: {e.output}")
+                logger.error(f"Standard Error: {e.stderr}")
             return False
 
     def _process_remote_hosts(self):
