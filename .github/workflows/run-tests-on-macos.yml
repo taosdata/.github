@@ -60,6 +60,7 @@ jobs:
 
           echo "Current step debug (GITHUB_ENV content):"
           cat $GITHUB_ENV
+
       - name: Output the environment information
         run: |
           echo "::group::Environment Info"
@@ -72,6 +73,7 @@ jobs:
           git --version
           echo "${{ env.WKDIR }}/restore.sh -p ${{ env.PR_NUMBER }} -n ${{ github.run_number }} -c ${{ env.CONTAINER_NAME }}"
           echo "::endgroup::"
+
       - name: Prepare repositories
         run: |
           set -euo pipefail
@@ -81,7 +83,7 @@ jobs:
             git clean -f
             git remote prune origin
             git fetch
-            git checkout "$2"
+            git checkout -f origin/"$2"
           }
           if [[ "${{ inputs.specified_source_branch }}" == 'unavailable' ]] && \
             [[ "${{ inputs.specified_target_branch}}" == 'unavailable' ]] && \
@@ -91,11 +93,11 @@ jobs:
             prepare_environment "${{ env.WK }}" $SOURCE_BRANCH
           fi
           prepare_environment "${{ env.WKC }}" $TARGET_BRANCH
+
       - name: Get latest codes and logs for TDinternal PR
         if: ${{ env.IS_TDINTERNAL == 'true' }}
         run: |
           cd ${{ env.WK }}
-          git pull >/dev/null
           git log -5
           echo "`date "+%Y%m%d-%H%M%S"` TDinternalTest/${{ env.PR_NUMBER }}:${{ github.run_number }}:${{ env.TARGET_BRANCH }}" >>${{ env.WKDIR }}/jenkins.log
           echo "CHANGE_BRANCH:${{ env.SOURCE_BRANCH }}" >>${{ env.WKDIR }}/jenkins.log
@@ -105,16 +107,13 @@ jobs:
           git log -5
           echo "TDinternal log merged: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
           cd ${{ env.WKC }}
-          git remote prune origin
-          git pull >/dev/null
           git log -5
           echo "community log: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
+
       - name: Get latest codes and logs for TDengine PR
         if: ${{ env.IS_TDINTERNAL == 'false' }}
         run: |
           cd ${{ env.WKC }}
-          git remote prune origin
-          git pull >/dev/null
           git log -5
           echo "`date "+%Y%m%d-%H%M%S"` TDengineTest/${{ env.PR_NUMBER }}:${{ github.run_number }}:${{ env.TARGET_BRANCH }}" >>${{ env.WKDIR }}/jenkins.log
           echo "CHANGE_BRANCH:${{ env.SOURCE_BRANCH }}" >>${{ env.WKDIR }}/jenkins.log
@@ -124,13 +123,14 @@ jobs:
           git log -5
           echo "community log merged: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
           cd ${{ env.WK }}
-          git pull >/dev/null
           git log -5
           echo "TDinternal log: `git log -5`" >>${{ env.WKDIR }}/jenkins.log
-      - name: Update submodule
-        run: |
-          cd ${{ env.WKC }}
-          git submodule update --init --recursive
+          
+      # - name: Update submodule
+      #   run: |
+      #     cd ${{ env.WKC }}
+      #     git submodule update --init --recursive
+
       - name: Run tests
         run: |
           date

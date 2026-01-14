@@ -145,7 +145,7 @@ class TestPreparer:
             f"cd {repo_path} && git clean -f",
             f"cd {repo_path} && git remote prune origin",
             f"cd {repo_path} && git fetch",
-            f"cd {repo_path} && git checkout {branch}",
+            f"cd {repo_path} && git checkout -f origin/{branch}",
         ]
         self.utils.run_commands(cmds)
 
@@ -170,12 +170,12 @@ class TestPreparer:
     def _update_latest_from_target_branch(self, repo_path):
         """Update latest code from target branch, and log to jenkins.log"""
         repo_log_name = "community" if "community" in str(repo_path) else "tdinternal"
-        # 拉取最新代码
-        cmds = [
-            f"cd {repo_path} && git remote prune origin",
-            f"cd {repo_path} && git pull ",
-        ]
-        self.utils.run_commands(cmds)
+        # # 拉取最新代码
+        # cmds = [
+        #     f"cd {repo_path} && git remote prune origin && git fetch",
+        #     f"cd {repo_path} && git pull ",
+        # ]
+        # self.utils.run_commands(cmds)
         # 记录日志
         log = subprocess.getoutput(f"cd {repo_path} && git log -5")
         with open(f"{self.wkdir}/jenkins.log", "a") as f:
@@ -184,9 +184,9 @@ class TestPreparer:
     def _update_latest_merge_from_pr(self, repo_path, pr_number, job_name=""):
         """Update latest codes and merge from PR, and log to jenkins.log"""
         repo_log_name = "community" if "community" in str(repo_path) else "tdinternal"
-        # 拉取最新代码
-        cmds = [f"cd {repo_path} && git pull"]
-        self.utils.run_commands(cmds)
+        # # 拉取最新代码
+        # cmds = [f"cd {repo_path} && git pull"]
+        # self.utils.run_commands(cmds)
         # 记录日志
         log = subprocess.getoutput(f"cd {repo_path} && git log -5")
         with open(f"{self.wkdir}/jenkins.log", "a") as f:
@@ -294,7 +294,7 @@ class TestPreparer:
         ):
             success, _ = self._execute_remote_command(
                 host_config,
-                f"cd {workdir}/TDinternal && git reset --hard && git clean -f && git remote prune origin && git fetch && git checkout {self.target_branch}",
+                f"cd {workdir}/TDinternal && git reset --hard && git clean -f && git remote prune origin && git fetch && git checkout -f origin/{self.target_branch}",
             )
             if not success:
                 logger.info(f"Failed to prepare TDinternal on {host}")
@@ -302,7 +302,7 @@ class TestPreparer:
         else:
             success, _ = self._execute_remote_command(
                 host_config,
-                f"cd {workdir}/TDinternal && git reset --hard && git clean -f && git remote prune origin && git fetch && git checkout {self.source_branch}",
+                f"cd {workdir}/TDinternal && git reset --hard && git clean -f && git remote prune origin && git fetch && git checkout -f origin/{self.source_branch}",
             )
             if not success:
                 logger.info(f"Failed to prepare TDinternal on {host}")
@@ -311,7 +311,7 @@ class TestPreparer:
         # Prepare community repository
         success, _ = self._execute_remote_command(
             host_config,
-            f"cd {workdir}/TDinternal/community && git reset --hard && git clean -f && git remote prune origin && git fetch && git checkout {self.target_branch}",
+            f"cd {workdir}/TDinternal/community && git reset --hard && git clean -f && git remote prune origin && git fetch && git checkout -f origin/{self.target_branch}",
         )
         if not success:
             logger.error(f"Failed to prepare community on {host}")
@@ -360,13 +360,13 @@ class TestPreparer:
         host = host_config["host"]
         repo_log_name = "community" if "community" in repo_path else "tdinternal"
 
-        # Pull latest code
-        success, _ = self._execute_remote_command(
-            host_config, f"cd {repo_path} && git remote prune origin && git pull"
-        )
-        if not success:
-            logger.error(f"Failed to pull latest code from target branch on {host}")
-            return False
+        # # Pull latest code
+        # success, _ = self._execute_remote_command(
+        #     host_config, f"cd {repo_path} && git remote prune origin && git pull"
+        # )
+        # if not success:
+        #     logger.error(f"Failed to pull latest code from target branch on {host}")
+        #     return False
 
         # Log git history
         success, log = self._execute_remote_command(
@@ -390,13 +390,13 @@ class TestPreparer:
         host = host_config["host"]
         repo_log_name = "community" if "community" in repo_path else "tdinternal"
 
-        # Pull latest code
-        success, _ = self._execute_remote_command(
-            host_config, f"cd {repo_path} && git pull"
-        )
-        if not success:
-            logger.error(f"Failed to pull latest code on {host}")
-            return False
+        # # Pull latest code
+        # success, _ = self._execute_remote_command(
+        #     host_config, f"cd {repo_path} && git pull"
+        # )
+        # if not success:
+        #     logger.error(f"Failed to pull latest code on {host}")
+        #     return False
 
         # Log git history
         success, log = self._execute_remote_command(
@@ -520,9 +520,9 @@ class TestPreparer:
             if not self._update_codes_remote(host_config):
                 return False
 
-            # Update submodules
-            if not self._update_submodules_remote(host_config):
-                return False
+            # # Update submodules
+            # if not self._update_submodules_remote(host_config):
+            #     return False
 
             # Output file without doc changes (Linux only)
             if platform.system().lower() == "linux":
@@ -562,7 +562,7 @@ class TestPreparer:
                 self.output_environment_info()
             self.prepare_repositories()
             self.update_codes()
-            self.update_submodules()
+            # self.update_submodules()
             if platform.system().lower() == "linux":
                 self.outut_file_no_doc_change()
                 self.get_testing_params()

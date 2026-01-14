@@ -103,6 +103,7 @@ jobs:
           time /t
           rd /s /Q "%WIN_INTERNAL_ROOT%\debug" || exit 0
         shell: cmd
+
       - name: Prepare repositories
         run: |
           :: Prepare internal repository
@@ -115,11 +116,11 @@ jobs:
             if "%SPECIFIED_SOURCE_BRANCH%"=="unavailable" (
               if "%SPECIFIED_TARGET_BRANCH%"=="unavailable" (
                 if "%SPECIFIED_PR_NUMBER%"=="unavailable" (
-                  git checkout -f "%TARGET_BRANCH%"
+                  git checkout -f origin/"%TARGET_BRANCH%"
                 )
               )
             ) else (
-              git checkout -f "%SOURCE_BRANCH%"
+              git checkout -f origin/"%SOURCE_BRANCH%"
             )
           ) else (
             echo Directory does not exist: "%WIN_INTERNAL_ROOT%"
@@ -133,35 +134,29 @@ jobs:
             git clean -f
             git remote prune origin
             git fetch
-            git checkout -f "%TARGET_BRANCH%"
+            git checkout -f origin/"%TARGET_BRANCH%"
           ) else (
             echo Directory does not exist: "%WIN_COMMUNITY_ROOT%"
             exit 1
           )
         shell: cmd
+
       - name: Get latest codes and logs for TDinternal PR
         if: ${{ env.IS_TDINTERNAL == 'true' }}
         run: |
           cd %WIN_INTERNAL_ROOT%
-          git pull origin %TARGET_BRANCH%
           git fetch origin +refs/pull/%PR_NUMBER%/merge
           git checkout -f FETCH_HEAD
-          cd %WIN_COMMUNITY_ROOT%
-          git remote prune origin
-          git pull
         shell: cmd
+
       - name: Get latest codes and logs for TDengine PR
         if: ${{ env.IS_TDINTERNAL == 'false' }}
         run: |
-          cd %WIN_INTERNAL_ROOT%
-          git remote prune origin
-          git pull 
           cd %WIN_COMMUNITY_ROOT%
-          git remote prune origin
-          git pull  origin %TARGET_BRANCH%
           git fetch origin +refs/pull/%PR_NUMBER%/merge
           git checkout -f FETCH_HEAD
         shell: cmd
+
       - name: Output branch and log information
         run: |
           cd %WIN_INTERNAL_ROOT%
@@ -172,11 +167,13 @@ jobs:
           git branch
           git log -5
         shell: cmd
-      - name: Update submodule
-        run: |
-          cd %WIN_COMMUNITY_ROOT%
-          git submodule update --init --recursive
-        shell: cmd
+
+      # - name: Update submodule
+      #   run: |
+      #     cd %WIN_COMMUNITY_ROOT%
+      #     git submodule update --init --recursive
+      #   shell: cmd
+
       - name: Build on windows
         run: |
           echo "building ..."
@@ -204,6 +201,7 @@ jobs:
             xcopy /e/y/i/f "%WIN_INTERNAL_ROOT%\\debug\\build\\bin\\taosnative.dll" C:\\Windows\\System32
           )
         shell: cmd
+
       - name: Run ctest
         run: |
           echo "windows ctest ..."
