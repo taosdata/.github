@@ -23,4 +23,4 @@ jobs:
         run: |
           echo "Parameter 1: ${{ github.event.inputs.parameter1 }}"
           echo "Parameter 2: ${{ github.event.inputs.parameter2 }}"
-              
+

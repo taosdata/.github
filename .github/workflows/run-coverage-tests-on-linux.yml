@@ -5,27 +5,27 @@ on:
   workflow_call:
     inputs:
       specified_tdinternal_test_branch:
-        description: 'Enter the test branch of TDinternal'
+        description: "Enter the test branch of TDinternal"
         required: true
         type: string
       specified_tdengine_test_branch:
-        description: 'Enter the test branch of TDengine'
+        description: "Enter the test branch of TDengine"
         required: true
         type: string
 
 jobs:
   run-tests-coverage-on-linux:
-    runs-on: 
+    runs-on:
       group: CI
       labels: [self-hosted, Linux, X64, testing]
-    
+
     timeout-minutes: 300
 
     env:
-      CONTAINER_NAME: 'taosd-test'
-      WKDIR: '/var/lib/jenkins/workspace'
-      WK: '/var/lib/jenkins/workspace/TDinternal'
-      WKC: '/var/lib/jenkins/workspace/TDinternal/community'
+      CONTAINER_NAME: "taosd-test"
+      WKDIR: "/var/lib/jenkins/workspace"
+      WK: "/var/lib/jenkins/workspace/TDinternal"
+      WKC: "/var/lib/jenkins/workspace/TDinternal/community"
       SOURCE_BRANCH_TDINTERNAL: ""
       SOURCE_BRANCH_TDENGINE: ""
 
@@ -89,7 +89,7 @@ jobs:
         run: |
           cd ${{ env.WKC }}
           git submodule update --init --recursive
- 
+
       - name: Build docker container
         run: |
           date
@@ -130,10 +130,10 @@ jobs:
           ${{ steps.get_param.outputs.timeout_cmd }} time ./run.sh -e -m /home/m.json -t cases.task -b PR-${{ github.run_number }} -l ${{ env.WKDIR }}/log -o 1200 ${{ steps.get_param.outputs.extra_param }} || true
           ${{ steps.get_param.outputs.timeout_cmd }} time ./run.sh -e -m /home/m.json -t longtimeruning_cases.task -b PR-${{ github.run_number }} -l ${{ env.WKDIR }}/log -o 1800 ${{ steps.get_param.outputs.extra_param }} || true
           #${{ steps.get_param.outputs.timeout_cmd }} time ./run.sh -e -m /home/m.json -t tdgpt_cases.task -b PR-${{ github.run_number }} -l ${{ env.WKDIR }}/log -o 1200 ${{ steps.get_param.outputs.extra_param }} || true
-        continue-on-error: true  
-   
-      - name: Run taosd && taosc coverage 
-        if: always() 
+        continue-on-error: true
+
+      - name: Run taosd && taosc coverage
+        if: always()
         run: |
           echo "::group::Run taosd && taosc coverage"
           cd ${{ env.WKC }}/tests/parallel_test

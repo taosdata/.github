@@ -11,7 +11,7 @@ on:
         description: "The group ID for the Maven package"
         required: false
         type: string
-        default: 'com.taosdata.tdasset'
+        default: "com.taosdata.tdasset"
       package_name:
         description: "The name of the package to clean"
         required: true
@@ -20,12 +20,12 @@ on:
         description: "The number of days to keep the package"
         required: false
         type: string
-        default: '10'
+        default: "10"
       specific_version:
         description: "Specific version to delete (optional)"
         required: false
         type: string
-        default: ''
+        default: ""
     secrets:
       WORKFLOW_PAT:
         description: "GitHub PAT with packages permission"
@@ -38,8 +38,8 @@ jobs:
       - name: Checkout the repository
         uses: actions/checkout@v4
         with:
-          repository: 'taosdata/.github'
-          ref: 'main'
+          repository: "taosdata/.github"
+          ref: "main"
 
       - name: Clean package
         run: |
