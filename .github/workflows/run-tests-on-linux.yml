@@ -4,38 +4,38 @@ on:
   workflow_call:
     inputs:
       tdinternal:
-        description: 'Is the PR from TDinternal?'
+        description: "Is the PR from TDinternal?"
         required: true
         type: boolean
       specified_source_branch:
-        description: 'Enter the source branch name of TDengine'
+        description: "Enter the source branch name of TDengine"
         required: false
-        default: 'unavailable'
+        default: "unavailable"
         type: string
       specified_target_branch:
-        description: 'Enter the target branch name of TDengine'
+        description: "Enter the target branch name of TDengine"
         required: false
-        default: 'unavailable'
+        default: "unavailable"
         type: string
       specified_pr_number:
-        description: 'Enter the PR number of TDengine'
+        description: "Enter the PR number of TDengine"
         required: false
-        default: 'unavailable'
+        default: "unavailable"
         type: string
 
 jobs:
   run-tests-on-linux:
-    runs-on: 
+    runs-on:
       group: CI
       labels: [self-hosted, Linux, X64, new-framework]
-    
+
     timeout-minutes: 200
 
     env:
-      CONTAINER_NAME: 'taosd-test'
-      WKDIR: '/var/lib/jenkins/workspace'
-      WK: '/var/lib/jenkins/workspace/TDinternal'
-      WKC: '/var/lib/jenkins/workspace/TDinternal/community'
+      CONTAINER_NAME: "taosd-test"
+      WKDIR: "/var/lib/jenkins/workspace"
+      WK: "/var/lib/jenkins/workspace/TDinternal"
+      WKC: "/var/lib/jenkins/workspace/TDinternal/community"
       IS_TDINTERNAL: ${{ inputs.tdinternal }}
       SOURCE_BRANCH: ""
       TARGET_BRANCH: ""
@@ -49,8 +49,8 @@ jobs:
       - name: Checkout the repository
         uses: actions/checkout@v4
         with:
-          repository: 'taosdata/.github'
-          ref: 'main'
+          repository: "taosdata/.github"
+          ref: "main"
           fetch-depth: 0
 
       - name: Set envrionment variables based on condition

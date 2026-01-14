@@ -4,23 +4,23 @@ on:
   workflow_call:
     inputs:
       tdinternal:
-        description: 'Is the PR from TDinternal?'
+        description: "Is the PR from TDinternal?"
         required: true
         type: boolean
       specified_source_branch:
-        description: 'Enter the source branch name of TDengine'
+        description: "Enter the source branch name of TDengine"
         required: false
-        default: 'unavailable'
+        default: "unavailable"
         type: string
       specified_target_branch:
-        description: 'Enter the target branch name of TDengine'
+        description: "Enter the target branch name of TDengine"
         required: false
-        default: 'unavailable'
+        default: "unavailable"
         type: string
       specified_pr_number:
-        description: 'Enter the PR number of TDengine'
+        description: "Enter the PR number of TDengine"
         required: false
-        default: 'unavailable'
+        default: "unavailable"
         type: string
 
 jobs:
@@ -34,7 +34,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: '3.8'
+          python-version: "3.8"
 
       - name: Get all changed case files
         id: changed-case-files
@@ -64,19 +64,19 @@ jobs:
           - platform: linux
             runner_group: CI
             runner_labels: [self-hosted, Linux, X64, new-framework]
-            WKDIR: '/var/lib/jenkins/workspace'
-            WK: '/var/lib/jenkins/workspace/TDinternal'
-            WKC: '/var/lib/jenkins/workspace/TDinternal/community'
+            WKDIR: "/var/lib/jenkins/workspace"
+            WK: "/var/lib/jenkins/workspace/TDinternal"
+            WKC: "/var/lib/jenkins/workspace/TDinternal/community"
           - platform: macos
             runner_group: CI
             runner_labels: [self-hosted, macOS, X64, testing]
-            WKDIR: '/var/lib/jenkins/workspace'
-            WK: '/var/lib/jenkins/workspace/TDinternal'
-            WKC: '/var/lib/jenkins/workspace/TDinternal/community'
+            WKDIR: "/var/lib/jenkins/workspace"
+            WK: "/var/lib/jenkins/workspace/TDinternal"
+            WKC: "/var/lib/jenkins/workspace/TDinternal/community"
           - platform: windows
             runner_group: CI
             runner_labels: [self-hosted, Windows, X64, test-win]
-            WKDIR: 'C:\\workspace\\0'                 # adjust as needed for your windows runners
+            WKDIR: 'C:\\workspace\\0' # adjust as needed for your windows runners
             WK: 'C:\\workspace\\0\\TDinternal'
             WKC: 'C:\\workspace\\TDinternal\\community'
     runs-on:
@@ -88,7 +88,7 @@ jobs:
     timeout-minutes: 200
 
     env:
-      CONTAINER_NAME: 'taosd-test'
+      CONTAINER_NAME: "taosd-test"
       WKDIR: ${{ matrix.WKDIR }}
       WK: ${{ matrix.WK }}
       WKC: ${{ matrix.WKC }}
@@ -97,19 +97,19 @@ jobs:
       TARGET_BRANCH: ${{ inputs.specified_target_branch != 'unavailable' && inputs.specified_target_branch || github.event.pull_request.base.ref || github.ref_name }}
       PYTHONIOENCODING: utf-8
       PYTHONUTF8: "1"
-      LANG: en_US.UTF-8      
+      LANG: en_US.UTF-8
 
     defaults:
       run:
         working-directory: ${{ github.workspace }}/.github/scripts/
         shell: ${{ matrix.platform == 'windows' && 'cmd' || 'bash' }}
-        
+
     steps:
       - name: Checkout the repository
         uses: actions/checkout@v4
         with:
-          repository: 'taosdata/.github'
-          ref: 'enh/checkout-repo'
+          repository: "taosdata/.github"
+          ref: "enh/checkout-repo"
           fetch-depth: 0
 
       - name: Debug env
@@ -136,8 +136,8 @@ jobs:
         run: python3 test_runner.py
         env:
           WKDIR: ${{ env.WKDIR }}
-          TEST_TYPE: 'assert'
-  
+          TEST_TYPE: "assert"
+
       - name: Check void function testing
         if: >
           env.IS_TDINTERNAL == 'false' &&
@@ -145,7 +145,7 @@ jobs:
           matrix.platform == 'linux'
         run: python3 test_runner.py
         env:
-          TEST_TYPE: 'void'
+          TEST_TYPE: "void"
 
       - name: Build docker or repo
         if: matrix.platform == 'linux' || env.TARGET_BRANCH != '3.3.6'
@@ -160,10 +160,10 @@ jobs:
           matrix.platform == 'linux'
         run: python3 test_runner.py
         env:
-          TEST_TYPE: 'function_returns'
+          TEST_TYPE: "function_returns"
 
       - name: Run function test cases
         if: matrix.platform == 'linux' || env.TARGET_BRANCH != '3.3.6'
         run: python3 test_runner.py
         env:
-          TEST_TYPE: 'function'
+          TEST_TYPE: "function"

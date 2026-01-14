@@ -4,23 +4,23 @@ on:
   workflow_call:
     inputs:
       tdinternal:
-        description: 'Is the PR from TDinternal?'
+        description: "Is the PR from TDinternal?"
         required: true
         type: boolean
       specified_source_branch:
-        description: 'Enter the source branch name of TDengine'
+        description: "Enter the source branch name of TDengine"
         required: false
-        default: 'unavailable'
+        default: "unavailable"
         type: string
       specified_target_branch:
-        description: 'Enter the target branch name of TDengine'
+        description: "Enter the target branch name of TDengine"
         required: false
-        default: 'unavailable'
+        default: "unavailable"
         type: string
       specified_pr_number:
-        description: 'Enter the PR number of TDengine'
+        description: "Enter the PR number of TDengine"
         required: false
-        default: 'unavailable'
+        default: "unavailable"
         type: string
 
 jobs:
@@ -50,7 +50,6 @@ jobs:
       LANG: en_US.UTF-8
 
     steps:
-    
       - name: init environment
         shell: cmd
         continue-on-error: true
@@ -62,8 +61,8 @@ jobs:
               echo Python3 process has been terminated.
           ) else (
               echo No Python3 process was found.
-          )   
-          
+          )
+
       - name: Set environment variables based on condition
         run: |
           REM Trim the blank space
@@ -243,7 +242,7 @@ jobs:
           del /f /q test-win.py
           time /t
         shell: cmd
-        
+
       - name: Clearup the running cases
         shell: cmd
         continue-on-error: true
