@@ -212,11 +212,11 @@ class TestPreparer:
 
     def output_file_no_doc_change(self):
         cmds = [
-            f"mkdir -p {self.wkdir}/tmp/{self.pr_number}_{self.run_number}",
+            f"mkdir -p {self.wkdir}/tmp/{self.pr_number}_{self.run_number}_{self.run_attempt}",
             f"""
             cd {self.wkc} \
             && changed_files_non_doc=$(git --no-pager diff --name-only FETCH_HEAD `git merge-base FETCH_HEAD origin/{self.target_branch}` | grep -v '^docs/en/' | grep -v '^docs/zh/' | grep -v '.md$' | tr '\n' ' ' || :) \
-            && echo $changed_files_non_doc > {self.wkdir}/tmp/{self.pr_number}_{self.run_number}/docs_changed.txt
+            && echo $changed_files_non_doc > {self.wkdir}/tmp/{self.pr_number}_{self.run_number}_{self.run_attempt}/docs_changed.txt
             """,
         ]
         self.utils.run_commands(cmds)
@@ -461,10 +461,10 @@ class TestPreparer:
 
         logger.info(f"Outputting file without doc changes on {host}...")
         cmd = f"""
-        mkdir -p {workdir}/tmp/{self.pr_number}_{self.run_number} && \
+        mkdir -p {workdir}/tmp/{self.pr_number}_{self.run_number}_{self.run_attempt} && \
         cd {workdir}/TDinternal/community && \
         changed_files_non_doc=$(git --no-pager diff --name-only FETCH_HEAD `git merge-base FETCH_HEAD {self.target_branch}` | grep -v '^docs/en/' | grep -v '^docs/zh/' | grep -v '.md$' | tr '\\n' ' ' || :) && \
-        echo $changed_files_non_doc > {workdir}/tmp/{self.pr_number}_{self.run_number}/docs_changed.txt
+        echo $changed_files_non_doc > {workdir}/tmp/{self.pr_number}_{self.run_number}_{self.run_attempt}/docs_changed.txt
         """
         success, _ = self._execute_remote_command(host_config, cmd)
         if not success:
