@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 import platform
 
@@ -16,8 +17,12 @@ class TestRunner:
         self.platform = platform.system().lower()
         self.pr_number = self.utils.get_env_var("PR_NUMBER")
         self.run_number = self.utils.get_env_var("GITHUB_RUN_NUMBER")
+        self.run_attempt = self.utils.get_env_var("GITHUB_RUN_ATTEMPT")
         self.timeout = self.utils.get_env_var("timeout_cmd")
         self.extra_param = self.utils.get_env_var("extra_param")
+        self.date_tag = datetime.now().strftime("%Y%m%d-%H%M%S")
+        self.test_log_dir_name_base = f"PR-{self.pr_number}_{self.run_number}_{self.run_attempt}"
+        self.test_log_dir_name = f"PR-{self.pr_number}_{self.run_number}_{self.run_attempt}_{self.date_tag}"
 
     def run_assert_test(self):
         cmd = (
@@ -31,29 +36,31 @@ class TestRunner:
 
     def run_function_return_test(self):
         print(
-            f"PR number: {self.pr_number}, run number: {self.run_number}, extra param: {self.extra_param}"
+            f"PR number: {self.pr_number}, run number: {self.run_number}, attempt: {self.run_attempt}, extra param: {self.extra_param}"
         )
-        cmd = f"cd {self.wkc}/test/ci && ./run_scan_container.sh -d {self.wkdir} -b {self.pr_number}_{self.run_number} -f {self.wkdir}/tmp/{self.pr_number}_{self.run_number}/docs_changed.txt {self.extra_param}"
+        cmd = f"cd {self.wkc}/test/ci && ./run_scan_container.sh -d {self.wkdir} -b {self.pr_number}_{self.run_number}_{self.run_attempt} -f {self.wkdir}/tmp/{self.pr_number}_{self.run_number}_{self.run_attempt}/docs_changed.txt {self.extra_param}"
         self.utils.run_command(cmd, silent=False)
 
     def run_function_test(self):
         print(f"timeout: {self.timeout}")
+       
         linux_cmds = [
             f"cd {self.wkc}/test/ci && export DEFAULT_RETRY_TIME=1",
-            f"date",
-            f"cd {self.wkc}/test/ci && {self.timeout} time ./run.sh -e -m /home/m.json -t cases.task -b PR-{self.utils.get_env_var('PR_NUMBER')}_{self.utils.get_env_var('GITHUB_RUN_NUMBER')} -l {self.wkdir}/log -o 1230 {self.utils.get_env_var('extra_param')}",
+            "date",
+            f"cd {self.wkc}/test/ci && {self.timeout} time ./run.sh -e -m /home/m.json -t cases.task -b {self.test_log_dir_name_base} -l {self.wkdir}/log -o 1230 {self.extra_param}",
         ]
         mac_cmds = [
             "date",
+            f"cd {self.wk}/.. && mkdir -p {self.test_log_dir_name}",
             f"cd {self.wkc}/test && python3.9 -m venv .venv",
             f"cd {self.wkc}/test && source .venv/bin/activate && pip install --upgrade pip",
             f"cd {self.wkc}/test && source .venv/bin/activate && pip install -r requirements.txt",
-            f"cd {self.wkc}/test && source .venv/bin/activate && sudo TAOS_BIN_PATH={self.wk}/debug/build/bin WORK_DIR=`pwd`/yourtest DYLD_LIBRARY_PATH={self.wk}/debug/build/lib pytest --clean cases/01-DataTypes/test_datatype_bigint.py",
-            f"cd {self.wkc}/test && source .venv/bin/activate && sudo TAOS_BIN_PATH={self.wk}/debug/build/bin WORK_DIR=`pwd`/yourtest DYLD_LIBRARY_PATH={self.wk}/debug/build/lib pytest --clean cases/81-Tools/03-Benchmark/test_benchmark_taosc.py",
+            f"cd {self.wkc}/test && source .venv/bin/activate && sudo TAOS_BIN_PATH={self.wk}/debug/build/bin WORK_DIR=`pwd`/yourtest DYLD_LIBRARY_PATH={self.wk}/debug/build/lib pytest --clean cases/01-DataTypes/test_datatype_bigint.py || (cp -rf {self.wk}/sim/* {self.test_log_dir_name}/; [ -d /cores ] && ls /cores/core* 1>/dev/null 2>&1 && cp -rf /cores/core* {self.test_log_dir_name}/ || true)",
+            f"cd {self.wkc}/test && source .venv/bin/activate && sudo TAOS_BIN_PATH={self.wk}/debug/build/bin WORK_DIR=`pwd`/yourtest DYLD_LIBRARY_PATH={self.wk}/debug/build/lib pytest --clean cases/81-Tools/03-Benchmark/test_benchmark_taosc.py || (cp -rf {self.wk}/sim/* {self.test_log_dir_name}/; [ -d /cores ] && ls /cores/core* 1>/dev/null 2>&1 && cp -rf /cores/core* {self.test_log_dir_name}/ || true)",
             "date",
         ]
         windows_copy_dll_cmd = f"copy {self.wkc}\\..\\debug\\build\\bin\\taos.dll C:\\Windows\\System32 && copy {self.wkc}\\..\\debug\\build\\bin\\pthreadVC3.dll C:\\Windows\\System32 && copy {self.wkc}\\..\\debug\\build\\bin\\taosnative.dll C:\\Windows\\System32"
-        windows_cmds = f"cd {self.wkc}/test && python3 ci/run_win_cases.py ci/win_cases.task c:/workspace/0/ci-log/PR-{self.utils.get_env_var('PR_NUMBER')}-{self.utils.get_env_var('GITHUB_RUN_NUMBER')}"
+        windows_cmds = f"cd {self.wkc}/test && python3 ci/run_win_cases.py ci/win_cases.task c:/workspace/0/ci-log/{self.test_log_dir_name}"
 
         if self.platform == "linux":
             self.utils.run_commands(linux_cmds)
@@ -65,10 +72,11 @@ class TestRunner:
 
     def run_tdgpt_test(self):
         print(f"timeout: {self.timeout}")
+
         linux_cmds = [
             f"cd {self.wkc}/test/ci && export DEFAULT_RETRY_TIME=2",
-            f"date",
-            f"cd {self.wkc}/test/ci && timeout 900 time ./run.sh -e -m /home/m.json -t tdgpt_cases.task -b PR-{self.utils.get_env_var('PR_NUMBER')}_{self.utils.get_env_var('GITHUB_RUN_NUMBER')} -l {self.wkdir}/log -o 900 {self.utils.get_env_var('extra_param')}",
+            "date",
+            f"cd {self.wkc}/test/ci && timeout 900 time ./run.sh -e -m /home/m.json -t tdgpt_cases.task -b {self.test_log_dir_name_base} -l {self.wkdir}/log -o 900 {self.extra_param}",
         ]
         if self.platform == "linux":
             self.utils.run_commands(linux_cmds)
