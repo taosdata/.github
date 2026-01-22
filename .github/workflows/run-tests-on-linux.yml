@@ -98,10 +98,10 @@ jobs:
       - name: Output the 'file_no_doc_changed' information to the file
         if: ${{ env.IS_TDINTERNAL == 'false' && env.TARGET_BRANCH != '3.1' }}
         run: |
-          mkdir -p ${{ env.WKDIR }}/tmp/${{ env.PR_NUMBER }}_${{ github.run_number }}
+          mkdir -p ${{ env.WKDIR }}/tmp/${{ env.PR_NUMBER }}_${{ github.run_number }}_${{ github.run_attempt }}
           cd ${{ env.WKC }}
           changed_files_non_doc=$(git --no-pager diff --name-only FETCH_HEAD `git merge-base FETCH_HEAD ${{ env.TARGET_BRANCH }}`|grep -v "^docs/en/"|grep -v "^docs/zh/"|grep -v ".md$" | tr '\n' ' ' || :)
-          echo $changed_files_non_doc > ${{ env.WKDIR }}/tmp/${{ env.PR_NUMBER }}_${{ github.run_number }}/docs_changed.txt
+          echo $changed_files_non_doc > ${{ env.WKDIR }}/tmp/${{ env.PR_NUMBER }}_${{ github.run_number }}_${{ github.run_attempt }}/docs_changed.txt
 
       - name: Check assert testing
         if: ${{ env.IS_TDINTERNAL == 'false' && env.TARGET_BRANCH != '3.1' }}

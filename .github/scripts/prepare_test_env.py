@@ -43,6 +43,7 @@ class TestPreparer:
         self.wk = self.utils.path(os.path.join(self.wkdir, "TDinternal"))
         self.wkc = self.utils.path(os.path.join(self.wk, "community"))
         self.run_number = self.utils.get_env_var("GITHUB_RUN_NUMBER", 0)
+        self.run_attempt = self.utils.get_env_var("GITHUB_RUN_ATTEMPT", 0)
 
         # Load GitHub context data
         self.event = json.loads(self.utils.get_env_var("GITHUB_EVENT", "{}"))
