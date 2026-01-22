@@ -23,6 +23,7 @@ class TestRunner:
         self.date_tag = datetime.now().strftime("%Y%m%d-%H%M%S")
         self.test_log_dir_name_base = f"PR-{self.pr_number}_{self.run_number}_{self.run_attempt}"
         self.test_log_dir_name = f"PR-{self.pr_number}_{self.run_number}_{self.run_attempt}_{self.date_tag}"
+        self.mac_test_log_dir_name = str(self.wk.parent / f"PR-{self.pr_number}_{self.run_number}_{self.run_attempt}_{self.date_tag}")
 
     def run_assert_test(self):
         cmd = (
@@ -50,12 +51,12 @@ class TestRunner:
         ]
         mac_cmds = [
             "date",
-            f"cd {self.wk}/.. && mkdir -p {self.test_log_dir_name}",
+            f"mkdir -p {self.mac_test_log_dir_name}",
             f"cd {self.wkc}/test && python3.9 -m venv .venv",
             f"cd {self.wkc}/test && source .venv/bin/activate && pip install --upgrade pip",
             f"cd {self.wkc}/test && source .venv/bin/activate && pip install -r requirements.txt",
-            f"cd {self.wkc}/test && source .venv/bin/activate && sudo TAOS_BIN_PATH={self.wk}/debug/build/bin WORK_DIR=`pwd`/yourtest DYLD_LIBRARY_PATH={self.wk}/debug/build/lib pytest --clean cases/01-DataTypes/test_datatype_bigint.py || (cp -rf {self.wk}/sim/* {self.test_log_dir_name}/; [ -d /cores ] && ls /cores/core* 1>/dev/null 2>&1 && cp -rf /cores/core* {self.test_log_dir_name}/ || true)",
-            f"cd {self.wkc}/test && source .venv/bin/activate && sudo TAOS_BIN_PATH={self.wk}/debug/build/bin WORK_DIR=`pwd`/yourtest DYLD_LIBRARY_PATH={self.wk}/debug/build/lib pytest --clean cases/81-Tools/03-Benchmark/test_benchmark_taosc.py || (cp -rf {self.wk}/sim/* {self.test_log_dir_name}/; [ -d /cores ] && ls /cores/core* 1>/dev/null 2>&1 && cp -rf /cores/core* {self.test_log_dir_name}/ || true)",
+            f"cd {self.wkc}/test && source .venv/bin/activate && sudo TAOS_BIN_PATH={self.wk}/debug/build/bin WORK_DIR=`pwd`/yourtest DYLD_LIBRARY_PATH={self.wk}/debug/build/lib pytest --clean cases/01-DataTypes/test_datatype_bigint.py || (cp -rf {self.wk}/sim/* {self.mac_test_log_dir_name}/; [ -d /cores ] && ls /cores/core* 1>/dev/null 2>&1 && cp -rf /cores/core* {self.mac_test_log_dir_name}/ || true)",
+            f"cd {self.wkc}/test && source .venv/bin/activate && sudo TAOS_BIN_PATH={self.wk}/debug/build/bin WORK_DIR=`pwd`/yourtest DYLD_LIBRARY_PATH={self.wk}/debug/build/lib pytest --clean cases/81-Tools/03-Benchmark/test_benchmark_taosc.py || (cp -rf {self.wk}/sim/* {self.mac_test_log_dir_name}/; [ -d /cores ] && ls /cores/core* 1>/dev/null 2>&1 && cp -rf /cores/core* {self.mac_test_log_dir_name}/ || true)",
             "date",
         ]
         windows_copy_dll_cmd = f"copy {self.wkc}\\..\\debug\\build\\bin\\taos.dll C:\\Windows\\System32 && copy {self.wkc}\\..\\debug\\build\\bin\\pthreadVC3.dll C:\\Windows\\System32 && copy {self.wkc}\\..\\debug\\build\\bin\\taosnative.dll C:\\Windows\\System32"
