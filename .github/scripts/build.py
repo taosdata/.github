@@ -53,13 +53,15 @@ class TestBuild:
         cmds = [
             'date',
             f'rm -rf {self.wkc}/debug',
+            f'rm -rf {self.wkc}/../../debugSan',
+            f'rm -rf {self.wkc}/../../debugNoSan',
             f'cd {self.wkc}/test/ci && time ./container_build.sh -w {self.wkdir} -e -b {self.target_branch}'
         ]
         self.utils.run_commands(cmds)
 
     def doc_build(self):
         # build chinese doc
-        cmd = 'yarn ass local && yarn build'
+        cmd = 'yarn install && yarn ass local && yarn build'
         self.utils.run_command(cmd, cwd=f'{self.wkdir}/{self.ZH_DOC_REPO}')
 
         # build english doc
