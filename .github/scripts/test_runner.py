@@ -43,7 +43,6 @@ class TestRunner:
 
     def run_function_test(self):
         print(f"timeout: {self.timeout}")
-       
         linux_cmds = [
             f"cd {self.wkc}/test/ci && export DEFAULT_RETRY_TIME=1",
             "date",
