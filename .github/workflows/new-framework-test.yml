@@ -109,7 +109,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: "taosdata/.github"
-          ref: "enh/add-run-attemp"
+          ref: "main"
           fetch-depth: 0
 
       - name: Debug env
