@@ -43,6 +43,7 @@ class TestPreparer:
         self.wk = self.utils.path(os.path.join(self.wkdir, "TDinternal"))
         self.wkc = self.utils.path(os.path.join(self.wk, "community"))
         self.run_number = self.utils.get_env_var("GITHUB_RUN_NUMBER", 0)
+        self.run_attempt = self.utils.get_env_var("GITHUB_RUN_ATTEMPT", 0)
 
         # Load GitHub context data
         self.event = json.loads(self.utils.get_env_var("GITHUB_EVENT", "{}"))
@@ -119,6 +120,8 @@ class TestPreparer:
             "TARGET_BRANCH", self.target_branch, os.getenv("GITHUB_ENV", "")
         )
         self.utils.set_env_var("PR_NUMBER", self.pr_number, os.getenv("GITHUB_ENV", ""))
+        self.utils.set_env_var("GITHUB_RUN_NUMBER", self.run_number, os.getenv("GITHUB_ENV", ""))
+        self.utils.set_env_var("GITHUB_RUN_ATTEMPT", self.run_attempt, os.getenv("GITHUB_ENV", ""))
 
     def prepare_repositories(self):
         """Prepare both TDengine or TDinternal repository"""
@@ -209,11 +212,11 @@ class TestPreparer:
 
     def output_file_no_doc_change(self):
         cmds = [
-            f"mkdir -p {self.wkdir}/tmp/{self.pr_number}_{self.run_number}",
+            f"mkdir -p {self.wkdir}/tmp/{self.pr_number}_{self.run_number}_{self.run_attempt}",
             f"""
             cd {self.wkc} \
             && changed_files_non_doc=$(git --no-pager diff --name-only FETCH_HEAD `git merge-base FETCH_HEAD origin/{self.target_branch}` | grep -v '^docs/en/' | grep -v '^docs/zh/' | grep -v '.md$' | tr '\n' ' ' || :) \
-            && echo $changed_files_non_doc > {self.wkdir}/tmp/{self.pr_number}_{self.run_number}/docs_changed.txt
+            && echo $changed_files_non_doc > {self.wkdir}/tmp/{self.pr_number}_{self.run_number}_{self.run_attempt}/docs_changed.txt
             """,
         ]
         self.utils.run_commands(cmds)
@@ -458,10 +461,10 @@ class TestPreparer:
 
         logger.info(f"Outputting file without doc changes on {host}...")
         cmd = f"""
-        mkdir -p {workdir}/tmp/{self.pr_number}_{self.run_number} && \
+        mkdir -p {workdir}/tmp/{self.pr_number}_{self.run_number}_{self.run_attempt} && \
         cd {workdir}/TDinternal/community && \
         changed_files_non_doc=$(git --no-pager diff --name-only FETCH_HEAD `git merge-base FETCH_HEAD {self.target_branch}` | grep -v '^docs/en/' | grep -v '^docs/zh/' | grep -v '.md$' | tr '\\n' ' ' || :) && \
-        echo $changed_files_non_doc > {workdir}/tmp/{self.pr_number}_{self.run_number}/docs_changed.txt
+        echo $changed_files_non_doc > {workdir}/tmp/{self.pr_number}_{self.run_number}_{self.run_attempt}/docs_changed.txt
         """
         success, _ = self._execute_remote_command(host_config, cmd)
         if not success:
