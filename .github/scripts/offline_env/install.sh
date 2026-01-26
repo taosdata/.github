@@ -11,7 +11,15 @@ yellow_echo() { echo -e "${YELLOW}$*${RESET}"; }
 script_path=$(dirname "$(readlink -f "$0")")
 binary_dir=/usr/bin
 taos_anode_dir=/var/lib/taos/taosanode
-python_venv_dir="${taos_anode_dir}/venv"
+
+# Determine python venv directory based on deployment type
+if [ -d "$script_path/idmp" ]; then
+    # IDMP deployment uses dedicated venv path
+    python_venv_dir="/usr/local/taos/idmp/venv"
+else
+    # Default TDengine deployment
+    python_venv_dir="${taos_anode_dir}/venv"
+fi
 venv_label=2
 EXPECTED_OS_RELEASE="$script_path"/os-release
 CURRENT_OS_RELEASE="/etc/os-release"
@@ -40,8 +48,15 @@ function install_venv() {
         venv_dir=$(find . -type d -name ".venv*" -print -quit)
         venv_name=$(basename "$venv_dir")
         if [ -d "$script_path/py_venv/venv" ];then
-            mkdir -p "$taos_anode_dir"
-            cp -r "$script_path/py_venv/venv" "$taos_anode_dir"
+            if [ -d "$script_path/idmp" ]; then
+                # IDMP deployment: install to /usr/local/taos/idmp/venv
+                mkdir -p "/usr/local/taos/idmp"
+                cp -r "$script_path/py_venv/venv" "/usr/local/taos/idmp/"
+            else
+                # TDengine deployment: install to /var/lib/taos/taosanode/venv
+                mkdir -p "$taos_anode_dir"
+                cp -r "$script_path/py_venv/venv" "$taos_anode_dir"
+            fi
             venv_label=0
         else
             venv_label=1
@@ -251,6 +266,143 @@ function install_docker_compose() {
     fi
 }
 
+function install_java() {
+    if [ -d "$script_path/java" ]; then
+        yellow_echo "Installing Java JRE..."
+        
+        # Read version and arch info
+        if [ -f "$script_path/java/version.txt" ]; then
+            local java_version
+            java_version=$(cat "$script_path/java/version.txt")
+            yellow_echo "Java version: $java_version"
+        fi
+        
+        if [ -f "$script_path/java/tarname.txt" ]; then
+            local tar_name
+            tar_name=$(cat "$script_path/java/tarname.txt")
+            
+            # Check if tarball exists
+            if [ ! -f "$script_path/java/$tar_name" ]; then
+                red_echo "Java tarball not found: $tar_name"
+                return 1
+            fi
+            
+            # Backup existing Java installation if exists
+            if [ -d /opt/jre ]; then
+                yellow_echo "Backing up existing Java installation to /opt/jre.bak"
+                rm -rf /opt/jre.bak
+                mv /opt/jre /opt/jre.bak
+            fi
+            
+            # Extract Java JRE
+            yellow_echo "Extracting Java JRE to /opt/jre..."
+            mkdir -p /opt/jre
+            tar -xzf "$script_path/java/$tar_name" -C /opt/jre --strip-components=1
+            
+            # Configure environment variables
+            yellow_echo "Configuring Java environment variables..."
+            
+            # Add to /etc/profile.d for system-wide configuration
+            cat > /etc/profile.d/java.sh <<'EOF'
+# Java JRE Environment Variables
+export JAVA_HOME=/opt/jre
+export PATH=$JAVA_HOME/bin:$PATH
+EOF
+            chmod +x /etc/profile.d/java.sh
+            
+            # Source the profile for current session
+            export JAVA_HOME=/opt/jre
+            export PATH=$JAVA_HOME/bin:$PATH
+            
+            # Verify installation
+            if /opt/jre/bin/java -version &>/dev/null; then
+                green_echo "Java JRE installed successfully at /opt/jre"
+                yellow_echo "Java version:"
+                /opt/jre/bin/java -version 2>&1 | head -3
+                green_echo "Environment variables configured in /etc/profile.d/java.sh"
+                yellow_echo "Please run 'source /etc/profile.d/java.sh' or re-login to use java command"
+            else
+                red_echo "Java installation verification failed"
+                return 1
+            fi
+        else
+            red_echo "Java tarball name file not found"
+            return 1
+        fi
+    fi
+}
+
+function install_idmp() {
+    if [ -d "$script_path/idmp" ]; then
+        yellow_echo "Installing IDMP packages..."
+        
+        # Read architecture info
+        if [ -f "$script_path/idmp/arch.txt" ]; then
+            local arch
+            arch=$(cat "$script_path/idmp/arch.txt")
+            yellow_echo "Architecture: $arch"
+        fi
+        
+        # 1. Install Arthas (requires Java)
+        if [ -f "$script_path/idmp/arthas-boot.jar" ]; then
+            yellow_echo "Installing Arthas..."
+            
+            # Create Arthas directory
+            mkdir -p /opt/arthas
+            cp "$script_path/idmp/arthas-boot.jar" /opt/arthas/arthas-boot.jar
+            
+            # Create Arthas launcher script
+            cat > /usr/local/bin/arthas <<'EOF'
+#!/bin/sh
+java -jar /opt/arthas/arthas-boot.jar "$@"
+EOF
+            chmod +x /usr/local/bin/arthas
+            
+            green_echo "Arthas installed successfully at /opt/arthas"
+            yellow_echo "Usage: arthas [options]"
+        fi
+        
+        # 2. Install Playwright packages
+        yellow_echo "Installing Playwright packages..."
+        
+        # Create Playwright cache directories
+        mkdir -p ~/.cache/ms-playwright/chromium_headless_shell-1194/
+        mkdir -p ~/.cache/ms-playwright/
+        
+        # Determine which files to extract based on architecture
+        if [ "$arch" = "x86_64" ]; then
+            chromium_zip="chromium-headless-shell-linux.zip"
+            ffmpeg_zip="ffmpeg-linux.zip"
+        else
+            chromium_zip="chromium-headless-shell-linux-arm64.zip"
+            ffmpeg_zip="ffmpeg-linux-arm64.zip"
+        fi
+        
+        # Copy Chromium package (will be extracted by application installer)
+        if [ -f "$script_path/idmp/$chromium_zip" ]; then
+            yellow_echo "Copying Chromium package to ~/.cache/ms-playwright/chromium_headless_shell-1194/"
+            cp "$script_path/idmp/$chromium_zip" ~/.cache/ms-playwright/chromium_headless_shell-1194/
+            green_echo "Chromium package copied successfully"
+        else
+            red_echo "Chromium package not found: $chromium_zip"
+        fi
+        
+        # Copy FFmpeg package (will be extracted by application installer)
+        if [ -f "$script_path/idmp/$ffmpeg_zip" ]; then
+            yellow_echo "Copying FFmpeg package to ~/.cache/ms-playwright/"
+            cp "$script_path/idmp/$ffmpeg_zip" ~/.cache/ms-playwright/
+            green_echo "FFmpeg package copied successfully"
+        else
+            red_echo "FFmpeg package not found: $ffmpeg_zip"
+        fi
+        
+        # Set permissions
+        chmod -R 755 ~/.cache/ms-playwright/
+        
+        green_echo "IDMP packages installed successfully"
+    fi
+}
+
 function install_system_packages() {
     if [ -d "$script_path/system_packages" ]; then
         yellow_echo "Installing offline pkgs ..."
@@ -266,13 +418,21 @@ function install_system_packages() {
         elif [ -f /etc/debian_version ]; then
             DEBIAN_FRONTEND=noninteractive dpkg -i "$script_path/system_packages/"*.deb >/dev/null 2>&1
         elif [ -f /etc/SuSE-release ] || [ -f /etc/os-release ]; then
-            # Check if it's a SUSE system
+            # Check if it's a SUSE system or openEuler
             if [ -f /etc/os-release ]; then
                 OS_ID=$(grep -E '^ID=' /etc/os-release | cut -d= -f2 | tr -d '"')
                 if [ "$OS_ID" = "sles" ] || [ "$OS_ID" = "opensuse-leap" ] || [ "$OS_ID" = "suse" ]; then
                     compare_field "ID" || exit 1
                     compare_field "VERSION_ID" || exit 1
                     # Install RPM packages on SUSE systems
+                    for i in "$script_path/system_packages/"*.rpm;
+                    do
+                        rpm -ivh --nodeps "$i" >/dev/null 2>&1
+                    done
+                elif [ "$OS_ID" = "openEuler" ]; then
+                    compare_field "ID" || exit 1
+                    compare_field "VERSION_ID" || exit 1
+                    # Install RPM packages on openEuler systems
                     for i in "$script_path/system_packages/"*.rpm;
                     do
                         rpm -ivh --nodeps "$i" >/dev/null 2>&1
@@ -295,6 +455,8 @@ function main() {
         install_binary_tools
         install_docker
         install_docker_compose
+        install_java
+        install_idmp
         install_system_packages
         green_echo "Install finished, please check your env"
         if [ $venv_label -eq 0 ];then
