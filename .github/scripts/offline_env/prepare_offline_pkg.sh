@@ -9,6 +9,7 @@ MODE="build"
 SYSTEM_PACKAGES=""
 PYTHON_VERSION=""
 PYTHON_PACKAGES=""
+PYTHON_REQUIREMENTS=""
 PKG_LABEL=""
 BINARY_TOOLS=("bpftrace")
 TDGPT=""
@@ -16,14 +17,24 @@ DOCKER_VERSION="latest"
 DOCKER_COMPOSE_VERSION="latest"
 INSTALL_DOCKER=""
 INSTALL_DOCKER_COMPOSE=""
+JAVA_VERSION="21"
+INSTALL_JAVA=""
+IDMP=""
+CACHE_DIR="/tmp/taos-packages"
 
 function show_usage() {
     echo "Usage:"
     echo "  Option      Mode: $0 [--build|--test] --system-packages=<pkgs> --python-version=<ver> --python-packages=<pkgs> --pkg-label=<label>"
     echo "  Docker Options: [--install-docker] [--docker-version=<version>] [--install-docker-compose] [--docker-compose-version=<version>]"
+    echo "  Java Options: [--install-java] [--java-version=<version>] (default: 21, supported: 8,11,17,21,23)"
+    echo "  Python Options: [--python-requirements=<url_or_path>] (alternative to --python-packages)"
+    echo "  Special Options: [--tdgpt=<true|false>] [--idmp=<true|false>]"
     echo "Example:"
     echo "  $0 --build --system-packages=vim,ntp --python-version=3.10 --python-packages=fabric2,requests --pkg-label=1.0.20250409"
+    echo "  $0 --build --python-version=3.10 --python-requirements=https://github.com/user/repo/blob/main/requirements.txt --pkg-label=test"
     echo "  $0 --build --install-docker --docker-version=27.5.1 --install-docker-compose --docker-compose-version=v2.40.2 --pkg-label=test"
+    echo "  $0 --build --install-java --java-version=21 --pkg-label=java-test"
+    echo "  $0 --build --install-java --idmp=true --pkg-label=idmp-env"
     exit 1
 }
 
@@ -43,6 +54,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --python-packages=*)
             PYTHON_PACKAGES="${1#*=}"
+            shift
+            ;;
+        --python-requirements=*)
+            PYTHON_REQUIREMENTS="${1#*=}"
             shift
             ;;
         --pkg-label=*)
@@ -67,6 +82,18 @@ while [[ $# -gt 0 ]]; do
             ;;
         --docker-compose-version=*)
             DOCKER_COMPOSE_VERSION="${1#*=}"
+            shift
+            ;;
+        --install-java)
+            INSTALL_JAVA="true"
+            shift
+            ;;
+        --java-version=*)
+            JAVA_VERSION="${1#*=}"
+            shift
+            ;;
+        --idmp=*)
+            IDMP="${1#*=}"
             shift
             ;;
         -h|--help)
@@ -103,8 +130,13 @@ function validate_params() {
     # [[ -z "$PKG_LABEL" ]] && missing_required+=("PKG_LABEL")
 
     # Check package logic: at least one exists
-    if [[ -z "$SYSTEM_PACKAGES" && -z "$PYTHON_PACKAGES" && -z "$INSTALL_DOCKER" && -z "$INSTALL_DOCKER_COMPOSE" ]]; then
-        package_error="At least one of **SYSTEM_PACKAGES**, **PYTHON_PACKAGES**, **INSTALL_DOCKER**, or **INSTALL_DOCKER_COMPOSE** must be provided."
+    if [[ -z "$SYSTEM_PACKAGES" && -z "$PYTHON_PACKAGES" && -z "$PYTHON_REQUIREMENTS" && -z "$INSTALL_DOCKER" && -z "$INSTALL_DOCKER_COMPOSE" && -z "$INSTALL_JAVA" && -z "$IDMP" ]]; then
+        package_error="At least one of **SYSTEM_PACKAGES**, **PYTHON_PACKAGES**, **PYTHON_REQUIREMENTS**, **INSTALL_DOCKER**, **INSTALL_DOCKER_COMPOSE**, **INSTALL_JAVA**, or **IDMP** must be provided."
+    fi
+    
+    # Check if both python-packages and python-requirements are specified
+    if [[ -n "$PYTHON_PACKAGES" && -n "$PYTHON_REQUIREMENTS" ]]; then
+        package_error="Cannot specify both **PYTHON_PACKAGES** and **PYTHON_REQUIREMENTS** at the same time. Please use only one."
     fi
 
     # Combined error message
@@ -164,7 +196,25 @@ function init() {
                 ;;
             centos|rhel|rocky|kylin)
                 if [ "$OS_ID" = "kylin" ]; then
-                    SUB_VERSION="$(cat /etc/.productinfo | awk '/SP2/ {split($0,a,"/"); gsub(/[()]/,"",a[2]); print "SP2-"a[3]} /SP3/ {split($0,a,"/"); gsub(/[()]/,"",a[2]); print "SP3-"a[3]}' | paste -sd '_')-"
+                    # Extract both SP version and code name from /etc/.productinfo
+                    # Example line: "release V10 (SP3) /(Lance)-x86_64-Build23.02/20230324"
+                    # Extract: SP3-Lance
+                    if [ -f /etc/.productinfo ]; then
+                        SUB_VERSION="$(sed -n '2p' /etc/.productinfo | sed -n 's/.*(\(SP[0-9]\+\)).*\/(\([^)]\+\)).*/\1-\2/p')-"
+                    fi
+                fi
+                PKG_MGR="yum"
+                PKG_CONFIRM="rpm -q"
+                ;;
+            openEuler)
+                # openEuler uses yum/dnf, extract LTS-SP version if exists
+                # Check VERSION field (not VERSION_ID) for LTS-SP information
+                OS_VERSION_FULL=$(grep -E '^VERSION=' /etc/os-release | cut -d= -f2 | tr -d '"')
+                if echo "$OS_VERSION_FULL" | grep -q "LTS-SP"; then
+                    SP_VERSION=$(echo "$OS_VERSION_FULL" | sed -n 's/.*\(LTS-SP[0-9]\+\).*/\1/p')
+                    if [ -n "$SP_VERSION" ]; then
+                        SUB_VERSION="${SP_VERSION}-"
+                    fi
                 fi
                 PKG_MGR="yum"
                 PKG_CONFIRM="rpm -q"
@@ -195,12 +245,16 @@ function init() {
 
     formated_system_packages=$(echo "$SYSTEM_PACKAGES" | tr ',' ' ')
     formated_python_packages=$(echo "$PYTHON_PACKAGES" | tr ',' ' ')
+    formated_python_requirements="$PYTHON_REQUIREMENTS"
     if [[ -z "$PARENT_DIR" ]]; then
         parent_dir=/opt/offline-env
     else
         parent_dir=$PARENT_DIR
     fi
     mkdir -p "$parent_dir"
+    # Create cache directory for downloads
+    mkdir -p "$CACHE_DIR"
+    yellow_echo "Using cache directory: $CACHE_DIR"
     offline_env_dir="offline-pkgs-$PKG_LABEL-$OS_ID-$OS_VERSION-${SUB_VERSION}$(arch)"
     offline_env_path="$parent_dir/$offline_env_dir"
     system_packages_dir="$offline_env_path/system_packages"
@@ -214,7 +268,7 @@ function init() {
         if [[ -n "$SYSTEM_PACKAGES" ]]; then
             mkdir -p "$system_packages_dir"
         fi
-        if [[ -n "$PYTHON_PACKAGES" ]]; then
+        if [[ -n "$PYTHON_PACKAGES" ]] || [[ -n "$PYTHON_REQUIREMENTS" ]]; then
             mkdir -p "$py_venv_dir"
         fi
     fi
@@ -301,6 +355,185 @@ function download_docker() {
     green_echo "Successfully downloaded Docker ${DOCKER_VERSION} for ${arch}"
 }
 
+function download_java() {
+    if [ "$INSTALL_JAVA" != "true" ]; then
+        return 0
+    fi
+    
+    yellow_echo "Downloading Java JRE ${JAVA_VERSION}..."
+    
+    # Detect system architecture
+    local arch
+    arch=$(get_system_arch) || exit 1
+    
+    # Map architecture to Adoptium naming
+    local jre_arch
+    case "$arch" in
+        x86_64)
+            jre_arch="x64"
+            ;;
+        aarch64)
+            jre_arch="aarch64"
+            ;;
+        *)
+            red_echo "Unsupported architecture for Java: $arch"
+            exit 1
+            ;;
+    esac
+    
+    mkdir -p "$offline_env_path/java"
+    
+    # Version-specific URLs and checksums
+    local base_url tar_name sha256_x64 sha256_aarch64
+    
+    case "$JAVA_VERSION" in
+        8)
+            base_url="https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u432-b06"
+            tar_name="OpenJDK8U-jre_${jre_arch}_linux_hotspot_8u432b06.tar.gz"
+            ;;
+        11)
+            base_url="https://github.com/adoptium/temurin11-binaries/releases/download/jdk-11.0.26%2B8"
+            tar_name="OpenJDK11U-jre_${jre_arch}_linux_hotspot_11.0.26_8.tar.gz"
+            ;;
+        17)
+            base_url="https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.14%2B8"
+            tar_name="OpenJDK17U-jre_${jre_arch}_linux_hotspot_17.0.14_8.tar.gz"
+            ;;
+        21)
+            base_url="https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.6%2B7"
+            tar_name="OpenJDK21U-jre_${jre_arch}_linux_hotspot_21.0.6_7.tar.gz"
+            sha256_x64="7fc9d6837da5fa1f12e0f41901fd70a73154914b8c8ecbbcad2d44176a989937"
+            sha256_aarch64="f1b78f2bd6d505d5e0539261737740ad11ade3233376b4ca52e6c72fbefd2bf6"
+            ;;
+        23)
+            base_url="https://github.com/adoptium/temurin23-binaries/releases/download/jdk-23.0.2%2B7"
+            tar_name="OpenJDK23U-jre_${jre_arch}_linux_hotspot_23.0.2_7.tar.gz"
+            ;;
+        *)
+            red_echo "Unsupported Java version: $JAVA_VERSION (supported: 8, 11, 17, 21, 23)"
+            exit 1
+            ;;
+    esac
+    
+    local download_url="${base_url}/${tar_name}"
+    local cached_file="$CACHE_DIR/${tar_name}"
+    
+    # Check if file exists in cache
+    if [ -f "$cached_file" ]; then
+        yellow_echo "Using cached Java JRE from: $cached_file"
+    else
+        yellow_echo "Downloading from: $download_url"
+        if ! curl -fsSL "$download_url" -o "$cached_file"; then
+            red_echo "Failed to download Java JRE ${JAVA_VERSION}"
+            exit 1
+        fi
+        green_echo "Downloaded to cache: $cached_file"
+    fi
+    
+    # SHA256 verification for Java 21 only
+    if [ "$JAVA_VERSION" = "21" ]; then
+        yellow_echo "Verifying SHA256 checksum..."
+        local expected_sha256
+        if [ "$jre_arch" = "x64" ]; then
+            expected_sha256="$sha256_x64"
+        else
+            expected_sha256="$sha256_aarch64"
+        fi
+        
+        echo "${expected_sha256}  $cached_file" | sha256sum -c - || {
+            red_echo "SHA256 checksum verification failed!"
+            exit 1
+        }
+        green_echo "SHA256 checksum verified successfully"
+    fi
+    
+    # Copy from cache to offline package directory
+    cp "$cached_file" "$offline_env_path/java/${tar_name}"
+    
+    # Save version and arch info
+    echo "$JAVA_VERSION" > "$offline_env_path/java/version.txt"
+    echo "$arch" > "$offline_env_path/java/arch.txt"
+    echo "$tar_name" > "$offline_env_path/java/tarname.txt"
+    
+    green_echo "Successfully downloaded Java JRE ${JAVA_VERSION} for ${arch}"
+}
+
+function download_idmp_packages() {
+    if [ "$IDMP" != "true" ]; then
+        return 0
+    fi
+    
+    yellow_echo "Downloading IDMP packages..."
+    
+    # Detect system architecture
+    local arch
+    arch=$(get_system_arch) || exit 1
+    
+    mkdir -p "$offline_env_path/idmp"
+    
+    # 1. Download Arthas
+    yellow_echo "Downloading Arthas..."
+    local arthas_file="$CACHE_DIR/arthas-boot.jar"
+    if [ -f "$arthas_file" ]; then
+        yellow_echo "Using cached Arthas from: $arthas_file"
+    else
+        if ! curl -fsSL --retry 3 -o "$arthas_file" https://arthas.aliyun.com/arthas-boot.jar; then
+            red_echo "Failed to download Arthas"
+            exit 1
+        fi
+        green_echo "Downloaded Arthas to cache"
+    fi
+    cp "$arthas_file" "$offline_env_path/idmp/arthas-boot.jar"
+    
+    # 2. Download Playwright packages based on architecture
+    yellow_echo "Downloading Playwright packages for ${arch}..."
+    
+    if [ "$arch" = "x86_64" ]; then
+        # x64 packages
+        local chromium_url="https://cdn.playwright.dev/dbazure/download/playwright/builds/chromium/1194/chromium-headless-shell-linux.zip"
+        local ffmpeg_url="https://cdn.playwright.dev/dbazure/download/playwright/builds/ffmpeg/1011/ffmpeg-linux.zip"
+        local chromium_file="$CACHE_DIR/chromium-headless-shell-linux.zip"
+        local ffmpeg_file="$CACHE_DIR/ffmpeg-linux.zip"
+    else
+        # aarch64 packages
+        local chromium_url="https://playwright.download.prss.microsoft.com/dbazure/download/playwright/builds/chromium/1194/chromium-headless-shell-linux-arm64.zip"
+        local ffmpeg_url="https://cdn.playwright.dev/dbazure/download/playwright/builds/ffmpeg/1011/ffmpeg-linux-arm64.zip"
+        local chromium_file="$CACHE_DIR/chromium-headless-shell-linux-arm64.zip"
+        local ffmpeg_file="$CACHE_DIR/ffmpeg-linux-arm64.zip"
+    fi
+    
+    # Download Chromium
+    if [ -f "$chromium_file" ]; then
+        yellow_echo "Using cached Chromium from: $chromium_file"
+    else
+        yellow_echo "Downloading Chromium from: $chromium_url"
+        if ! curl -fsSL --retry 3 -o "$chromium_file" "$chromium_url"; then
+            red_echo "Failed to download Chromium"
+            exit 1
+        fi
+        green_echo "Downloaded Chromium to cache"
+    fi
+    cp "$chromium_file" "$offline_env_path/idmp/"
+    
+    # Download FFmpeg
+    if [ -f "$ffmpeg_file" ]; then
+        yellow_echo "Using cached FFmpeg from: $ffmpeg_file"
+    else
+        yellow_echo "Downloading FFmpeg from: $ffmpeg_url"
+        if ! curl -fsSL --retry 3 -o "$ffmpeg_file" "$ffmpeg_url"; then
+            red_echo "Failed to download FFmpeg"
+            exit 1
+        fi
+        green_echo "Downloaded FFmpeg to cache"
+    fi
+    cp "$ffmpeg_file" "$offline_env_path/idmp/"
+    
+    # Save architecture info
+    echo "$arch" > "$offline_env_path/idmp/arch.txt"
+    
+    green_echo "Successfully downloaded all IDMP packages for ${arch}"
+}
+
 function download_docker_compose() {
     if [ "$INSTALL_DOCKER_COMPOSE" != "true" ]; then
         return 0
@@ -350,9 +583,12 @@ function download_docker_compose() {
 function install_system_packages() {
     if [ -n "$SYSTEM_PACKAGES" ]; then
         yellow_echo "Downloading system packages: $SYSTEM_PACKAGES"
-        if [ -f /etc/redhat-release ] || [ -f /etc/kylin-release ]; then
-            # TODO Confirm
+        # Source os-release first to get ID variable
+        if [ -f /etc/os-release ]; then
             source /etc/os-release
+        fi
+        if [ -f /etc/redhat-release ] || [ -f /etc/kylin-release ] || [ "$ID" = "openEuler" ]; then
+            # TODO Confirm
             if [ "$ID" = "centos" ] && [ "$VERSION_ID" = "7" ];then
                 config_yum
             fi
@@ -364,16 +600,27 @@ function install_system_packages() {
             $PKG_MGR install -q -y wget gcc gcc-c++
             for pkg in $formated_system_packages;
             do
-                if [[ "$pkg" == "bpftrace" ]] && [ "$ID" = "centos" ]; then
-                    download_bpftrace_binary "CentOS/RHEL"
+                if [[ "$pkg" == "bpftrace" ]] && ([ "$ID" = "centos" ] || [ "$ID" = "openEuler" ]); then
+                    download_bpftrace_binary "CentOS/RHEL/openEuler"
                     continue
                 else
                     $PKG_MGR install -q -y dnf-plugins-core
-                    pkg_name=$(yum provides "$pkg" 2>/dev/null | grep -E "^(|[0-9]+:)[^/]*${pkg}-" | head -1 | awk '{print $1}')
+                    # Escape special regex characters in package name for grep
+                    escaped_pkg=$(echo "$pkg" | sed 's/[+]/\\&/g')
+                    pkg_name=$(yum provides "$pkg" 2>/dev/null | grep -E "^(|[0-9]+:)[^/]*${escaped_pkg}-" | head -1 | awk '{print $1}')
                     format_name=$(echo "$pkg_name" | sed -E 's/^[0-9]+://; s/\.[^.]+$//')
+                    
+                    # If format_name is empty, try to use the original package name
+                    if [ -z "$format_name" ]; then
+                        yellow_echo "Warning: Could not resolve package name for '$pkg', trying direct download..."
+                        format_name="$pkg"
+                    fi
+                    
                     yellow_echo "Downloading offline pkgs......"
                     if [ -f /etc/kylin-release ];then
                         repotrack --destdir "$system_packages_dir" "$format_name"
+                    elif [ "$ID" = "openEuler" ];then
+                        repotrack --downloaddir="$system_packages_dir" --resolve --alldeps "$format_name"
                     else
                         repotrack -p "$system_packages_dir" "$format_name"
                     fi
@@ -507,12 +754,16 @@ function install_system_packages() {
 }
 
 function install_python_packages() {
-    if [ -n "$PYTHON_PACKAGES" ]; then
-        yellow_echo "Installing uv and Python $PYTHON_VERSION and packages: $PYTHON_PACKAGES"
+    if [ -n "$PYTHON_PACKAGES" ] || [ -n "$PYTHON_REQUIREMENTS" ]; then
+        if [ -n "$PYTHON_REQUIREMENTS" ]; then
+            yellow_echo "Installing uv and Python $PYTHON_VERSION from requirements file: $PYTHON_REQUIREMENTS"
+        else
+            yellow_echo "Installing uv and Python $PYTHON_VERSION and packages: $PYTHON_PACKAGES"
+        fi
 
         # Install uv with setup_env.sh
         if ! command -v uv &> /dev/null; then
-            if [ -f /etc/kylin-release ]; then
+            if [ -f /etc/kylin-release ] || [ "$OS_ID" = "openEuler" ]; then
                 curl -LsSf https://astral.sh/uv/install.sh | sh
             else
                 curl -o "$script_dir"/setup_env.sh https://raw.githubusercontent.com/taosdata/TDengine/main/packaging/setup_env.sh
@@ -530,6 +781,8 @@ function install_python_packages() {
 
         if [ "$TDGPT" == "true" ];then
             python_venv_dir="/var/lib/taos/taosanode/venv"
+        elif [ "$IDMP" == "true" ];then
+            python_venv_dir="/usr/local/taos/idmp/venv"
         else
             python_venv_dir="$HOME/.venv$PYTHON_VERSION"
         fi
@@ -542,16 +795,82 @@ function install_python_packages() {
 
         yellow_echo "Installing Python packages..."
         source "$python_venv_dir"/bin/activate
-        IFS=',' read -ra pkg_array <<< "$PYTHON_PACKAGES"
-        for pkg in "${pkg_array[@]}"
-        do
-            echo "installing: $pkg"
-            if [[ $pkg == *"--index-url"* ]]; then
-                uv pip install $pkg
-            else
-                uv pip install $pkg -i https://pypi.tuna.tsinghua.edu.cn/simple
+        
+        if [ -n "$PYTHON_REQUIREMENTS" ]; then
+            # Handle requirements file
+            local req_file="$py_venv_dir/requirements.txt"
+            
+            # Convert GitHub blob URL to raw URL if needed
+            local download_url="$PYTHON_REQUIREMENTS"
+            if [[ "$download_url" == *"github.com"* ]] && [[ "$download_url" == *"/blob/"* ]]; then
+                download_url=$(echo "$download_url" | sed 's|github.com|raw.githubusercontent.com|' | sed 's|/blob/|/|')
+                yellow_echo "Converted GitHub URL to raw: $download_url"
             fi
-        done
+            
+            # Download or copy requirements file
+            if [[ "$download_url" =~ ^https?:// ]]; then
+                yellow_echo "Downloading requirements file from: $download_url"
+                if ! curl -fsSL "$download_url" -o "$req_file"; then
+                    red_echo "Failed to download requirements file"
+                    exit 1
+                fi
+            elif [ -f "$download_url" ]; then
+                yellow_echo "Using local requirements file: $download_url"
+                cp "$download_url" "$req_file"
+            else
+                red_echo "Requirements file not found: $download_url"
+                exit 1
+            fi
+            
+            # Parse and install packages from requirements.txt
+            yellow_echo "Installing packages from requirements.txt..."
+            local current_index="-i https://pypi.tuna.tsinghua.edu.cn/simple"
+            local current_find_links=""
+            
+            # Install packages line by line, respecting index-url changes
+            while IFS= read -r line || [ -n "$line" ]; do
+                # Skip empty lines and comments
+                [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+                
+                # Handle --find-links
+                if [[ "$line" =~ ^--find-links[[:space:]]+(.*) ]] || [[ "$line" =~ ^--find-links=(.*) ]]; then
+                    find_links="${BASH_REMATCH[1]}"
+                    [[ -z "$find_links" ]] && find_links=$(echo "$line" | awk '{print $2}')
+                    current_find_links=" --find-links $find_links"
+                    yellow_echo "Switching to --find-links: $find_links"
+                    continue
+                fi
+                
+                # Handle --index-url (switch active index)
+                if [[ "$line" =~ ^--index-url[[:space:]]+(.*) ]] || [[ "$line" =~ ^--index-url=(.*) ]]; then
+                    index_url="${BASH_REMATCH[1]}"
+                    [[ -z "$index_url" ]] && index_url=$(echo "$line" | awk '{print $2}')
+                    current_index="-i $index_url"
+                    current_find_links=""  # Clear find-links when switching index
+                    yellow_echo "Switching to --index-url: $index_url"
+                    continue
+                fi
+                
+                # Skip other pip options
+                [[ "$line" =~ ^-- ]] && continue
+                
+                # Install package with current active index/find-links
+                echo "Installing: $line"
+                uv pip install $current_find_links $current_index "$line"
+            done < "$req_file"
+        else
+            # Original comma-separated packages logic
+            IFS=',' read -ra pkg_array <<< "$PYTHON_PACKAGES"
+            for pkg in "${pkg_array[@]}"
+            do
+                echo "installing: $pkg"
+                if [[ $pkg == *"--index-url"* ]]; then
+                    uv pip install $pkg
+                else
+                    uv pip install $pkg -i https://pypi.tuna.tsinghua.edu.cn/simple
+                fi
+            done
+        fi
         # uv pip install $formated_python_packages -i https://pypi.tuna.tsinghua.edu.cn/simple
         if [ "$TDGPT" == "true" ];then
             uv pip install numpy==1.26.4 -i https://pypi.tuna.tsinghua.edu.cn/simple
@@ -582,6 +901,8 @@ function build_pkgs() {
     install_python_packages
     download_docker
     download_docker_compose
+    download_java
+    download_idmp_packages
     summary
 }
 
@@ -610,7 +931,7 @@ function check_python_pkgs() {
 
 function install_offline_pkgs() {
     yellow_echo "Installing offline pkgs"
-    if [ -f /etc/redhat-release ] || [ -f /etc/kylin-release ]; then
+    if [ -f /etc/redhat-release ] || [ -f /etc/kylin-release ] || [ "$OS_ID" = "openEuler" ]; then
         for i in "$HOME/$offline_env_dir/system_packages/"*.rpm;
         do
             rpm -ivh --nodeps "$i"  >/dev/null 2>&1
