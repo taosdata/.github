@@ -123,9 +123,17 @@ class TestPreparer:
         self.utils.set_env_var("GITHUB_RUN_NUMBER", self.run_number, os.getenv("GITHUB_ENV", ""))
         self.utils.set_env_var("GITHUB_RUN_ATTEMPT", self.run_attempt, os.getenv("GITHUB_ENV", ""))
 
+    def run_git_ref_lock_cleaner(self, repo_path):
+        script_path = Path(__file__).parent / "git_ref_lock_cleaner.py"
+        result = subprocess.run(["python3", str(script_path)], cwd=repo_path)
+        if result.returncode != 0:
+            logger.warning("git_ref_lock_cleaner.py failed")
+
     def prepare_repositories(self):
         """Prepare both TDengine or TDinternal repository"""
         logger.info(f"Preparing TDinternal in {self.wkdir}...")
+        self.run_git_ref_lock_cleaner(self.wk)
+        self.run_git_ref_lock_cleaner(self.wkc)
         if (
             self.inputs.get("specified_source_branch") == "unavailable"
             and self.inputs.get("specified_target_branch") == "unavailable"
