@@ -4,6 +4,7 @@ import logging
 import os
 import platform
 import socket
+import sys
 import subprocess
 from datetime import datetime
 from pathlib import Path
@@ -125,9 +126,24 @@ class TestPreparer:
 
     def run_git_ref_lock_cleaner(self, repo_path):
         script_path = Path(__file__).parent / "git_ref_lock_cleaner.py"
-        result = subprocess.run(["python3", str(script_path)], cwd=repo_path)
-        if result.returncode != 0:
-            logger.warning("git_ref_lock_cleaner.py failed")
+        if not repo_path.exists():
+            logger.warning(f"Repository path {repo_path} does not exist, skip git_ref_lock_cleaner.")
+            return
+        try:
+            subprocess.run(
+                [sys.executable, str(script_path)],
+                cwd=repo_path,
+                capture_output=True,
+                text=True,
+                check=True
+            )
+        except subprocess.CalledProcessError as e:
+            logger.warning(
+                f"git_ref_lock_cleaner.py failed in {repo_path}.\n"
+                f"Stdout: {e.stdout.strip()}\nStderr: {e.stderr.strip()}"
+            )
+        except OSError as e:
+            logger.warning(f"Failed to run git_ref_lock_cleaner.py in {repo_path}: {e}")
 
     def prepare_repositories(self):
         """Prepare both TDengine or TDinternal repository"""
