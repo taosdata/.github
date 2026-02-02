@@ -146,7 +146,16 @@ class TestPreparer:
             logger.warning(f"Failed to run git_ref_lock_cleaner.py in {repo_path}: {e}")
 
     def prepare_repositories(self):
-        """Prepare both TDengine or TDinternal repository"""
+        """
+        Prepare both TDengine and TDinternal repositories for CI.
+
+        This method:
+        1. Runs git_ref_lock_cleaner for each repo to clean ref lock errors and ensure fetch/prune are done.
+        2. Prepares each repository to the correct branch (source/target) for testing.
+        3. Avoids redundant git fetch/prune since cleaner already synchronizes the repo state.
+
+        After this step, all repositories are ready for CI and up-to-date.
+        """
         logger.info(f"Preparing TDinternal in {self.wkdir}...")
         self.run_git_ref_lock_cleaner(self.wk)
         self.run_git_ref_lock_cleaner(self.wkc)
@@ -170,8 +179,6 @@ class TestPreparer:
         cmds = [
             f"cd {repo_path} && git reset --hard",
             f"cd {repo_path} && git clean -f",
-            f"cd {repo_path} && git remote prune origin",
-            f"cd {repo_path} && git fetch",
             f"cd {repo_path} && git checkout -f origin/{branch}",
         ]
         self.utils.run_commands(cmds)
@@ -312,8 +319,11 @@ class TestPreparer:
         workdir = host_config["workdir"]
 
         logger.info(f"Preparing repositories on {host}...")
-
+        logger.info(f"Preparing TDinternal in {self.wkdir}...")
+        self.run_git_ref_lock_cleaner(self.wk)
+        self.run_git_ref_lock_cleaner(self.wkc)
         # Prepare TDinternal repository
+        
         if (
             self.inputs.get("specified_source_branch") == "unavailable"
             and self.inputs.get("specified_target_branch") == "unavailable"
@@ -321,7 +331,7 @@ class TestPreparer:
         ):
             success, _ = self._execute_remote_command(
                 host_config,
-                f"cd {workdir}/TDinternal && git reset --hard && git clean -f && git remote prune origin && git fetch && git checkout -f origin/{self.target_branch}",
+                f"cd {workdir}/TDinternal && git reset --hard && git clean -f && git checkout -f origin/{self.target_branch}",
             )
             if not success:
                 logger.info(f"Failed to prepare TDinternal on {host}")
@@ -329,7 +339,7 @@ class TestPreparer:
         else:
             success, _ = self._execute_remote_command(
                 host_config,
-                f"cd {workdir}/TDinternal && git reset --hard && git clean -f && git remote prune origin && git fetch && git checkout -f origin/{self.source_branch}",
+                f"cd {workdir}/TDinternal && git reset --hard && git clean -f && git checkout -f origin/{self.source_branch}",
             )
             if not success:
                 logger.info(f"Failed to prepare TDinternal on {host}")
@@ -338,7 +348,7 @@ class TestPreparer:
         # Prepare community repository
         success, _ = self._execute_remote_command(
             host_config,
-            f"cd {workdir}/TDinternal/community && git reset --hard && git clean -f && git remote prune origin && git fetch && git checkout -f origin/{self.target_branch}",
+            f"cd {workdir}/TDinternal/community && git reset --hard && git clean -f && git checkout -f origin/{self.target_branch}",
         )
         if not success:
             logger.error(f"Failed to prepare community on {host}")
