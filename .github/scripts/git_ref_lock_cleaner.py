@@ -83,13 +83,6 @@ class RefLockErrorHandlerFactory:
                 return handler
         return None
 
-def git_fetch():
-    return subprocess.run(['git', 'fetch'], capture_output=True, text=True)
-
-def git_prune():
-    print("git remote prune origin")
-    return subprocess.run(['git', 'remote', 'prune', 'origin'], capture_output=True, text=True)
-
 def handle_error(error_output):
     handler = RefLockErrorHandlerFactory.get_handler(error_output)
     if handler:
@@ -97,21 +90,35 @@ def handle_error(error_output):
     else:
         print("No handler found for this error.")
 
+def git_fetch():
+    print("Running: git fetch")
+    result = subprocess.run(['git', 'fetch'], capture_output=True, text=True)
+    if result.returncode != 0:
+        print("git fetch failed:")
+        print(result.stderr)
+    else:
+        print("git fetch successful.")
+    return result
+
+def git_prune():
+    print("Running: git remote prune origin")
+    result = subprocess.run(['git', 'remote', 'prune', 'origin'], capture_output=True, text=True)
+    if result.returncode != 0:
+        print("git remote prune origin failed:")
+        print(result.stderr)
+    else:
+        print("git remote prune origin successful.")
+    return result
+
 def main():
     fetch_result = git_fetch()
-    if fetch_result.stderr:
+    if fetch_result.returncode != 0:
         handle_error(fetch_result.stderr)
-    else:
-        print("Git fetch successful.")
+        return
 
     prune_result = git_prune()
-    print(prune_result.returncode)
     if prune_result.returncode != 0:
-        error_output = prune_result.stderr
-        print(error_output)
-        handle_error(error_output)
-    else:
-        print("Git prune successful.")
+        handle_error(prune_result.stderr)
 
 if __name__ == "__main__":
     main()
