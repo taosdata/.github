@@ -125,7 +125,7 @@ class TestPreparer:
         self.utils.set_env_var("GITHUB_RUN_ATTEMPT", self.run_attempt, os.getenv("GITHUB_ENV", ""))
 
     def run_git_ref_lock_cleaner(self, repo_path):
-        logger.info(f"Running cleaner script: {script_path}"))
+        logger.info(f"Running cleaner script: {script_path}")
         if not repo_path.exists():
             logger.warning(f"Repository path {repo_path} does not exist, skip git_ref_lock_cleaner.")
             return
