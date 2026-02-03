@@ -126,6 +126,7 @@ class TestPreparer:
 
     def run_git_ref_lock_cleaner(self, repo_path):
         script_path = Path(__file__).parent / "git_ref_lock_cleaner.py"
+        print(f"Running cleaner script: {script_path}")
         if not repo_path.exists():
             logger.warning(f"Repository path {repo_path} does not exist, skip git_ref_lock_cleaner.")
             return
