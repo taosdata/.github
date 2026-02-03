@@ -19,6 +19,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 script_path = (Path(__file__).parent.resolve() / "git_ref_lock_cleaner.py").resolve()
+
+
 class TestPreparer:
     """Prepare the environment for testing TDengine or TDinternal
     1. Prepare the environment
@@ -120,13 +122,19 @@ class TestPreparer:
             "TARGET_BRANCH", self.target_branch, os.getenv("GITHUB_ENV", "")
         )
         self.utils.set_env_var("PR_NUMBER", self.pr_number, os.getenv("GITHUB_ENV", ""))
-        self.utils.set_env_var("GITHUB_RUN_NUMBER", self.run_number, os.getenv("GITHUB_ENV", ""))
-        self.utils.set_env_var("GITHUB_RUN_ATTEMPT", self.run_attempt, os.getenv("GITHUB_ENV", ""))
+        self.utils.set_env_var(
+            "GITHUB_RUN_NUMBER", self.run_number, os.getenv("GITHUB_ENV", "")
+        )
+        self.utils.set_env_var(
+            "GITHUB_RUN_ATTEMPT", self.run_attempt, os.getenv("GITHUB_ENV", "")
+        )
 
     def run_git_ref_lock_cleaner(self, repo_path):
         logger.info(f"Running cleaner script: {script_path}")
         if not repo_path.exists():
-            logger.warning(f"Repository path {repo_path} does not exist, skip git_ref_lock_cleaner.")
+            logger.warning(
+                f"Repository path {repo_path} does not exist, skip git_ref_lock_cleaner."
+            )
             return
         try:
             subprocess.run(
@@ -134,7 +142,7 @@ class TestPreparer:
                 cwd=repo_path,
                 capture_output=True,
                 text=True,
-                check=True
+                check=True,
             )
         except subprocess.CalledProcessError as e:
             logger.warning(
@@ -323,11 +331,7 @@ class TestPreparer:
         logger.info(f"[{host}] Starting remote repository preparation.")
 
         # Step 1: Distribute cleaner script
-        scp_cmd = [
-            "scp",
-            local_script,
-            f"{username}@{host}:{remote_path}"
-        ]
+        scp_cmd = ["scp", local_script, f"{username}@{host}:{remote_path}"]
         try:
             subprocess.run(scp_cmd, check=True)
             logger.info(f"[{host}] Cleaner script distributed to {remote_path}.")
@@ -645,7 +649,9 @@ class TestPreparer:
             logger.info("No remote hosts to process.")
             return True
 
-        logger.info(f"Starting remote host processing: {len(self.host_configs)} hosts in total.")
+        logger.info(
+            f"Starting remote host processing: {len(self.host_configs)} hosts in total."
+        )
         max_threads = max(1, min(len(self.host_configs), 10))
         results = []
 
@@ -667,13 +673,17 @@ class TestPreparer:
                     else:
                         logger.error(f"[{host}] ✗ Host processing failed.")
                 except Exception as e:
-                    logger.error(f"[{host}] ✗ Host processing failed with exception: {e}")
+                    logger.error(
+                        f"[{host}] ✗ Host processing failed with exception: {e}"
+                    )
                     results.append((host, False))
 
         failed_hosts = [host for host, success in results if not success]
         if failed_hosts:
             logger.error(f"✗ Failed hosts: {', '.join(failed_hosts)}")
-            logger.error(f"Remote host processing completed with {len(failed_hosts)} failures out of {len(results)} hosts.")
+            logger.error(
+                f"Remote host processing completed with {len(failed_hosts)} failures out of {len(results)} hosts."
+            )
             return False
 
         logger.info(f"✓ All {len(results)} remote hosts processed successfully.")
