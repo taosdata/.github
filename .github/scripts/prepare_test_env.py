@@ -18,8 +18,7 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
-script_path = (Path(__file__).parent.resolve() / "git_ref_lock_cleaner.py").resolve()
-
+script_path = (Path(__file__).parent / "git_ref_lock_cleaner.py").resolve()
 
 class TestPreparer:
     """Prepare the environment for testing TDengine or TDinternal
@@ -321,65 +320,52 @@ class TestPreparer:
             return False, str(e)
 
     def _prepare_repositories_remote(self, host_config):
-        """Prepare repositories on remote host with English logs and clear steps."""
+        """Prepare repositories on remote host."""
         host = host_config["host"]
         workdir = host_config["workdir"]
         username = host_config["username"]
-        local_script = str(script_path)
-        remote_path = f"{workdir}/git_ref_lock_cleaner.py"
+        remote_script = f"{workdir}/git_ref_lock_cleaner.py"
 
-        logger.info(f"[{host}] Starting remote repository preparation.")
+        logger.info(f"[{host}] Start remote repository preparation.")
 
-        # Step 1: Distribute cleaner script
-        scp_cmd = ["scp", local_script, f"{username}@{host}:{remote_path}"]
+        # 1. Distribute cleaner script
         try:
-            subprocess.run(scp_cmd, check=True)
-            logger.info(f"[{host}] Cleaner script distributed to {remote_path}.")
+            subprocess.run(
+                ["scp", str(script_path), f"{username}@{host}:{remote_script}"],
+                check=True
+            )
+            logger.info(f"[{host}] Cleaner script sent to {remote_script}.")
         except Exception as e:
-            logger.error(f"[{host}] Failed to distribute cleaner script: {e}")
+            logger.error(f"[{host}] Failed to send cleaner script: {e}")
             return False
 
-        # Step 2: Prepare TDinternal repository
-        logger.info(f"[{host}] Preparing TDinternal repository.")
-        if (
-            self.inputs.get("specified_source_branch") == "unavailable"
-            and self.inputs.get("specified_target_branch") == "unavailable"
-            and self.inputs.get("specified_pr_number") == "unavailable"
-        ):
-            tdinternal_cmd = (
-                f"cd {workdir}/TDinternal && "
-                f"python3 {remote_path} && "
-                "git reset --hard && git clean -f && "
-                f"git checkout -f origin/{self.target_branch}"
-            )
-        else:
-            tdinternal_cmd = (
-                f"cd {workdir}/TDinternal && "
-                f"python3 {remote_path} && "
-                "git reset --hard && git clean -f && "
-                f"git checkout -f origin/{self.source_branch}"
-            )
-        success, _ = self._execute_remote_command(host_config, tdinternal_cmd)
-        if not success:
-            logger.error(f"[{host}] TDinternal repository preparation failed.")
+        # 2. Prepare TDinternal
+        branch = self.target_branch if all(
+            self.inputs.get(k) == "unavailable"
+            for k in ["specified_source_branch", "specified_target_branch", "specified_pr_number"]
+        ) else self.source_branch
+        td_cmd = (
+            f"cd {workdir}/TDinternal && "
+            f"python3 {remote_script} && "
+            "git reset --hard && git clean -f && "
+            f"git checkout -f origin/{branch}"
+        )
+        if not self._execute_remote_command(host_config, td_cmd)[0]:
+            logger.error(f"[{host}] TDinternal preparation failed.")
             return False
-        logger.info(f"[{host}] TDinternal repository prepared successfully.")
 
-        # Step 3: Prepare community repository
-        logger.info(f"[{host}] Preparing community repository.")
-        community_cmd = (
+        # 3. Prepare community
+        comm_cmd = (
             f"cd {workdir}/TDinternal/community && "
-            f"python3 {remote_path} && "
+            f"python3 {remote_script} && "
             "git reset --hard && git clean -f && "
             f"git checkout -f origin/{self.target_branch}"
         )
-        success, _ = self._execute_remote_command(host_config, community_cmd)
-        if not success:
-            logger.error(f"[{host}] Community repository preparation failed.")
+        if not self._execute_remote_command(host_config, comm_cmd)[0]:
+            logger.error(f"[{host}] Community preparation failed.")
             return False
-        logger.info(f"[{host}] Community repository prepared successfully.")
 
-        logger.info(f"[{host}] Remote repository preparation completed.")
+        logger.info(f"[{host}] Remote repository preparation done.")
         return True
 
     def _update_codes_remote(self, host_config):
@@ -644,7 +630,7 @@ class TestPreparer:
             return False
 
     def _process_remote_hosts(self):
-        """Process all remote hosts in parallel with pretty English logs"""
+        """Process all remote hosts in parallel"""
         if not self.host_configs:
             logger.info("No remote hosts to process.")
             return True
