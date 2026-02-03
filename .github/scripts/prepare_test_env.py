@@ -18,8 +18,7 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
-script_path = Path(__file__).parent / "git_ref_lock_cleaner.py"
-logger.info(f"1 Script path: {script_path}")
+script_path = (Path(__file__).parent.resolve() / "git_ref_lock_cleaner.py").resolve()
 class TestPreparer:
     """Prepare the environment for testing TDengine or TDinternal
     1. Prepare the environment
@@ -126,7 +125,6 @@ class TestPreparer:
 
     def run_git_ref_lock_cleaner(self, repo_path):
         logger.info(f"Running cleaner script: {script_path}")
-        logger.info(f"2 Script path: {script_path}")
         if not repo_path.exists():
             logger.warning(f"Repository path {repo_path} does not exist, skip git_ref_lock_cleaner.")
             return
