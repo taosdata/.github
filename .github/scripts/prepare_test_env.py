@@ -1,9 +1,11 @@
 import concurrent.futures
 import glob
 import json
+import paramiko
 import logging
 import os
 import platform
+import shlex
 import socket
 import sys
 import subprocess
@@ -129,8 +131,8 @@ class TestPreparer:
             "GITHUB_RUN_ATTEMPT", self.run_attempt, os.getenv("GITHUB_ENV", "")
         )
         
-    def clean_git_locks(repo_path):
-        """清理 Git 锁文件"""
+    def clean_git_locks(self, repo_path):
+        """clean .git/*.lock files in a local repository"""
         git_dir = os.path.join(repo_path, '.git')
         if not os.path.exists(git_dir):
             return
@@ -139,11 +141,11 @@ class TestPreparer:
         for lock_file in lock_files:
             try:
                 os.remove(lock_file)
-                print(f"Removed lock file: {lock_file}")
+                logger.info(f"Removed lock file: {lock_file}")
             except Exception as e:
-                print(f"Failed to remove {lock_file}: {e}")
+                logger.info(f"Failed to remove {lock_file}: {e}")
 
-    def clean_git_locks_remote(host: str, username: str, repo_path: str, password: str = None, key_filename: str = None):
+    def clean_git_locks_remote(self, host: str, username: str, repo_path: str, password: str = None, key_filename: str = None):
         """
         Clean .git/*.lock files in a remote repository via SSH.
         :param host: Remote host IP or domain
@@ -152,7 +154,6 @@ class TestPreparer:
         :param password: SSH password (optional, for password login)
         :param key_filename: Path to private key file (optional, for key-based login)
         """
-        import paramiko
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         try:
@@ -163,15 +164,16 @@ class TestPreparer:
                 key_filename=key_filename,
             )
             git_dir = f"{repo_path}/.git"
-            cmd = f"find {git_dir} -name '*.lock' -type f -exec rm -f {{}} \\;"
+            safe_git_dir = shlex.quote(git_dir)
+            cmd = f"find {safe_git_dir} -name '*.lock' -type f -exec rm -f {{}} \\;"
             stdin, stdout, stderr = ssh.exec_command(cmd)
             out = stdout.read().decode()
             err = stderr.read().decode()
-            print(f"[{host}] Cleaned locks in {git_dir}")
+            logger.info(f"[{host}] Cleaned locks in {git_dir}")
             if out:
-                print(out)
+                logger.info(out)
             if err:
-                print(err)
+                logger.info(err)
         finally:
             ssh.close()
             
@@ -340,8 +342,6 @@ class TestPreparer:
     def _execute_remote_command(self, host_config, command):
         """Execute a command on remote host via SSH"""
         try:
-            import paramiko
-
             ssh = paramiko.SSHClient()
             ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
