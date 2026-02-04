@@ -1,4 +1,5 @@
 import concurrent.futures
+import glob
 import json
 import logging
 import os
@@ -127,7 +128,53 @@ class TestPreparer:
         self.utils.set_env_var(
             "GITHUB_RUN_ATTEMPT", self.run_attempt, os.getenv("GITHUB_ENV", "")
         )
+        
+    def clean_git_locks(repo_path):
+        """清理 Git 锁文件"""
+        git_dir = os.path.join(repo_path, '.git')
+        if not os.path.exists(git_dir):
+            return
+        
+        lock_files = glob.glob(os.path.join(git_dir, '*.lock'))
+        for lock_file in lock_files:
+            try:
+                os.remove(lock_file)
+                print(f"Removed lock file: {lock_file}")
+            except Exception as e:
+                print(f"Failed to remove {lock_file}: {e}")
 
+    def clean_git_locks_remote(host: str, username: str, repo_path: str, password: str = None, key_filename: str = None):
+        """
+        Clean .git/*.lock files in a remote repository via SSH.
+        :param host: Remote host IP or domain
+        :param username: SSH username
+        :param repo_path: Path to the repository on the remote host
+        :param password: SSH password (optional, for password login)
+        :param key_filename: Path to private key file (optional, for key-based login)
+        """
+        import paramiko
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        try:
+            ssh.connect(
+                hostname=host,
+                username=username,
+                password=password,
+                key_filename=key_filename,
+            )
+            git_dir = f"{repo_path}/.git"
+            cmd = f"find {git_dir} -name '*.lock' -type f -exec rm -f {{}} \\;"
+            stdin, stdout, stderr = ssh.exec_command(cmd)
+            out = stdout.read().decode()
+            err = stderr.read().decode()
+            print(f"[{host}] Cleaned locks in {git_dir}")
+            if out:
+                print(out)
+            if err:
+                print(err)
+        finally:
+            ssh.close()
+            
     def run_git_ref_lock_cleaner(self, repo_path):
         logger.info(f"Running cleaner script: {script_path}")
         if not repo_path.exists():
@@ -165,6 +212,7 @@ class TestPreparer:
         logger.info(f"Preparing TDinternal in {self.wkdir}...")
         self.run_git_ref_lock_cleaner(self.wk)
         self.run_git_ref_lock_cleaner(self.wkc)
+
         if (
             self.inputs.get("specified_source_branch") == "unavailable"
             and self.inputs.get("specified_target_branch") == "unavailable"
@@ -181,7 +229,7 @@ class TestPreparer:
         """Prepare a single repository"""
         if not repo_path.exists():
             raise FileNotFoundError(f"Repository path not found: {repo_path}")
-
+        self.clean_git_locks(repo_path)
         cmds = [
             f"cd {repo_path} && git reset --hard",
             f"cd {repo_path} && git clean -f",
@@ -339,7 +387,9 @@ class TestPreparer:
             logger.error(f"[{host}] Failed to send cleaner script: {e}")
             return False
 
+        
         # 2. Prepare TDinternal
+        self.clean_git_locks_remote(host, username, f"{workdir}/TDinternal")
         branch = self.target_branch if all(
             self.inputs.get(k) == "unavailable"
             for k in ["specified_source_branch", "specified_target_branch", "specified_pr_number"]
@@ -355,6 +405,7 @@ class TestPreparer:
             return False
 
         # 3. Prepare community
+        self.clean_git_locks_remote(host, username, f"{workdir}/TDinternal/community")
         comm_cmd = (
             f"cd {workdir}/TDinternal/community && "
             f"python3 {remote_script} && "
