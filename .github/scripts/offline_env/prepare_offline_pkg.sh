@@ -13,6 +13,7 @@ PYTHON_REQUIREMENTS=""
 PKG_LABEL=""
 BINARY_TOOLS=("bpftrace")
 TDGPT=""
+TDGPT_MODELS=""  # New: comma-separated list of models to build/install
 DOCKER_VERSION="latest"
 DOCKER_COMPOSE_VERSION="latest"
 INSTALL_DOCKER=""
@@ -28,13 +29,22 @@ function show_usage() {
     echo "  Docker Options: [--install-docker] [--docker-version=<version>] [--install-docker-compose] [--docker-compose-version=<version>]"
     echo "  Java Options: [--install-java] [--java-version=<version>] (default: 21, supported: 8,11,17,21,23)"
     echo "  Python Options: [--python-requirements=<url_or_path>] (alternative to --python-packages)"
-    echo "  Special Options: [--tdgpt=<true|false>] [--idmp=<true|false>]"
+    echo "  Special Options: [--tdgpt=<true|false>] [--tdgpt-models=<model1,model2,...>] [--idmp=<true|false>]"
+    echo ""
+    echo "TDgpt Model Options:"
+    echo "  --tdgpt-models=<models>   Specify which TDgpt models to build/install (comma-separated)"
+    echo "                            Available models: tdtsfm,timemoe,timesfm,moirai,chronos,moment"
+    echo "                            If not specified or empty, all models will be built/installed"
+    echo "                            Example: --tdgpt-models=timesfm,chronos,moirai"
+    echo ""
     echo "Example:"
     echo "  $0 --build --system-packages=vim,ntp --python-version=3.10 --python-packages=fabric2,requests --pkg-label=1.0.20250409"
     echo "  $0 --build --python-version=3.10 --python-requirements=https://github.com/user/repo/blob/main/requirements.txt --pkg-label=test"
     echo "  $0 --build --install-docker --docker-version=27.5.1 --install-docker-compose --docker-compose-version=v2.40.2 --pkg-label=test"
     echo "  $0 --build --install-java --java-version=21 --pkg-label=java-test"
     echo "  $0 --build --install-java --idmp=true --pkg-label=idmp-env"
+    echo "  $0 --build --tdgpt=true --tdgpt-models=timesfm,chronos,moirai --pkg-label=tdgpt-partial"
+    echo "  $0 --build --tdgpt=true --pkg-label=tdgpt-all  # Build all models"
     exit 1
 }
 
@@ -66,6 +76,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --tdgpt=*)
             TDGPT="${1#*=}"
+            shift
+            ;;
+        --tdgpt-models=*)
+            TDGPT_MODELS="${1#*=}"
             shift
             ;;
         --install-docker)
@@ -130,8 +144,8 @@ function validate_params() {
     # [[ -z "$PKG_LABEL" ]] && missing_required+=("PKG_LABEL")
 
     # Check package logic: at least one exists
-    if [[ -z "$SYSTEM_PACKAGES" && -z "$PYTHON_PACKAGES" && -z "$PYTHON_REQUIREMENTS" && -z "$INSTALL_DOCKER" && -z "$INSTALL_DOCKER_COMPOSE" && -z "$INSTALL_JAVA" && -z "$IDMP" ]]; then
-        package_error="At least one of **SYSTEM_PACKAGES**, **PYTHON_PACKAGES**, **PYTHON_REQUIREMENTS**, **INSTALL_DOCKER**, **INSTALL_DOCKER_COMPOSE**, **INSTALL_JAVA**, or **IDMP** must be provided."
+    if [[ -z "$SYSTEM_PACKAGES" && -z "$PYTHON_PACKAGES" && -z "$PYTHON_REQUIREMENTS" && -z "$INSTALL_DOCKER" && -z "$INSTALL_DOCKER_COMPOSE" && -z "$INSTALL_JAVA" && -z "$IDMP" && -z "$TDGPT" ]]; then
+        package_error="At least one of **SYSTEM_PACKAGES**, **PYTHON_PACKAGES**, **PYTHON_REQUIREMENTS**, **INSTALL_DOCKER**, **INSTALL_DOCKER_COMPOSE**, **INSTALL_JAVA**, **IDMP**, or **TDGPT** must be provided."
     fi
     
     # Check if both python-packages and python-requirements are specified
@@ -174,6 +188,25 @@ get_system_arch() {
             ;;
         aarch64|arm64)
             echo "aarch64"
+            ;;
+        *)
+            red_echo "Unsupported architecture: $arch"
+            return 1
+            ;;
+    esac
+}
+
+# Get simplified architecture name for package naming
+# Returns: x64 or arm64
+get_simplified_arch() {
+    local arch
+    arch=$(uname -m)
+    case "$arch" in
+        x86_64)
+            echo "x64"
+            ;;
+        aarch64|arm64)
+            echo "arm64"
             ;;
         *)
             red_echo "Unsupported architecture: $arch"
@@ -255,7 +288,9 @@ function init() {
     # Create cache directory for downloads
     mkdir -p "$CACHE_DIR"
     yellow_echo "Using cache directory: $CACHE_DIR"
-    offline_env_dir="offline-pkgs-$PKG_LABEL-$OS_ID-$OS_VERSION-${SUB_VERSION}$(arch)"
+    local simplified_arch
+    simplified_arch=$(get_simplified_arch) || exit 1
+    offline_env_dir="offline-pkgs-$PKG_LABEL-$OS_ID-$OS_VERSION-${SUB_VERSION}${simplified_arch}"
     offline_env_path="$parent_dir/$offline_env_dir"
     system_packages_dir="$offline_env_path/system_packages"
     tar_file="$system_packages_dir/system_packages.tar"
@@ -753,6 +788,155 @@ function install_system_packages() {
     fi
 }
 
+function build_tdgpt_venvs() {
+    if [ "$TDGPT" != "true" ]; then
+        return 0
+    fi
+
+    yellow_echo "Building TDgpt model virtual environments..."
+
+    # Determine which models to build
+    local models_to_build=()
+    if [ -n "$TDGPT_MODELS" ]; then
+        IFS=',' read -ra models_to_build <<< "$TDGPT_MODELS"
+        yellow_echo "Building venvs for specified models: $TDGPT_MODELS"
+    else
+        models_to_build=(tdtsfm timemoe timesfm moirai chronos moment)
+        yellow_echo "Building venvs for all models"
+    fi
+
+    # Base directory for TDgpt venvs
+    local tdgpt_base_dir="/var/lib/taos/taosanode"
+    mkdir -p "$tdgpt_base_dir"
+
+    # Install uv if not available
+    if ! command -v uv &> /dev/null; then
+        if [ -f /etc/kylin-release ] || [ "$OS_ID" = "openEuler" ]; then
+            curl -LsSf https://astral.sh/uv/install.sh | sh
+        else
+            curl -o "$script_dir"/setup_env.sh https://raw.githubusercontent.com/taosdata/TDengine/main/packaging/setup_env.sh
+            chmod +x "$script_dir"/setup_env.sh
+            "$script_dir"/setup_env.sh install_uv
+        fi
+    fi
+
+    if [ -f "$HOME/.local/bin/env" ]; then
+        source "$HOME/.local/bin/env"
+    fi
+
+    # Determine Python version
+    local python_ver="${PYTHON_VERSION:-3.10}"
+    yellow_echo "Using Python version: $python_ver"
+    uv python install "$python_ver"
+
+    # Build venvs for each model
+    for model in "${models_to_build[@]}"; do
+        model=$(echo "$model" | xargs)  # trim whitespace
+
+        case "$model" in
+            tdtsfm|timemoe)
+                # Default venv (transformers==4.40.0)
+                if [ ! -d "${py_venv_dir}/venv" ]; then
+                    yellow_echo "Building default venv for tdtsfm/timemoe..."
+                    local venv_path="${tdgpt_base_dir}/venv"
+                    uv venv --python "$python_ver" "$venv_path" --clear
+                    source "$venv_path/bin/activate"
+                    # Install pip in the virtual environment
+                    uv pip install pip
+                    uv pip install --index-url https://download.pytorch.org/whl/cpu torch==2.3.1+cpu
+                    uv pip install -i https://pypi.tuna.tsinghua.edu.cn/simple \
+                        pandas==1.5.3 scipy==1.15.0 scikit-learn==1.5.2 outlier-utils==0.0.5 \
+                        statsmodels==0.14.4 pyculiarity==0.0.7 Cython==3.0.11 pmdarima==2.0.4 \
+                        Flask==3.0.3 matplotlib==3.9.2 uWSGI==2.0.27 keras==3.9.0 taospy==2.8.6 \
+                        transformers==4.40.0 accelerate==0.34.2 cmdstanpy==1.2.0 fastdtw==0.3.4 \
+                        prophet==1.1.7 numpy==1.26.4 xlsxwriter==3.2.1
+
+                    uv pip install -i https://pypi.tuna.tsinghua.edu.cn/simple tensorflow-cpu==2.18.0
+                    deactivate
+                    mkdir -p "${py_venv_dir}/venv"
+                    cp -r "$venv_path" "${py_venv_dir}/"
+                    green_echo "Default venv built successfully"
+                fi
+                ;;
+
+            timesfm)
+                yellow_echo "Building timesfm venv (transformers==4.40.0)..."
+                local venv_path="${tdgpt_base_dir}/timesfm_venv"
+                uv venv --python "$python_ver" "$venv_path" --clear
+                source "$venv_path/bin/activate"
+                # Install pip in the virtual environment
+                uv pip install pip
+                uv pip install --index-url https://download.pytorch.org/whl/cpu \
+                    torch==2.3.1+cpu
+                uv pip install -i https://pypi.tuna.tsinghua.edu.cn/simple jax timesfm flask==3.0.3
+                deactivate
+                mkdir -p "${py_venv_dir}/timesfm_venv"
+                cp -r "$venv_path" "${py_venv_dir}/"
+                green_echo "timesfm venv built successfully"
+                ;;
+
+            moirai)
+                yellow_echo "Building moirai venv (transformers==4.40.0)..."
+                local venv_path="${tdgpt_base_dir}/moirai_venv"
+                uv venv --python "$python_ver" "$venv_path" --clear
+                source "$venv_path/bin/activate"
+                # Install pip in the virtual environment
+                uv pip install pip
+                uv pip install --index-url https://download.pytorch.org/whl/cpu \
+                    torch==2.3.1+cpu
+                uv pip install -i https://pypi.tuna.tsinghua.edu.cn/simple uni2ts flask
+                deactivate
+                mkdir -p "${py_venv_dir}/moirai_venv"
+                cp -r "$venv_path" "${py_venv_dir}/"
+                green_echo "moirai venv built successfully"
+                ;;
+
+            chronos)
+                yellow_echo "Building chronos venv (transformers==4.55.0)..."
+                local venv_path="${tdgpt_base_dir}/chronos_venv"
+                uv venv --python "$python_ver" "$venv_path" --clear
+                source "$venv_path/bin/activate"
+                # Install pip in the virtual environment
+                uv pip install pip
+                uv pip install --index-url https://download.pytorch.org/whl/cpu \
+                    torch==2.3.1+cpu
+                uv pip install -i https://pypi.tuna.tsinghua.edu.cn/simple chronos-forecasting flask
+                deactivate
+                mkdir -p "${py_venv_dir}/chronos_venv"
+                cp -r "$venv_path" "${py_venv_dir}/"
+                green_echo "chronos venv built successfully"
+                ;;
+
+            moment)
+                yellow_echo "Building moment venv (transformers==4.33.3)..."
+                local venv_path="${tdgpt_base_dir}/momentfm_venv"
+                uv venv --python "$python_ver" "$venv_path" --clear
+                source "$venv_path/bin/activate"
+                # Install pip in the virtual environment
+                uv pip install pip
+                uv pip install --index-url https://download.pytorch.org/whl/cpu \
+                    torch==2.3.1+cpu
+                uv pip install -i https://pypi.tuna.tsinghua.edu.cn/simple \
+                    transformers==4.33.3 numpy==1.25.2 matplotlib pandas==1.5 \
+                    scikit-learn flask==3.0.3 momentfm
+                deactivate
+                mkdir -p "${py_venv_dir}/momentfm_venv"
+                cp -r "$venv_path" "${py_venv_dir}/"
+                green_echo "moment venv built successfully"
+                ;;
+
+            *)
+                yellow_echo "Warning: Unknown model '$model', skipping..."
+                ;;
+        esac
+    done
+
+    # Copy .local directory for uv
+    cp -r "$HOME/.local" "$py_venv_dir/"
+
+    green_echo "TDgpt venvs built successfully"
+}
+
 function install_python_packages() {
     if [ -n "$PYTHON_PACKAGES" ] || [ -n "$PYTHON_REQUIREMENTS" ]; then
         if [ -n "$PYTHON_REQUIREMENTS" ]; then
@@ -781,6 +965,8 @@ function install_python_packages() {
 
         if [ "$TDGPT" == "true" ];then
             python_venv_dir="/var/lib/taos/taosanode/venv"
+            # Export TDGPT_MODELS for install.sh to use
+            export TDGPT_MODELS
         elif [ "$IDMP" == "true" ];then
             python_venv_dir="/usr/local/taos/idmp/venv"
         else
@@ -791,7 +977,7 @@ function install_python_packages() {
 
         yellow_echo "Installing Python $PYTHON_VERSION using uv..."
         uv python install "$PYTHON_VERSION"
-        uv venv --python "$PYTHON_VERSION" "$python_venv_dir"
+        uv venv --python "$PYTHON_VERSION" "$python_venv_dir" --clear
 
         yellow_echo "Installing Python packages..."
         source "$python_venv_dir"/bin/activate
@@ -889,6 +1075,15 @@ function summary() {
     cd "$parent_dir" || exit
     cp -f "$script_dir"/install.sh "$offline_env_dir"
     cp /etc/os-release "$offline_env_path"/os-release
+
+    # Save TDGPT_MODELS configuration for install.sh
+    if [ "$TDGPT" == "true" ] && [ -n "$TDGPT_MODELS" ]; then
+        echo "$TDGPT_MODELS" > "$offline_env_path"/tdgpt_models.txt
+        green_echo "TDgpt models to build/install: $TDGPT_MODELS"
+    elif [ "$TDGPT" == "true" ]; then
+        green_echo "TDgpt models to build/install: all"
+    fi
+
     tar zcf "$offline_env_dir.tar.gz" "$offline_env_dir"
     mv "$offline_env_dir.tar.gz" "$offline_env_path"
     green_echo "Offline env completed, please check $offline_env_path/$offline_env_dir.tar.gz"
@@ -899,6 +1094,7 @@ function summary() {
 function build_pkgs() {
     install_system_packages
     install_python_packages
+    build_tdgpt_venvs
     download_docker
     download_docker_compose
     download_java

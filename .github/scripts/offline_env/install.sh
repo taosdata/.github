@@ -44,7 +44,23 @@ compare_field "VERSION_ID" || exit 1
 function install_venv() {
     if [ -d "$script_path/py_venv" ];then
         yellow_echo "Installing pyvenv ..."
-        cp -r "$script_path"/py_venv/.[!.]* "$HOME"
+
+        # Copy .local directory, do not overwrite existing files
+        if [ -d "$script_path/py_venv/.local" ]; then
+            mkdir -p "$HOME/.local"
+            # Use -n to not overwrite existing files, suppress errors for busy files
+            cp -rn "$script_path/py_venv/.local"/* "$HOME/.local/" 2>/dev/null || true
+        fi
+
+        # Copy other hidden files/directories
+        for item in "$script_path"/py_venv/.[!.]*; do
+            [ -e "$item" ] || continue
+            item_name=$(basename "$item")
+            if [ "$item_name" != ".local" ]; then
+                cp -rn "$item" "$HOME/" 2>/dev/null || true
+            fi
+        done
+
         venv_dir=$(find . -type d -name ".venv*" -print -quit)
         venv_name=$(basename "$venv_dir")
         if [ -d "$script_path/py_venv/venv" ];then
@@ -56,6 +72,15 @@ function install_venv() {
                 # TDengine deployment: install to /var/lib/taos/taosanode/venv
                 mkdir -p "$taos_anode_dir"
                 cp -r "$script_path/py_venv/venv" "$taos_anode_dir"
+
+                # Copy other TDgpt model-specific venvs if they exist
+                for model_venv in "$script_path/py_venv"/*_venv; do
+                    if [ -d "$model_venv" ]; then
+                        model_venv_name=$(basename "$model_venv")
+                        yellow_echo "Installing $model_venv_name..."
+                        cp -r "$model_venv" "$taos_anode_dir/"
+                    fi
+                done
             fi
             venv_label=0
         else
