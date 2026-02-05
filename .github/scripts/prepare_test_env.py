@@ -174,6 +174,10 @@ class TestPreparer:
                 logger.info(out)
             if err:
                 logger.info(err)
+            return True
+        except Exception as e:
+            logger.error(f"[{host}] Failed to clean git locks in {repo_path}: {e}")
+            return False
         finally:
             ssh.close()
             
