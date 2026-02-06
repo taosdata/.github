@@ -19,7 +19,8 @@ sudo iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 sudo iptables -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 
 # 允许局域网通信（192.168.0.0/22 包含 192.168.0-3.0/24，单独添加 192.168.100.0/24）
-sudo iptables -A INPUT -s 192.168.0.0/22,192.168.100.0/24 -j ACCEPT
+sudo iptables -A INPUT -s 192.168.0.0/22 -j ACCEPT
+sudo iptables -A INPUT -s 192.168.100.0/24 -j ACCEPT
 sudo iptables -A OUTPUT -d 192.168.0.0/22,192.168.100.0/24 -j ACCEPT
 
 sudo service iptables save
