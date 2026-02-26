@@ -61,7 +61,7 @@ function install_venv() {
             fi
         done
 
-        venv_dir=$(find . -type d -name ".venv*" -print -quit)
+        venv_dir=$(find "$script_path/py_venv" -maxdepth 1 -type d -name ".venv*" -print -quit)
         venv_name=$(basename "$venv_dir")
         if [ -d "$script_path/py_venv/venv" ];then
             if [ -d "$script_path/idmp" ]; then
@@ -362,11 +362,13 @@ function install_idmp() {
         yellow_echo "Installing IDMP packages..."
         
         # Read architecture info
+        local arch=""
         if [ -f "$script_path/idmp/arch.txt" ]; then
-            local arch
             arch=$(cat "$script_path/idmp/arch.txt")
-            yellow_echo "Architecture: $arch"
+            yellow_echo "Architecture (from arch.txt): $arch"
         fi
+        # Fall back to host arch when arch.txt is missing or empty
+        [ -z "$arch" ] && arch=$(uname -m) && yellow_echo "Architecture (detected): $arch"
         
         # 1. Install Arthas (requires Java)
         if [ -f "$script_path/idmp/arthas-boot.jar" ]; then
@@ -443,28 +445,18 @@ function install_system_packages() {
         elif [ -f /etc/debian_version ]; then
             DEBIAN_FRONTEND=noninteractive dpkg -i "$script_path/system_packages/"*.deb >/dev/null 2>&1
         elif [ -f /etc/SuSE-release ] || [ -f /etc/os-release ]; then
-            # Check if it's a SUSE system or openEuler
-            if [ -f /etc/os-release ]; then
-                OS_ID=$(grep -E '^ID=' /etc/os-release | cut -d= -f2 | tr -d '"')
-                if [ "$OS_ID" = "sles" ] || [ "$OS_ID" = "opensuse-leap" ] || [ "$OS_ID" = "suse" ]; then
-                    compare_field "ID" || exit 1
-                    compare_field "VERSION_ID" || exit 1
-                    # Install RPM packages on SUSE systems
-                    for i in "$script_path/system_packages/"*.rpm;
-                    do
-                        rpm -ivh --nodeps "$i" >/dev/null 2>&1
-                    done
-                elif [ "$OS_ID" = "openEuler" ]; then
-                    compare_field "ID" || exit 1
-                    compare_field "VERSION_ID" || exit 1
-                    # Install RPM packages on openEuler systems
-                    for i in "$script_path/system_packages/"*.rpm;
-                    do
-                        rpm -ivh --nodeps "$i" >/dev/null 2>&1
-                    done
-                else
-                    red_echo "Unsupported Linux distribution.. Please install the packages manually."
-                fi
+            # Read OS_ID to precisely identify SUSE/openEuler; fall back to /etc/SuSE-release
+            # for legacy SUSE systems that predate /etc/os-release
+            OS_ID=$(grep -E '^ID=' /etc/os-release 2>/dev/null | cut -d= -f2 | tr -d '"')
+            if [ "$OS_ID" = "sles" ] || [ "$OS_ID" = "opensuse-leap" ] || [ "$OS_ID" = "suse" ] || \
+               [ "$OS_ID" = "openEuler" ] || [ -f /etc/SuSE-release ]; then
+                compare_field "ID" || exit 1
+                compare_field "VERSION_ID" || exit 1
+                # Install RPM packages on SUSE/openEuler systems
+                for i in "$script_path/system_packages/"*.rpm;
+                do
+                    rpm -ivh --nodeps "$i" >/dev/null 2>&1
+                done
             else
                 red_echo "Unsupported Linux distribution.. Please install the packages manually."
             fi
