@@ -15,7 +15,7 @@ BINARY_TOOLS=("bpftrace")
 TDGPT=""
 TDGPT_ALL=""  # Install all model venvs (mirrors install_tdgpt.sh -a flag)
 TDENGINE_TSDB_VER=""  # TDengine version for downloading requirements files (e.g. 3.4.0.8)
-IDMP_VER=""  # IDMP version/tag for downloading requirements from TDasset repo (e.g. v1.0.0 or main)
+IDMP_VER=""  # IDMP version for downloading requirements from TDasset repo (e.g. 1.0.12.10, maps to tag ver-1.0.12.10)
 GH_TOKEN=""  # GitHub personal access token for private repos (required for TDasset)
 PIP_INDEX_URL="https://pypi.tuna.tsinghua.edu.cn/simple"  # Default pip index mirror
 DOCKER_VERSION="latest"
@@ -51,8 +51,8 @@ function show_usage() {
     echo "                            With --tdgpt-all: also build timesfm/moirai/chronos/moment extra venvs"
     echo ""
     echo "IDMP Options:"
-    echo "  --idmp-ver=<ver>          IDMP version/tag to download requirements from TDasset repo"
-    echo "                            (e.g. v1.0.0 or main). Downloads ai-server/requirements.txt from the tag."
+    echo "  --idmp-ver=<ver>          IDMP version to download requirements from TDasset repo"
+    echo "                            (e.g. 1.0.12.10). Downloads ai-server/requirements.txt from tag ver-<ver>."
     echo "                            Requires --gh-token since TDasset is a private repository."
     echo "  --gh-token=<token>        GitHub personal access token for accessing private repositories."
     echo ""
@@ -62,7 +62,7 @@ function show_usage() {
     echo "  $0 --build --install-docker --docker-version=27.5.1 --install-docker-compose --docker-compose-version=v2.40.2 --pkg-label=test"
     echo "  $0 --build --install-java --java-version=21 --pkg-label=java-test"
     echo "  $0 --build --install-java --idmp=true --pkg-label=idmp-env"
-    echo "  $0 --build --idmp=true --idmp-ver=main --gh-token=ghp_xxx --python-version=3.10 --pkg-label=idmp-ai"
+    echo "  $0 --build --idmp=true --idmp-ver=1.0.12.10 --gh-token=ghp_xxx --python-version=3.10 --pkg-label=idmp-ai"
     echo "  $0 --build --tdgpt=true --tdengine-tsdb-ver=3.4.0.8 --pkg-label=tdgpt-default  # Download requirements from ver"
     echo "  $0 --build --tdgpt=true --tdengine-tsdb-ver=3.4.0.8 --tdgpt-all --pkg-label=tdgpt-all  # All venvs from ver"
     exit 1
@@ -1111,17 +1111,18 @@ function build_idmp_venvs() {
     # Download requirements.txt from TDasset private repo
     local req_dir
     req_dir=$(mktemp -d)
-    local raw_url="https://raw.githubusercontent.com/taosdata/TDasset/${IDMP_VER}/ai-server/requirements.txt"
-    yellow_echo "Downloading IDMP requirements from TDasset version: ${IDMP_VER}"
+    local idmp_tag="ver-${IDMP_VER}"
+    local raw_url="https://raw.githubusercontent.com/taosdata/TDasset/${idmp_tag}/ai-server/requirements.txt"
+    yellow_echo "Downloading IDMP requirements from TDasset version: ${IDMP_VER} (tag: ${idmp_tag})"
     yellow_echo "  URL: ${raw_url}"
 
     if ! curl -fsSL -H "Authorization: token ${GH_TOKEN}" "${raw_url}" -o "${req_dir}/requirements.txt"; then
-        red_echo "Failed to download requirements.txt from TDasset tag/branch '${IDMP_VER}'"
-        red_echo "Please check: 1) --idmp-ver is a valid tag/branch  2) --gh-token has repo access"
+        red_echo "Failed to download requirements.txt from TDasset tag '${idmp_tag}'"
+        red_echo "Please check: 1) --idmp-ver is a valid version (e.g. 1.0.12.10)  2) --gh-token has repo access"
         rm -rf "$req_dir"
         exit 1
     fi
-    green_echo "Successfully downloaded requirements.txt from TDasset ${IDMP_VER}"
+    green_echo "Successfully downloaded requirements.txt from TDasset ${idmp_tag}"
 
     # Append extra packages from --python-packages if specified
     if [ -n "$PYTHON_PACKAGES" ]; then

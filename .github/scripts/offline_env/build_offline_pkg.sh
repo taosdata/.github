@@ -72,6 +72,7 @@ DOCKER_IMAGE=""                             # resolved from OS_KEY:OS_VER, or se
 CONTAINER_NAME=""                           # auto-generated from os+ver+arch
 CONTAINER_ENGINE="docker"                   # docker | podman
 OUTPUT_DIR=""                               # host dir for output (default: ./offline_pkgs)
+CACHE_DIR=""                                # host cache dir (default: /tmp/taos-packages)
 CLEANUP_CONTAINER="true"                    # remove container after build
 DOCKER_PLATFORM=""                          # e.g. linux/arm64 (for cross-arch builds)
 DOCKER_EXTRA_ARGS=""                        # extra args passed to docker run
@@ -169,6 +170,7 @@ ORCHESTRATOR OPTIONS:
   --container-name=<name>       Custom container name (default: auto-generated)
   --container-engine=<cmd>      Container runtime: docker or podman (default: docker)
   --output-dir=<path>           Host directory for output artifacts (default: ./offline_pkgs)
+  --cache-dir=<path>            Host cache directory for downloads (default: /tmp/taos-packages)
   --cleanup-container=<bool>    Remove container after build (default: true)
   --docker-platform=<platform>  Platform flag, e.g. linux/arm64 (optional)
   --docker-extra-args=<args>    Extra arguments for docker run (optional)
@@ -192,7 +194,7 @@ PASS-THROUGH OPTIONS (forwarded to prepare_offline_pkg.sh):
   --install-java                Include Java JRE
   --java-version=<ver>          Java version (8,11,17,21,23)
   --idmp=<true|false>           Include IDMP packages
-  --idmp-ver=<ver>              IDMP version/tag for requirements download (from TDasset repo)
+  --idmp-ver=<ver>              IDMP version for requirements download (e.g. 1.0.12.10, maps to tag ver-<ver>)
   --gh-token=<token>            GitHub token for private repos (required for TDasset)
   --bpftrace-version=<ver>      bpftrace version
   --tdgpt-base-dir=<path>       TDgpt base directory
@@ -273,6 +275,9 @@ parse_args() {
                 ;;
             --output-dir=*)
                 OUTPUT_DIR="${1#*=}"
+                ;;
+            --cache-dir=*)
+                CACHE_DIR="${1#*=}"
                 ;;
             --cleanup-container=*)
                 CLEANUP_CONTAINER="${1#*=}"
@@ -387,6 +392,7 @@ run_docker() {
     cyan_echo "  Action:     $action_flag"
     cyan_echo "  Arch:       $ARCH"
     cyan_echo "  Output:     $OUTPUT_DIR"
+    cyan_echo "  Cache:      ${CACHE_DIR:-/tmp/taos-packages}"
     [[ -n "$DOCKER_PLATFORM" ]] && cyan_echo "  Platform:   $DOCKER_PLATFORM"
     echo ""
 
@@ -406,8 +412,14 @@ run_docker() {
     # Mount points:
     #   - output directory → /opt/offline-env (where prepare_offline_pkg.sh writes)
     #   - script directory → /build-scripts (read-only, contains prepare_offline_pkg.sh + install.sh)
+    #   - cache directory  → /tmp/taos-packages (shared cache for Java/Arthas/Chromium/FFmpeg)
     run_args+=(-v "${OUTPUT_DIR}:/opt/offline-env")
     run_args+=(-v "${SCRIPT_DIR}:/build-scripts:ro")
+
+    # Host cache directory for downloads (avoid re-downloading across container runs)
+    local host_cache_dir="${CACHE_DIR:-/tmp/taos-packages}"
+    mkdir -p "$host_cache_dir"
+    run_args+=(-v "${host_cache_dir}:/tmp/taos-packages")
 
     # Environment
     run_args+=(-e "PARENT_DIR=/opt/offline-env")
@@ -458,8 +470,7 @@ run_docker() {
     yellow_echo "Executing prepare_offline_pkg.sh --${action_flag} inside container..."
 
     local exec_cmd
-    exec_cmd="chmod +x /build-scripts/prepare_offline_pkg.sh && "
-    exec_cmd+="/build-scripts/prepare_offline_pkg.sh --${action_flag}"
+    exec_cmd="/build-scripts/prepare_offline_pkg.sh --${action_flag}"
 
     # Append forwarded arguments
     for arg in "${FORWARD_ARGS[@]}"; do
@@ -478,6 +489,20 @@ run_docker() {
     fi
 
     green_echo "Action '${action_flag}' completed successfully inside container"
+
+    # Show clear path mapping for user
+    echo ""
+    cyan_echo "Path mapping (container → host):"
+    cyan_echo "  /opt/offline-env    → ${OUTPUT_DIR}"
+    cyan_echo "  /tmp/taos-packages  → ${host_cache_dir}"
+
+    # Find and display the actual tar.gz file
+    local tarball
+    tarball=$(find "${OUTPUT_DIR}" -name '*.tar.gz' -type f 2>/dev/null | head -1)
+    if [[ -n "$tarball" ]]; then
+        green_echo ""
+        green_echo "Offline package: ${tarball}"
+    fi
 }
 
 # ======================== Cleanup =============================
@@ -541,7 +566,16 @@ main() {
     green_echo ""
     green_echo "============================================"
     green_echo "  Build completed successfully!"
-    green_echo "  Output: ${OUTPUT_DIR}"
+    green_echo "  Output directory: ${OUTPUT_DIR}"
+    # Show the final tar.gz path
+    local tarball
+    tarball=$(find "${OUTPUT_DIR}" -name '*.tar.gz' -type f 2>/dev/null | head -1)
+    if [[ -n "$tarball" ]]; then
+        green_echo "  Package: ${tarball}"
+        local pkg_size
+        pkg_size=$(du -sh "$tarball" 2>/dev/null | awk '{print $1}')
+        [[ -n "$pkg_size" ]] && green_echo "  Size:    ${pkg_size}"
+    fi
     green_echo "============================================"
 }
 

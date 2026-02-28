@@ -52,6 +52,10 @@ inputs:
     description: 'Host directory where the package will be written'
     required: false
     default: ''
+  cache-dir:
+    description: 'Host cache directory for downloads, shared across container runs (default: /tmp/taos-packages)'
+    required: false
+    default: ''
   system-packages:
     description: 'Comma-separated system packages (e.g. gdb,valgrind,bpftrace,perf)'
     required: false
@@ -121,7 +125,7 @@ inputs:
     required: false
     default: 'false'
   idmp-ver:
-    description: 'IDMP version/tag for downloading requirements from TDasset repo (e.g. v1.0.0 or main)'
+    description: 'IDMP version for downloading requirements from TDasset repo (e.g. 1.0.12.10, maps to tag ver-<ver>)'
     required: false
     default: ''
   gh-token:
@@ -165,6 +169,7 @@ runs:
         [[ -n "${{ inputs.docker-platform }}"     ]] && ARGS+=(--docker-platform=${{ inputs.docker-platform }})
         [[ -n "${{ inputs.docker-extra-args }}"   ]] && ARGS+=(--docker-extra-args="${{ inputs.docker-extra-args }}")
         [[ -n "${{ inputs.output-dir }}"          ]] && ARGS+=(--output-dir=${{ inputs.output-dir }})
+        [[ -n "${{ inputs.cache-dir }}"           ]] && ARGS+=(--cache-dir=${{ inputs.cache-dir }})
         ARGS+=(--cleanup-container=${{ inputs.cleanup-container }})
 
         # Pass-through flags for prepare_offline_pkg.sh

@@ -118,7 +118,7 @@ on:
         default: false
 
       idmp-ver:
-        description: 'IDMP version/tag for requirements download (e.g. v1.0.0 or main)'
+        description: 'IDMP version for requirements download (e.g. 1.0.12.10, maps to tag ver-<ver>)'
         required: false
         type: string
         default: ''
@@ -132,6 +132,13 @@ on:
 
       pytorch-whl-url:
         description: 'PyTorch wheel mirror URL (blank = default Aliyun mirror)'
+        required: false
+        type: string
+        default: ''
+
+      # ---- Cache ----
+      cache-dir:
+        description: 'Host cache directory for downloads (default: /tmp/taos-packages)'
         required: false
         type: string
         default: ''
@@ -214,7 +221,7 @@ on:
         type: string
         default: 'false'
       idmp-ver:
-        description: 'IDMP version/tag for requirements download'
+        description: 'IDMP version for requirements download (e.g. 1.0.12.10)'
         required: false
         type: string
         default: ''
@@ -225,6 +232,11 @@ on:
         default: ''
       pytorch-whl-url:
         description: 'PyTorch wheel mirror URL'
+        required: false
+        type: string
+        default: ''
+      cache-dir:
+        description: 'Host cache directory for downloads'
         required: false
         type: string
         default: ''
@@ -260,6 +272,7 @@ jobs:
           arch: ${{ inputs.arch }}
           action: ${{ inputs.action }}
           cleanup-container: ${{ inputs.cleanup-container }}
+          cache-dir: ${{ inputs.cache-dir }}
           system-packages: ${{ inputs.system-packages }}
           python-version: ${{ inputs.python-version }}
           pkg-label: ${{ inputs.pkg-label }}
