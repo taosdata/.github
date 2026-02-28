@@ -1,0 +1,300 @@
+name: Build Offline Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      # ---- Target OS ----
+      os:
+        description: 'Target OS'
+        required: true
+        type: choice
+        options:
+          - 'ubuntu'
+          - 'centos'
+          - 'kylin'
+          - 'openeuler'
+        default: 'ubuntu'
+
+      os-ver:
+        description: 'OS version (must match a supported entry — run --list-os to see all)'
+        required: true
+        type: choice
+        options:
+          - '22.04'
+          - '20.04'
+          - '24.04'
+          - '7'
+          - 'v10-sp2'
+          - 'v10-sp3-2403'
+          - '22.03-lts-sp3'
+          - '22.03-lts-sp4'
+          - '24.03-lts-sp2'
+        default: '22.04'
+
+      # ---- Architecture ----
+      arch:
+        description: 'Target architecture'
+        required: true
+        type: choice
+        options:
+          - 'x64'
+          - 'arm64'
+        default: 'x64'
+
+      # ---- Build action ----
+      action:
+        description: 'What to do'
+        required: true
+        type: choice
+        options:
+          - 'build'
+          - 'test'
+          - 'build-and-test'
+        default: 'build'
+
+      # ---- Package label ----
+      pkg-label:
+        description: 'Package label suffix (e.g. delivery-20260227, TDgpt-20260227)'
+        required: true
+        type: string
+        default: 'delivery'
+
+      # ---- System packages ----
+      system-packages:
+        description: 'Comma-separated system packages (e.g. gdb,valgrind,bpftrace,perf)'
+        required: false
+        type: string
+        default: 'gdb,valgrind'
+
+      # ---- TDgpt ----
+      tdgpt:
+        description: 'Enable TDgpt venv build'
+        required: false
+        type: boolean
+        default: false
+
+      tdgpt-all:
+        description: 'Build ALL TDgpt model venvs (includes prophet, fastdtw, etc.)'
+        required: false
+        type: boolean
+        default: false
+
+      tdengine-tsdb-ver:
+        description: 'TDengine version tag for requirements download (e.g. 3.4.0.8)'
+        required: false
+        type: string
+        default: ''
+
+      # ---- Python ----
+      python-version:
+        description: 'Python version (e.g. 3.10)'
+        required: false
+        type: string
+        default: ''
+
+      # ---- Additional components ----
+      install-docker:
+        description: 'Include Docker in offline package'
+        required: false
+        type: boolean
+        default: false
+
+      install-java:
+        description: 'Include Java JRE in offline package'
+        required: false
+        type: boolean
+        default: false
+
+      java-version:
+        description: 'Java version (8,11,17,21,23)'
+        required: false
+        type: string
+        default: ''
+
+      idmp:
+        description: 'Include IDMP packages'
+        required: false
+        type: boolean
+        default: false
+
+      idmp-ver:
+        description: 'IDMP version/tag for requirements download (e.g. v1.0.0 or main)'
+        required: false
+        type: string
+        default: ''
+
+      # ---- Mirrors ----
+      pip-index-url:
+        description: 'Pip mirror URL (blank = default Tsinghua mirror)'
+        required: false
+        type: string
+        default: ''
+
+      pytorch-whl-url:
+        description: 'PyTorch wheel mirror URL (blank = default Aliyun mirror)'
+        required: false
+        type: string
+        default: ''
+
+      # ---- Cleanup ----
+      cleanup-container:
+        description: 'Remove Docker container after build'
+        required: false
+        type: boolean
+        default: true
+
+  workflow_call:
+    inputs:
+      os:
+        description: 'Target OS name: ubuntu, centos, kylin, openeuler'
+        required: true
+        type: string
+      os-ver:
+        description: 'OS version: 22.04, 7, v10-sp3-2403, 24.03-lts-sp2'
+        required: true
+        type: string
+      arch:
+        description: 'Target architecture: x64 or arm64'
+        required: false
+        type: string
+        default: 'x64'
+      action:
+        description: 'build, test, or build-and-test'
+        required: false
+        type: string
+        default: 'build'
+      pkg-label:
+        description: 'Package label suffix'
+        required: false
+        type: string
+        default: 'delivery'
+      system-packages:
+        description: 'Comma-separated system packages'
+        required: false
+        type: string
+        default: 'gdb,valgrind'
+      tdgpt:
+        description: 'Enable TDgpt (true/false)'
+        required: false
+        type: string
+        default: 'false'
+      tdgpt-all:
+        description: 'Build all TDgpt model venvs (true/false)'
+        required: false
+        type: string
+        default: 'false'
+      tdengine-tsdb-ver:
+        description: 'TDengine version tag'
+        required: false
+        type: string
+        default: ''
+      python-version:
+        description: 'Python version'
+        required: false
+        type: string
+        default: ''
+      install-docker:
+        description: 'Include Docker (true/false)'
+        required: false
+        type: string
+        default: 'false'
+      install-java:
+        description: 'Include Java (true/false)'
+        required: false
+        type: string
+        default: 'false'
+      java-version:
+        description: 'Java version'
+        required: false
+        type: string
+        default: ''
+      idmp:
+        description: 'Include IDMP (true/false)'
+        required: false
+        type: string
+        default: 'false'
+      idmp-ver:
+        description: 'IDMP version/tag for requirements download'
+        required: false
+        type: string
+        default: ''
+      pip-index-url:
+        description: 'Pip mirror URL'
+        required: false
+        type: string
+        default: ''
+      pytorch-whl-url:
+        description: 'PyTorch wheel mirror URL'
+        required: false
+        type: string
+        default: ''
+      cleanup-container:
+        description: 'Remove container after build (true/false)'
+        required: false
+        type: string
+        default: 'true'
+    secrets:
+      gh-token:
+        description: 'GitHub token for private repos (TDasset)'
+        required: false
+
+jobs:
+  build-offline-pkg:
+    name: "Build ${{ inputs.os }}:${{ inputs.os-ver }} (${{ inputs.arch }})"
+    runs-on:
+      group: CI
+      labels: [self-hosted, Linux, "${{ inputs.arch == 'arm64' && 'ARM64' || 'X64' }}"]
+
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build offline package
+        uses: ./.github/actions/build-offline-pkg
+        with:
+          mode: docker
+          os: ${{ inputs.os }}
+          os-ver: ${{ inputs.os-ver }}
+          arch: ${{ inputs.arch }}
+          action: ${{ inputs.action }}
+          cleanup-container: ${{ inputs.cleanup-container }}
+          system-packages: ${{ inputs.system-packages }}
+          python-version: ${{ inputs.python-version }}
+          pkg-label: ${{ inputs.pkg-label }}
+          tdgpt: ${{ inputs.tdgpt }}
+          tdgpt-all: ${{ inputs.tdgpt-all }}
+          tdengine-tsdb-ver: ${{ inputs.tdengine-tsdb-ver }}
+          install-docker: ${{ inputs.install-docker }}
+          install-java: ${{ inputs.install-java }}
+          java-version: ${{ inputs.java-version }}
+          idmp: ${{ inputs.idmp }}
+          idmp-ver: ${{ inputs.idmp-ver }}
+          gh-token: ${{ secrets.GH_TOKEN || secrets.gh-token }}
+          pip-index-url: ${{ inputs.pip-index-url }}
+          pytorch-whl-url: ${{ inputs.pytorch-whl-url }}
+
+      - name: List output artifacts
+        if: always()
+        shell: bash
+        run: |
+          echo "=== Output directory ==="
+          OUTPUT_DIR="${{ github.workspace }}/.github/scripts/offline_env/offline_pkgs"
+          if [[ -d "$OUTPUT_DIR" ]]; then
+            ls -lhR "$OUTPUT_DIR" | head -100
+            echo ""
+            echo "=== tar.gz files ==="
+            find "$OUTPUT_DIR" -name '*.tar.gz' -exec ls -lh {} \;
+          else
+            echo "Output directory not found: $OUTPUT_DIR"
+          fi
+
+      - name: Upload artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: "offline-pkg-${{ inputs.os }}-${{ inputs.os-ver }}-${{ inputs.pkg-label }}-${{ inputs.arch }}"
+          path: "${{ github.workspace }}/.github/scripts/offline_env/offline_pkgs/*.tar.gz"
+          retention-days: 30
+          if-no-files-found: warn

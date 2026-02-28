@@ -1,0 +1,200 @@
+name: 'Build Offline Package'
+description: >
+  Build an offline deployment package for TDengine / TDgpt / IDMP.
+  Supports native builds and Docker-based builds for any supported OS.
+
+inputs:
+  mode:
+    description: 'Run mode: native (on runner itself) or docker (inside container)'
+    required: false
+    default: 'docker'
+  os:
+    description: 'Target OS name: ubuntu, centos, kylin, openeuler'
+    required: false
+    default: ''
+  os-ver:
+    description: 'Target OS version: 22.04, 7, v10-sp3-2403, 24.03-lts-sp2'
+    required: false
+    default: ''
+  arch:
+    description: 'Target architecture: x64 or arm64 (default: auto-detect)'
+    required: false
+    default: ''
+  docker-image:
+    description: '[Advanced] Override Docker image directly (skip OS validation)'
+    required: false
+    default: ''
+  container-name:
+    description: 'Custom container name (auto-generated if empty)'
+    required: false
+    default: ''
+  container-engine:
+    description: 'Container runtime: docker or podman'
+    required: false
+    default: 'docker'
+  docker-platform:
+    description: 'Platform override for cross-arch builds, e.g. linux/arm64'
+    required: false
+    default: ''
+  docker-extra-args:
+    description: 'Extra arguments passed to docker run'
+    required: false
+    default: ''
+  cleanup-container:
+    description: 'Remove container after build (true/false)'
+    required: false
+    default: 'true'
+  action:
+    description: 'What to do: build, test, or build-and-test'
+    required: false
+    default: 'build'
+  output-dir:
+    description: 'Host directory where the package will be written'
+    required: false
+    default: ''
+  system-packages:
+    description: 'Comma-separated system packages (e.g. gdb,valgrind,bpftrace,perf)'
+    required: false
+    default: ''
+  python-version:
+    description: 'Python version to package (e.g. 3.10)'
+    required: false
+    default: ''
+  python-packages:
+    description: 'Comma-separated Python pip packages'
+    required: false
+    default: ''
+  python-requirements:
+    description: 'URL or path to a requirements file'
+    required: false
+    default: ''
+  pkg-label:
+    description: 'Package label / suffix for the tar.gz filename'
+    required: false
+    default: ''
+  tdgpt:
+    description: 'Enable TDgpt venv build (true/false)'
+    required: false
+    default: 'false'
+  tdgpt-all:
+    description: 'Build ALL TDgpt model venvs (flag, true/false)'
+    required: false
+    default: 'false'
+  tdengine-tsdb-ver:
+    description: 'TDengine version tag for requirements download (e.g. 3.4.0.8)'
+    required: false
+    default: ''
+  pip-index-url:
+    description: 'Custom pip mirror URL'
+    required: false
+    default: ''
+  pytorch-whl-url:
+    description: 'Custom PyTorch wheel mirror URL'
+    required: false
+    default: ''
+  install-docker:
+    description: 'Include Docker binaries in the offline package (true/false)'
+    required: false
+    default: 'false'
+  docker-version:
+    description: 'Docker version to package'
+    required: false
+    default: ''
+  install-docker-compose:
+    description: 'Include Docker Compose in the offline package (true/false)'
+    required: false
+    default: 'false'
+  docker-compose-version:
+    description: 'Docker Compose version to package'
+    required: false
+    default: ''
+  install-java:
+    description: 'Include Java JRE in the offline package (true/false)'
+    required: false
+    default: 'false'
+  java-version:
+    description: 'Java version (8,11,17,21,23)'
+    required: false
+    default: ''
+  idmp:
+    description: 'Include IDMP packages (true/false)'
+    required: false
+    default: 'false'
+  idmp-ver:
+    description: 'IDMP version/tag for downloading requirements from TDasset repo (e.g. v1.0.0 or main)'
+    required: false
+    default: ''
+  gh-token:
+    description: 'GitHub personal access token for private repos (required for TDasset)'
+    required: false
+    default: ''
+
+outputs:
+  output-dir:
+    description: 'Directory containing the built offline package'
+    value: ${{ steps.build.outputs.output_dir }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set script permissions
+      shell: bash
+      run: |
+        chmod +x ${{ github.action_path }}/../../scripts/offline_env/build_offline_pkg.sh
+        chmod +x ${{ github.action_path }}/../../scripts/offline_env/prepare_offline_pkg.sh
+
+    - name: Build offline package
+      id: build
+      shell: bash
+      run: |
+        echo "::group::Building offline package (${{ inputs.mode }} mode, os=${{ inputs.os }}:${{ inputs.os-ver }})"
+
+        ARGS=()
+        ARGS+=(--mode=${{ inputs.mode }})
+        ARGS+=(--action=${{ inputs.action }})
+
+        # OS target flags
+        [[ -n "${{ inputs.os }}"               ]] && ARGS+=(--os=${{ inputs.os }})
+        [[ -n "${{ inputs.os-ver }}"            ]] && ARGS+=(--os-ver=${{ inputs.os-ver }})
+        [[ -n "${{ inputs.arch }}"              ]] && ARGS+=(--arch=${{ inputs.arch }})
+
+        # Orchestrator flags
+        [[ -n "${{ inputs.docker-image }}"       ]] && ARGS+=(--docker-image=${{ inputs.docker-image }})
+        [[ -n "${{ inputs.container-name }}"      ]] && ARGS+=(--container-name=${{ inputs.container-name }})
+        [[ -n "${{ inputs.container-engine }}"    ]] && ARGS+=(--container-engine=${{ inputs.container-engine }})
+        [[ -n "${{ inputs.docker-platform }}"     ]] && ARGS+=(--docker-platform=${{ inputs.docker-platform }})
+        [[ -n "${{ inputs.docker-extra-args }}"   ]] && ARGS+=(--docker-extra-args="${{ inputs.docker-extra-args }}")
+        [[ -n "${{ inputs.output-dir }}"          ]] && ARGS+=(--output-dir=${{ inputs.output-dir }})
+        ARGS+=(--cleanup-container=${{ inputs.cleanup-container }})
+
+        # Pass-through flags for prepare_offline_pkg.sh
+        [[ -n "${{ inputs.system-packages }}"      ]] && ARGS+=(--system-packages=${{ inputs.system-packages }})
+        [[ -n "${{ inputs.python-version }}"       ]] && ARGS+=(--python-version=${{ inputs.python-version }})
+        [[ -n "${{ inputs.python-packages }}"      ]] && ARGS+=(--python-packages=${{ inputs.python-packages }})
+        [[ -n "${{ inputs.python-requirements }}"  ]] && ARGS+=(--python-requirements=${{ inputs.python-requirements }})
+        [[ -n "${{ inputs.pkg-label }}"            ]] && ARGS+=(--pkg-label=${{ inputs.pkg-label }})
+        [[ "${{ inputs.tdgpt }}" == "true"         ]] && ARGS+=(--tdgpt=true)
+        [[ "${{ inputs.tdgpt-all }}" == "true"     ]] && ARGS+=(--tdgpt-all)
+        [[ -n "${{ inputs.tdengine-tsdb-ver }}"    ]] && ARGS+=(--tdengine-tsdb-ver=${{ inputs.tdengine-tsdb-ver }})
+        [[ -n "${{ inputs.pip-index-url }}"        ]] && ARGS+=(--pip-index-url=${{ inputs.pip-index-url }})
+        [[ -n "${{ inputs.pytorch-whl-url }}"      ]] && ARGS+=(--pytorch-whl-url=${{ inputs.pytorch-whl-url }})
+        [[ "${{ inputs.install-docker }}" == "true" ]] && ARGS+=(--install-docker)
+        [[ -n "${{ inputs.docker-version }}"       ]] && ARGS+=(--docker-version=${{ inputs.docker-version }})
+        [[ "${{ inputs.install-docker-compose }}" == "true" ]] && ARGS+=(--install-docker-compose)
+        [[ -n "${{ inputs.docker-compose-version }}" ]] && ARGS+=(--docker-compose-version=${{ inputs.docker-compose-version }})
+        [[ "${{ inputs.install-java }}" == "true"  ]] && ARGS+=(--install-java)
+        [[ -n "${{ inputs.java-version }}"         ]] && ARGS+=(--java-version=${{ inputs.java-version }})
+        [[ "${{ inputs.idmp }}" == "true"          ]] && ARGS+=(--idmp=true)
+        [[ -n "${{ inputs.idmp-ver }}"             ]] && ARGS+=(--idmp-ver=${{ inputs.idmp-ver }})
+        [[ -n "${{ inputs.gh-token }}"             ]] && ARGS+=(--gh-token=${{ inputs.gh-token }})
+
+        ${{ github.action_path }}/../../scripts/offline_env/build_offline_pkg.sh "${ARGS[@]}"
+
+        # Export output directory
+        if [[ -n "${{ inputs.output-dir }}" ]]; then
+          echo "output_dir=${{ inputs.output-dir }}" >> $GITHUB_OUTPUT
+        else
+          echo "output_dir=${{ github.action_path }}/../../scripts/offline_env/offline_pkgs" >> $GITHUB_OUTPUT
+        fi
+
+        echo "::endgroup::"

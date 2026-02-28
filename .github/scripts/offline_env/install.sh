@@ -11,11 +11,12 @@ yellow_echo() { echo -e "${YELLOW}$*${RESET}"; }
 script_path=$(dirname "$(readlink -f "$0")")
 binary_dir=/usr/bin
 taos_anode_dir=/var/lib/taos/taosanode
+IDMP_VENV_DIR="/usr/local/taos/idmp/venv"  # Configurable IDMP venv directory
 
 # Determine python venv directory based on deployment type
 if [ -d "$script_path/idmp" ]; then
     # IDMP deployment uses dedicated venv path
-    python_venv_dir="/usr/local/taos/idmp/venv"
+    python_venv_dir="$IDMP_VENV_DIR"
 else
     # Default TDengine deployment
     python_venv_dir="${taos_anode_dir}/venv"
@@ -23,6 +24,64 @@ fi
 venv_label=2
 EXPECTED_OS_RELEASE="$script_path"/os-release
 CURRENT_OS_RELEASE="/etc/os-release"
+
+# Detect system architecture and normalize to standard format
+# Returns: x86_64 or aarch64
+get_system_arch() {
+    local arch
+    arch=$(uname -m)
+    case "$arch" in
+        x86_64)
+            echo "x86_64"
+            ;;
+        aarch64|arm64)
+            echo "aarch64"
+            ;;
+        *)
+            red_echo "Unsupported architecture: $arch"
+            return 1
+            ;;
+    esac
+}
+
+# Verify architecture compatibility
+# Args: $1 - expected architecture, $2 - current architecture
+verify_arch_compatibility() {
+    local expected_arch="$1"
+    local current_arch="$2"
+    
+    # Normalize both architectures
+    local normalized_expected normalized_current
+    case "$expected_arch" in
+        x86_64|amd64|x64)
+            normalized_expected="x86_64"
+            ;;
+        aarch64|arm64)
+            normalized_expected="aarch64"
+            ;;
+        *)
+            normalized_expected="$expected_arch"
+            ;;
+    esac
+    
+    case "$current_arch" in
+        x86_64|amd64|x64)
+            normalized_current="x86_64"
+            ;;
+        aarch64|arm64)
+            normalized_current="aarch64"
+            ;;
+        *)
+            normalized_current="$current_arch"
+            ;;
+    esac
+    
+    if [ "$normalized_expected" != "$normalized_current" ]; then
+        red_echo "Architecture mismatch: package built for $expected_arch, but current system is $current_arch"
+        return 1
+    fi
+    return 0
+}
 
 compare_field() {
     local field=$1
@@ -94,12 +153,16 @@ function install_binary_tools() {
     if [ -d "$script_path/binary_tools" ];then
         yellow_echo "Installing binary_tools ..."
         for tool in "$script_path/binary_tools"/*; do
+            [ -e "$tool" ] || continue
             tool_name=$(basename "$tool")
             if [ -f "$binary_dir/$tool_name" ];then
+                yellow_echo "Backing up existing $tool_name"
                 mv "$binary_dir/$tool_name" "$binary_dir/$tool_name.bak"
             fi
             cp -rf "$script_path/binary_tools/$tool_name" "$binary_dir"
+            chmod +x "$binary_dir/$tool_name"
         done
+        green_echo "Binary tools installed successfully"
     fi
 }
 
@@ -112,6 +175,19 @@ function install_docker() {
             local docker_version
             docker_version=$(cat "$script_path/docker/version.txt")
             yellow_echo "Docker version: $docker_version"
+        fi
+        
+        # Verify architecture compatibility
+        if [ -f "$script_path/docker/arch.txt" ]; then
+            local package_arch
+            package_arch=$(cat "$script_path/docker/arch.txt")
+            local current_arch
+            current_arch=$(get_system_arch) || exit 1
+            if ! verify_arch_compatibility "$package_arch" "$current_arch"; then
+                red_echo "Cannot install Docker: architecture mismatch"
+                exit 1
+            fi
+            green_echo "Docker architecture verification passed"
         fi
         
         # Extract Docker binaries
@@ -272,6 +348,19 @@ function install_docker_compose() {
             yellow_echo "Docker Compose version: $compose_version"
         fi
         
+        # Verify architecture compatibility
+        if [ -f "$script_path/docker_compose/arch.txt" ]; then
+            local package_arch
+            package_arch=$(cat "$script_path/docker_compose/arch.txt")
+            local current_arch
+            current_arch=$(get_system_arch) || exit 1
+            if ! verify_arch_compatibility "$package_arch" "$current_arch"; then
+                red_echo "Cannot install Docker Compose: architecture mismatch"
+                exit 1
+            fi
+            green_echo "Docker Compose architecture verification passed"
+        fi
+        
         # Backup existing docker-compose if it exists
         if [ -f /usr/local/bin/docker-compose ]; then
             yellow_echo "Backing up existing docker-compose to /usr/local/bin/docker-compose.bak"
@@ -300,6 +389,19 @@ function install_java() {
             local java_version
             java_version=$(cat "$script_path/java/version.txt")
             yellow_echo "Java version: $java_version"
+        fi
+        
+        # Verify architecture compatibility
+        if [ -f "$script_path/java/arch.txt" ]; then
+            local package_arch
+            package_arch=$(cat "$script_path/java/arch.txt")
+            local current_arch
+            current_arch=$(get_system_arch) || exit 1
+            if ! verify_arch_compatibility "$package_arch" "$current_arch"; then
+                red_echo "Cannot install Java: architecture mismatch"
+                exit 1
+            fi
+            green_echo "Java architecture verification passed"
         fi
         
         if [ -f "$script_path/java/tarname.txt" ]; then
@@ -361,14 +463,29 @@ function install_idmp() {
     if [ -d "$script_path/idmp" ]; then
         yellow_echo "Installing IDMP packages..."
         
-        # Read architecture info
-        local arch=""
+        # Read architecture info from package
+        local package_arch=""
         if [ -f "$script_path/idmp/arch.txt" ]; then
-            arch=$(cat "$script_path/idmp/arch.txt")
-            yellow_echo "Architecture (from arch.txt): $arch"
+            package_arch=$(cat "$script_path/idmp/arch.txt")
+            yellow_echo "Package architecture: $package_arch"
         fi
-        # Fall back to host arch when arch.txt is missing or empty
-        [ -z "$arch" ] && arch=$(uname -m) && yellow_echo "Architecture (detected): $arch"
+        
+        # Get current system architecture
+        local current_arch
+        current_arch=$(get_system_arch) || exit 1
+        
+        # Verify architecture compatibility if package arch is specified
+        if [ -n "$package_arch" ]; then
+            if ! verify_arch_compatibility "$package_arch" "$current_arch"; then
+                red_echo "Cannot install IDMP packages: architecture mismatch"
+                exit 1
+            fi
+            green_echo "Architecture verification passed"
+            arch="$package_arch"
+        else
+            yellow_echo "No arch.txt found, using current system architecture: $current_arch"
+            arch="$current_arch"
+        fi
         
         # 1. Install Arthas (requires Java)
         if [ -f "$script_path/idmp/arthas-boot.jar" ]; then
@@ -438,10 +555,9 @@ function install_system_packages() {
             compare_field "VERSION_ID" || exit 1
             for i in "$script_path/system_packages/"*.rpm;
             do
+                [ -e "$i" ] || continue
                 rpm -ivh --nodeps "$i"  >/dev/null 2>&1
             done
-            # rpm -Uvh --replacepkgs --nodeps "$script_path/system_packages/"*.rpm >/dev/null 2>&1
-            # yum localinstall -y "$script_path"/py_venv/system_packages/*.rpm >/dev/null 2>&1
         elif [ -f /etc/debian_version ]; then
             DEBIAN_FRONTEND=noninteractive dpkg -i "$script_path/system_packages/"*.deb >/dev/null 2>&1
         elif [ -f /etc/SuSE-release ] || [ -f /etc/os-release ]; then
@@ -455,6 +571,7 @@ function install_system_packages() {
                 # Install RPM packages on SUSE/openEuler systems
                 for i in "$script_path/system_packages/"*.rpm;
                 do
+                    [ -e "$i" ] || continue
                     rpm -ivh --nodeps "$i" >/dev/null 2>&1
                 done
             else
