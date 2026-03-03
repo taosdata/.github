@@ -22,6 +22,7 @@ else
     python_venv_dir="${taos_anode_dir}/venv"
 fi
 venv_label=2
+java_installed=false
 EXPECTED_OS_RELEASE="$script_path"/os-release
 CURRENT_OS_RELEASE="/etc/os-release"
 
@@ -141,6 +142,11 @@ function install_venv() {
                     fi
                 done
             fi
+            venv_label=0
+        elif [ -d "$script_path/py_venv/idmp_venv" ]; then
+            # IDMP venv built by build_idmp_venvs (saved as py_venv/idmp_venv/)
+            mkdir -p "/usr/local/taos/idmp"
+            cp -r "$script_path/py_venv/idmp_venv" "/usr/local/taos/idmp/venv"
             venv_label=0
         else
             venv_label=1
@@ -447,7 +453,7 @@ EOF
                 yellow_echo "Java version:"
                 /opt/jre/bin/java -version 2>&1 | head -3
                 green_echo "Environment variables configured in /etc/profile.d/java.sh"
-                yellow_echo "Please run 'source /etc/profile.d/java.sh' or re-login to use java command"
+                java_installed=true
             else
                 red_echo "Java installation verification failed"
                 return 1
@@ -583,8 +589,43 @@ function install_system_packages() {
     fi
 }
 
+# Disable SELinux permanently on RPM-based distros (CentOS/RHEL/openEuler/Kylin).
+# Required for TDgpt/IDMP services: SELinux blocks uwsgi/Python dynamic library loading
+# (status=203/EXEC from systemd) even when the binary path is correct.
+# Also disables it for the current session via setenforce so no reboot is needed.
+function disable_selinux() {
+    local selinux_config="/etc/selinux/config"
+
+    # Only applies to RPM-based systems that have SELinux
+    if [ ! -f "$selinux_config" ]; then
+        return 0
+    fi
+
+    # Check if SELinux is enabled
+    local current_mode
+    current_mode=$(getenforce 2>/dev/null || echo "Disabled")
+    if [ "$current_mode" = "Disabled" ]; then
+        return 0
+    fi
+
+    yellow_echo "Disabling SELinux (current mode: $current_mode)..."
+
+    # Disable for current session immediately (no reboot needed)
+    setenforce 0 2>/dev/null || true
+
+    # Persist: set SELINUX=disabled in /etc/selinux/config
+    if grep -q '^SELINUX=' "$selinux_config"; then
+        sed -i 's/^SELINUX=.*/SELINUX=disabled/' "$selinux_config"
+    else
+        echo "SELINUX=disabled" >> "$selinux_config"
+    fi
+
+    green_echo "SELinux disabled (current session + permanent after reboot)"
+}
+
 function main() {
     if [ -f /etc/os-release ]; then
+        disable_selinux
         install_venv
         install_binary_tools
         install_docker
@@ -599,6 +640,17 @@ function main() {
             green_echo "You can activate pyvenv via:\n\tsource $HOME/$venv_name/bin/activate"
         else
             green_echo "No pyvenv activate"
+        fi
+        if [ "$java_installed" = "true" ]; then
+            yellow_echo "Please run 'source /etc/profile.d/java.sh' or re-login to use java command"
+        fi
+        # SELinux reminder: only shown when /etc/selinux/config exists (RPM-based systems)
+        if [ -f /etc/selinux/config ] && grep -q '^SELINUX=disabled' /etc/selinux/config; then
+            yellow_echo ""
+            yellow_echo "SELinux has been disabled:"
+            yellow_echo "  - Immediately (system-wide): setenforce 0 already executed, effective now for all processes"
+            yellow_echo "  - Permanent: SELINUX=disabled written to /etc/selinux/config, effective after re-login"
+            yellow_echo "  - To verify current state: getenforce  (shows 'Permissive' now, 'Disabled' after re-login)"
         fi
     else
         red_echo "Cannot detect OS and set OS_ID and OS_VERSION to unknown"

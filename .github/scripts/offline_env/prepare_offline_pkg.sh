@@ -30,6 +30,84 @@ BPFTRACE_VERSION="0.23.2"  # Configurable bpftrace version
 TDGPT_BASE_DIR="/var/lib/taos/taosanode"  # Configurable TDgpt base directory
 IDMP_VENV_DIR="/usr/local/taos/idmp/venv"  # Configurable IDMP venv directory
 PYTORCH_WHL_URL="https://mirrors.aliyun.com/pytorch-wheels/cpu"  # PyTorch CPU wheel mirror (China CDN)
+BUILD_NOTES=()  # Post-build notes collected during the run, re-printed in summary()
+
+# Install uv with download caching (shared via $CACHE_DIR across container runs)
+# Populates BUILD_NOTES with PATH reminder if uv was newly installed.
+install_uv_cached() {
+    local uv_bin="$HOME/.local/bin/uv"
+    local cached_uv="$CACHE_DIR/uv"
+
+    if command -v uv &>/dev/null; then
+        return 0  # already on PATH, nothing to do
+    fi
+
+    mkdir -p "$HOME/.local/bin"
+
+    if [[ -f "$cached_uv" ]]; then
+        yellow_echo "Restoring uv from cache: $cached_uv"
+        cp "$cached_uv" "$uv_bin"
+        chmod +x "$uv_bin"
+    else
+        yellow_echo "Downloading and installing uv..."
+        if [[ -f /etc/kylin-release || "$OS_ID" == "openEuler" ]]; then
+            if ! curl -LsSf https://astral.sh/uv/install.sh | sh; then
+                red_echo "Failed to install uv"
+                exit 1
+            fi
+        else
+            local setup_env="$script_dir/setup_env.sh"
+            if ! curl -o "$setup_env" https://raw.githubusercontent.com/taosdata/TDengine/main/packaging/setup_env.sh; then
+                red_echo "Failed to download setup_env.sh"
+                exit 1
+            fi
+            chmod +x "$setup_env"
+            if ! "$setup_env" install_uv; then
+                red_echo "Failed to install uv"
+                exit 1
+            fi
+        fi
+        # Cache the binary for next run
+        if [[ -f "$uv_bin" ]]; then
+            cp "$uv_bin" "$cached_uv"
+            green_echo "uv binary cached: $cached_uv"
+        fi
+    fi
+
+    # Update PATH for current shell session.
+    # Always export ~/.local/bin first (handles cache-restore path where
+    # ~/.local/bin/env does not exist but the binary is already there).
+    export PATH="$HOME/.local/bin:$PATH"
+    # Also source the env file if it exists (sets any extra vars the installer created)
+    if [[ -f "$HOME/.local/bin/env" ]]; then
+        # shellcheck source=/dev/null
+        source "$HOME/.local/bin/env"
+    fi
+
+    # Persist uv's wheel/package cache on the host-mounted CACHE_DIR so that large
+    # wheels (torch ~200 MB, tensorflow ~600 MB) are only downloaded once across
+    # container runs.  Without this, every new container re-downloads from scratch.
+    export UV_CACHE_DIR="${CACHE_DIR}/uv-cache"
+    mkdir -p "$UV_CACHE_DIR"
+    # Cache dir is on a host-mounted volume; venv targets are inside the container,
+    # so they are on different filesystems — hardlinks won't work.  Tell uv to use
+    # copy mode explicitly to suppress the "Failed to hardlink" warning.
+    export UV_LINK_MODE=copy
+
+    # Sanity check — fail loudly rather than silently proceeding with uv missing
+    if ! command -v uv &>/dev/null; then
+        red_echo "ERROR: uv still not found on PATH after install/restore."
+        red_echo "  Expected location: $uv_bin"
+        red_echo "  PATH: $PATH"
+        exit 1
+    fi
+
+    # Record PATH reminder for summary
+    BUILD_NOTES+=("  uv installed to: $uv_bin")
+    BUILD_NOTES+=("  To make uv available in new shells, run:")
+    BUILD_NOTES+=("    source \$HOME/.local/bin/env          (sh, bash, zsh)")
+    BUILD_NOTES+=("    source \$HOME/.local/bin/env.fish     (fish)")
+}
 
 function show_usage() {
     echo "Usage:"
@@ -555,19 +633,28 @@ function download_java() {
     
     local download_url="${base_url}/${tar_name}"
     local cached_file="$CACHE_DIR/${tar_name}"
-    
-    # Check if file exists in cache
-    if [ -f "$cached_file" ]; then
-        yellow_echo "Using cached Java JRE from: $cached_file"
-    else
+
+    # Helper: download (or re-download) the JRE into the cache
+    _download_jre() {
         yellow_echo "Downloading from: $download_url"
         if ! curl -fsSL "$download_url" -o "$cached_file"; then
             red_echo "Failed to download Java JRE ${JAVA_VERSION}"
             exit 1
         fi
-        green_echo "Downloaded to cache: $cached_file"
+        green_echo "Downloaded to cache: $cached_file ($(du -sh "$cached_file" 2>/dev/null | cut -f1))"
+    }
+
+    # Check if a non-empty file already exists in cache
+    if [ -f "$cached_file" ] && [ -s "$cached_file" ]; then
+        yellow_echo "Using cached Java JRE from: $cached_file ($(du -sh "$cached_file" 2>/dev/null | cut -f1))"
+    else
+        if [ -f "$cached_file" ]; then
+            yellow_echo "Cached file is empty/corrupt, re-downloading: $cached_file"
+            rm -f "$cached_file"
+        fi
+        _download_jre
     fi
-    
+
     # SHA256 verification for Java 21 only
     if [ "$JAVA_VERSION" = "21" ]; then
         yellow_echo "Verifying SHA256 checksum..."
@@ -577,12 +664,22 @@ function download_java() {
         else
             expected_sha256="$sha256_aarch64"
         fi
-        
-        echo "${expected_sha256}  $cached_file" | sha256sum -c - || {
+
+        if ! echo "${expected_sha256}  $cached_file" | sha256sum -c - &>/dev/null; then
             red_echo "SHA256 checksum verification failed!"
-            exit 1
-        }
-        green_echo "SHA256 checksum verified successfully"
+            red_echo "  File:     $cached_file"
+            red_echo "  Expected: $expected_sha256"
+            red_echo "  Actual:   $(sha256sum "$cached_file" 2>/dev/null | awk '{print $1}')"
+            red_echo "Removing corrupt cached file and re-downloading..."
+            rm -f "$cached_file"
+            _download_jre
+            # Verify freshly downloaded file
+            if ! echo "${expected_sha256}  $cached_file" | sha256sum -c - &>/dev/null; then
+                red_echo "SHA256 verification failed again after re-download. Aborting."
+                exit 1
+            fi
+        fi
+        green_echo "SHA256 checksum verified"
     fi
     
     # Copy from cache to offline package directory
@@ -916,29 +1013,7 @@ function build_tdgpt_venvs() {
     local tdgpt_base_dir="$TDGPT_BASE_DIR"
     mkdir -p "$tdgpt_base_dir"
 
-    # Install uv if not available
-    if ! command -v uv &> /dev/null; then
-        if [ -f /etc/kylin-release ] || [ "$OS_ID" = "openEuler" ]; then
-            if ! curl -LsSf https://astral.sh/uv/install.sh | sh; then
-                red_echo "Failed to install uv"
-                exit 1
-            fi
-        else
-            if ! curl -o "$script_dir"/setup_env.sh https://raw.githubusercontent.com/taosdata/TDengine/main/packaging/setup_env.sh; then
-                red_echo "Failed to download setup_env.sh"
-                exit 1
-            fi
-            chmod +x "$script_dir"/setup_env.sh
-            if ! "$script_dir"/setup_env.sh install_uv; then
-                red_echo "Failed to install uv"
-                exit 1
-            fi
-        fi
-    fi
-
-    if [ -f "$HOME/.local/bin/env" ]; then
-        source "$HOME/.local/bin/env"
-    fi
+    install_uv_cached
 
     # Determine Python version
     local python_ver="${PYTHON_VERSION:-3.10}"
@@ -986,12 +1061,17 @@ function build_tdgpt_venvs() {
 
     yellow_echo "Building main venv for tdtsfm/timemoe (via requirements_ess.txt)..."
     local main_venv_path="${tdgpt_base_dir}/venv"
-    uv venv --python "$python_ver" "$main_venv_path" --clear
+    uv venv --python "$python_ver" "$main_venv_path" --seed --clear
     source "$main_venv_path/bin/activate"
 
-    # Strip --find-links pytorch lines from requirements; we supply our own via pytorch_index_args
-    # (the original points to download.pytorch.org which is slow; we use Chinese mirror instead)
-    sed -i '/^--find-links.*pytorch/d' "${req_dir}/requirements_ess.txt"
+    # Strip all pytorch.org index/find-links directives from requirements files
+    # so that our pytorch_index_args (aliyun CDN mirror) are the sole source for
+    # torch wheels. Apply to both known files (requirements_ess.txt includes -r
+    # requirements_docker.txt, so both need to be cleaned).
+    # Note: avoid 'find' — it may not be on PATH in minimal containers.
+    for _req_file in "${req_dir}/requirements_ess.txt" "${req_dir}/requirements_docker.txt"; do
+        [ -f "$_req_file" ] && sed -i '/pytorch\.org/d' "$_req_file"
+    done
 
     uv pip install -r "${req_dir}/requirements_ess.txt" \
         "${pip_index_args[@]}" "${pytorch_index_args[@]}"
@@ -1011,7 +1091,7 @@ function build_tdgpt_venvs() {
         # timesfm venv
         yellow_echo "Building timesfm venv..."
         local venv_path="${tdgpt_base_dir}/timesfm_venv"
-        uv venv --python "$python_ver" "$venv_path" --clear
+        uv venv --python "$python_ver" "$venv_path" --seed --clear
         source "$venv_path/bin/activate"
         uv pip install torch==2.3.1+cpu jax timesfm flask==3.0.3 \
             "${pip_index_args[@]}" "${pytorch_index_args[@]}"
@@ -1022,7 +1102,7 @@ function build_tdgpt_venvs() {
         # moirai venv
         yellow_echo "Building moirai venv..."
         venv_path="${tdgpt_base_dir}/moirai_venv"
-        uv venv --python "$python_ver" "$venv_path" --clear
+        uv venv --python "$python_ver" "$venv_path" --seed --clear
         source "$venv_path/bin/activate"
         uv pip install torch==2.3.1+cpu uni2ts flask \
             "${pip_index_args[@]}" "${pytorch_index_args[@]}"
@@ -1033,7 +1113,7 @@ function build_tdgpt_venvs() {
         # chronos venv
         yellow_echo "Building chronos venv..."
         venv_path="${tdgpt_base_dir}/chronos_venv"
-        uv venv --python "$python_ver" "$venv_path" --clear
+        uv venv --python "$python_ver" "$venv_path" --seed --clear
         source "$venv_path/bin/activate"
         uv pip install torch==2.3.1+cpu chronos-forecasting flask \
             "${pip_index_args[@]}" "${pytorch_index_args[@]}"
@@ -1044,7 +1124,7 @@ function build_tdgpt_venvs() {
         # momentfm venv
         yellow_echo "Building momentfm venv..."
         venv_path="${tdgpt_base_dir}/momentfm_venv"
-        uv venv --python "$python_ver" "$venv_path" --clear
+        uv venv --python "$python_ver" "$venv_path" --seed --clear
         source "$venv_path/bin/activate"
         uv pip install torch==2.3.1+cpu transformers==4.33.3 numpy==1.25.2 \
             matplotlib pandas==1.5 scikit-learn flask==3.0.3 momentfm \
@@ -1079,29 +1159,7 @@ function build_idmp_venvs() {
 
     yellow_echo "Building IDMP Python venv from TDasset requirements..."
 
-    # Install uv if not available
-    if ! command -v uv &> /dev/null; then
-        if [ -f /etc/kylin-release ] || [ "$OS_ID" = "openEuler" ]; then
-            if ! curl -LsSf https://astral.sh/uv/install.sh | sh; then
-                red_echo "Failed to install uv"
-                exit 1
-            fi
-        else
-            if ! curl -o "$script_dir"/setup_env.sh https://raw.githubusercontent.com/taosdata/TDengine/main/packaging/setup_env.sh; then
-                red_echo "Failed to download setup_env.sh"
-                exit 1
-            fi
-            chmod +x "$script_dir"/setup_env.sh
-            if ! "$script_dir"/setup_env.sh install_uv; then
-                red_echo "Failed to install uv"
-                exit 1
-            fi
-        fi
-    fi
-
-    if [ -f "$HOME/.local/bin/env" ]; then
-        source "$HOME/.local/bin/env"
-    fi
+    install_uv_cached
 
     # Determine Python version
     local python_ver="${PYTHON_VERSION:-3.10}"
@@ -1137,7 +1195,7 @@ function build_idmp_venvs() {
     # Create venv and install packages
     local idmp_venv_path="${IDMP_VENV_DIR}"
     mkdir -p "$idmp_venv_path"
-    uv venv --python "$python_ver" "$idmp_venv_path" --clear
+    uv venv --python "$python_ver" "$idmp_venv_path" --seed --clear
     source "$idmp_venv_path/bin/activate"
 
     yellow_echo "Installing IDMP packages from requirements.txt..."
@@ -1176,29 +1234,10 @@ function install_python_packages() {
         fi
 
         # Install uv with setup_env.sh
-        if ! command -v uv &> /dev/null; then
-            if [ -f /etc/kylin-release ] || [ "$OS_ID" = "openEuler" ]; then
-                if ! curl -LsSf https://astral.sh/uv/install.sh | sh; then
-                    red_echo "Failed to install uv"
-                    exit 1
-                fi
-            else
-                if ! curl -o "$script_dir"/setup_env.sh https://raw.githubusercontent.com/taosdata/TDengine/main/packaging/setup_env.sh; then
-                    red_echo "Failed to download setup_env.sh"
-                    exit 1
-                fi
-                chmod +x "$script_dir"/setup_env.sh
-                if ! "$script_dir"/setup_env.sh install_uv; then
-                    red_echo "Failed to install uv"
-                    exit 1
-                fi
-            fi
-        fi
+        install_uv_cached
 
-        if [ -f "$HOME/.local/bin/env" ]; then
-            source "$HOME/.local/bin/env"
-        else
-            red_echo "Error: $HOME/.local/bin/env not found."
+        if ! command -v uv &>/dev/null; then
+            red_echo "Error: uv not found after installation. $HOME/.local/bin/env may be missing."
             exit 1
         fi
 
@@ -1216,7 +1255,7 @@ function install_python_packages() {
 
         yellow_echo "Installing Python $PYTHON_VERSION using uv..."
         uv python install "$PYTHON_VERSION"
-        uv venv --python "$PYTHON_VERSION" "$python_venv_dir" --clear
+        uv venv --python "$PYTHON_VERSION" "$python_venv_dir" --seed --clear
 
         yellow_echo "Installing Python packages..."
         source "$python_venv_dir"/bin/activate
@@ -1322,8 +1361,15 @@ function summary() {
     tar zcf "$offline_env_dir.tar.gz" "$offline_env_dir"
     mv "$offline_env_dir.tar.gz" "$offline_env_path"
     green_echo "Offline env completed, please check $offline_env_path/$offline_env_dir.tar.gz"
-    # cp -r .[!.]* ~
-    # rpm -ivh --nodeps --force *.rpm
+
+    if [[ ${#BUILD_NOTES[@]} -gt 0 ]]; then
+        echo ""
+        yellow_echo "========== POST-BUILD NOTES =========="
+        for note in "${BUILD_NOTES[@]}"; do
+            yellow_echo "$note"
+        done
+        yellow_echo "======================================"
+    fi
 }
 
 function build_pkgs() {
