@@ -646,11 +646,7 @@ function main() {
         fi
         # SELinux reminder: only shown when /etc/selinux/config exists (RPM-based systems)
         if [ -f /etc/selinux/config ] && grep -q '^SELINUX=disabled' /etc/selinux/config; then
-            yellow_echo ""
-            yellow_echo "SELinux has been disabled:"
-            yellow_echo "  - Immediately (system-wide): setenforce 0 already executed, effective now for all processes"
-            yellow_echo "  - Permanent: SELINUX=disabled written to /etc/selinux/config, effective after re-login"
-            yellow_echo "  - To verify current state: getenforce  (shows 'Permissive' now, 'Disabled' after re-login)"
+            yellow_echo "SELinux has been disabled (effective now; permanent after re-login)"
         fi
     else
         red_echo "Cannot detect OS and set OS_ID and OS_VERSION to unknown"

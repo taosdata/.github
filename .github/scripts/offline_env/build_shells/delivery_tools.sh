@@ -336,9 +336,25 @@ docker exec -ti offline_pkgs_builder \
     --mode=docker \
     --os=openeuler --os-ver=24.03-lts-sp1 \
     --build \
-    --system-packages=tar,gcc,glibc-devel,procps-ng \
+    --system-packages=tar,gcc,gcc-c++,glibc-devel,procps-ng \
     --python-version=3.10 \
     --tdgpt=true --tdgpt-all \
-    --tdengine-tsdb-ver=3.4.0.9 \
+    --tdengine-tsdb-vder=3.4.0.9 \
     --pip-index-url=https://pypi.tuna.tsinghua.edu.cn/simple \
-    --pkg-label=tdgpt-3.4.0.9
+    --pkg-label=tdgpt-3.4.0.9 \
+     --nexus-url=https://nexus.tdengine.net
+
+
+./build_offline_pkg.sh \
+    --mode=docker \
+    --os=openeuler --os-ver=24.03-lts-sp1 \
+    --build \
+    --system-packages= \
+    --python-version=3.12 \
+    --idmp=true \
+    --idmp-ver=1.0.13.0 \
+    --pip-index-url=https://pypi.tuna.tsinghua.edu.cn/simple \
+    --gh-token=YOUR_GH_TOKEN \
+    --install-java --java-version=21 \
+    --pkg-label=idmp-v1.0.13.0 \
+    --nexus-url=https://nexus.tdengine.net

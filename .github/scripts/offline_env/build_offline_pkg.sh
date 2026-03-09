@@ -54,6 +54,7 @@ declare -A OS_REGISTRY=(
     # ---- CentOS ----
     ["centos:7"]="centos:7|x64"
     # ---- Kylin ----
+    ["kylin:v10-sp1"]="macrosan/kylin:v10-sp1|x64,arm64"
     ["kylin:v10-sp2"]="macrosan/kylin:v10-sp2|x64,arm64"
     ["kylin:v10-sp3-2403"]="macrosan/kylin:v10-sp3-2403|x64,arm64"
     # ---- openEuler ----
@@ -91,6 +92,7 @@ CACHE_DIR=""                                # host cache dir (default: /tmp/taos
 CLEANUP_CONTAINER="false"                   # remove container after build (default: keep for reuse)
 DOCKER_PLATFORM=""                          # e.g. linux/arm64 (for cross-arch builds)
 DOCKER_EXTRA_ARGS=""                        # extra args passed to docker run
+NEXUS_URL=""                                # Nexus mirror base URL (e.g. https://nexus.example.com); empty = disabled
 
 # -- Action --
 ACTION="build"                              # build | test | build-and-test
@@ -100,6 +102,11 @@ BUILD_LOCK_FILE=""                          # lock file path on host
 
 # -- All remaining flags are forwarded verbatim to prepare_offline_pkg.sh --
 FORWARD_ARGS=()
+
+# -- Captured from FORWARD_ARGS for default-package logic --
+SYSTEM_PACKAGES=""                          # from --system-packages (not forwarded directly)
+IDMP_ENABLED="false"                        # from --idmp=true
+TDGPT_ENABLED="false"                       # from --tdgpt=true
 
 # ======================== Script location =====================
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -196,6 +203,11 @@ ORCHESTRATOR OPTIONS:
   --docker-platform=<platform>  Platform flag, e.g. linux/arm64 (optional)
   --docker-extra-args=<args>    Extra arguments for docker run (optional)
   --docker-image=<image>        [Advanced] Override Docker image directly (skip OS validation)
+  --nexus-url=<url>             Nexus mirror base URL (e.g. https://nexus.example.com).
+                                When set, a nexus-<os>.repo / nexus-<os>.list is injected
+                                into the build container alongside the original OS repo.
+                                The original repo is kept; Nexus acts as a transparent cache.
+                                Default: empty (disabled).
 
 PASS-THROUGH OPTIONS (forwarded to prepare_offline_pkg.sh):
   --system-packages=<pkgs>      Comma-separated system packages
@@ -313,8 +325,26 @@ parse_args() {
             --docker-extra-args=*)
                 DOCKER_EXTRA_ARGS="${1#*=}"
                 ;;
+            --nexus-url=*)
+                NEXUS_URL="${1#*=}"
+                ;;
             --action=*)
                 ACTION="${1#*=}"
+                ;;
+            --system-packages=*)
+                # Captured here; NOT added to FORWARD_ARGS yet.
+                # apply_default_system_packages() will prepend preset defaults
+                # (for idmp/tdgpt) in front of the user-supplied packages,
+                # then main() pushes the merged --system-packages=... into FORWARD_ARGS.
+                SYSTEM_PACKAGES="${1#*=}"
+                ;;
+            --idmp=*)
+                IDMP_ENABLED="${1#*=}"
+                FORWARD_ARGS+=("$1")   # still forwarded verbatim
+                ;;
+            --tdgpt=*)
+                TDGPT_ENABLED="${1#*=}"
+                FORWARD_ARGS+=("$1")   # still forwarded verbatim
                 ;;
             --pkg-label=*)
                 # Peek at pkg-label so we can use it for the build lock key.
@@ -624,6 +654,9 @@ run_docker() {
             ;;
     esac
 
+    # ---- Inject Nexus repo (if --nexus-url is set) ----
+    inject_nexus_repo
+
     # ---- Copy install.sh into output dir (prepare_offline_pkg.sh expects it) ----
     # This is done by summary() in prepare_offline_pkg.sh, but we pre-copy so
     # the test phase can find it too
@@ -679,10 +712,195 @@ cleanup_container() {
     fi
 }
 
+# ======================== Nexus repo injection ===============
+# Injects a nexus-<os>.repo (RPM) or nexus-<os>.list (DEB) into the running
+# build container alongside the original OS repo (original repo is NOT modified).
+#
+# Design: all RPM systems share the same URL template:
+#   {nexus_base}/repository/{nexus_repo}/{path_prefix}/{subrepo}/$basearch/
+# Only the three variables differ per OS:
+#   nexus_repo   — Nexus repository name (may differ from OS_KEY, e.g. kylin→kylinv10)
+#   path_prefix  — path segment before subrepo (includes version)
+#   subrepos     — array of sub-repository names to generate sections for
+#
+# Verified Nexus repo mappings (https://nexus.tdengine.net):
+#   OS_KEY     Nexus repo   Upstream
+#   openeuler  openeuler    https://repo.openeuler.org
+#   centos     centos       http://mirrors.aliyun.com/centos
+#   kylin      kylinv10     http://update.cs2c.com.cn:8080
+#   ubuntu     ubuntu       http://cn.archive.ubuntu.com/ubuntu
+#   debian     debian{N}    http://deb.debian.org/debian
+inject_nexus_repo() {
+    [[ -z "$NEXUS_URL" ]] && return 0
+    [[ "$RUN_MODE" != "docker" ]] && return 0
+
+    local nexus_base="${NEXUS_URL%/}"
+
+    # ---- Per-OS configuration ----
+    local nexus_repo=""       # Nexus repository name
+    local path_prefix=""      # URL segment between repo-name and subrepo
+    local subrepos=()         # ordered list of sub-repos to add as sections
+    local pkg_family="rpm"
+
+    case "${OS_KEY}" in
+        openeuler)
+            # Path: openEuler-{VER_UPPER}/{subrepo}/$basearch/
+            # e.g. 24.03-lts-sp1 → openEuler-24.03-LTS-SP1
+            nexus_repo="openeuler"
+            local oe_ver; oe_ver=$(echo "$OS_VER" | tr '[:lower:]' '[:upper:]')
+            path_prefix="openEuler-${oe_ver}"
+            subrepos=("OS" "everything" "EPOL/main" "update")
+            ;;
+        centos)
+            # Upstream layout: mirrors.aliyun.com/centos/{ver}/{subrepo}/{arch}
+            # Nexus proxies as:  repository/centos/centos/{ver}/{subrepo}/{arch}
+            nexus_repo="centos"
+            path_prefix="centos/${OS_VER}"
+            subrepos=("os" "updates" "extras")
+            ;;
+        kylin)
+            # Upstream layout: update.cs2c.com.cn/NS/V10/{KYLIN_VER}/os/adv/lic/{subrepo}/{arch}
+            # Version mapping (must match upstream cs2c path exactly):
+            #   v10-sp1      → V10SP1.1   (cs2c uses V10SP1.1, not V10SP1)
+            #   v10-sp2      → V10SP2
+            #   v10-sp3-2403 → V10SP3-2403
+            nexus_repo="kylinv10"
+            local kylin_ver
+            case "$OS_VER" in
+                v10-sp1) kylin_ver="V10SP1.1" ;;
+                *)       kylin_ver=$(echo "$OS_VER" | sed 's/v10-sp/V10SP/') ;;
+            esac
+            path_prefix="NS/V10/${kylin_ver}/os/adv/lic"
+            subrepos=("base" "updates")
+            ;;
+        ubuntu)
+            pkg_family="deb"
+            nexus_repo="ubuntu"
+            ;;
+        debian)
+            pkg_family="deb"
+            # Nexus has per-major-version repos: debian12, debian13, ...
+            local debian_major="${OS_VER%%.*}"
+            nexus_repo="debian${debian_major}"
+            ;;
+        *)
+            yellow_echo "WARNING: No Nexus repo mapping defined for OS '${OS_KEY}', skipping injection"
+            return 0
+            ;;
+    esac
+
+    # ---- RPM family: build .repo file ----
+    if [[ "$pkg_family" == "rpm" ]]; then
+        local repo_content=""
+        for subrepo in "${subrepos[@]}"; do
+            # Section id: replace '/' with '-' (e.g. EPOL/main → EPOL-main)
+            local section_id="nexus-${subrepo//\//-}"
+            repo_content+="[${section_id}]
+name=Nexus ${OS_KEY} ${subrepo}
+baseurl=${nexus_base}/repository/${nexus_repo}/${path_prefix}/${subrepo}/\$basearch/
+enabled=1
+gpgcheck=0
+metadata_expire=1h
+
+"
+        done
+
+        local dest="/etc/yum.repos.d/nexus-${OS_KEY}.repo"
+        yellow_echo "Injecting Nexus yum repo into container: ${dest}"
+        printf '%s' "$repo_content" | $CONTAINER_ENGINE exec -i "$CONTAINER_NAME" \
+            bash -c "cat > ${dest}"
+        green_echo "Nexus yum repo injected (${#subrepos[@]} sections, original OS repo kept)"
+
+    # ---- DEB family: build .list file ----
+    else
+        # Codename is not in OS_VER (e.g. 22.04); read it from the container.
+        local codename
+        codename=$($CONTAINER_ENGINE exec "$CONTAINER_NAME" \
+            bash -c 'source /etc/os-release 2>/dev/null
+                     echo "${VERSION_CODENAME:-${UBUNTU_CODENAME:-}}"' 2>/dev/null || echo "")
+        if [[ -z "$codename" ]]; then
+            yellow_echo "WARNING: Could not detect OS codename in container, skipping Nexus DEB injection"
+            return 0
+        fi
+
+        local list_content
+        local components="main restricted universe multiverse"
+        [[ "${OS_KEY}" == "debian" ]] && components="main contrib non-free non-free-firmware"
+
+        # Main archive + updates
+        list_content="deb ${nexus_base}/repository/${nexus_repo} ${codename} ${components}
+deb ${nexus_base}/repository/${nexus_repo} ${codename}-updates ${components}"
+
+        # Security archive (separate Nexus repo)
+        local security_repo="${nexus_repo}-security"
+        list_content+="
+deb ${nexus_base}/repository/${security_repo} ${codename}-security ${components}"
+
+        local dest="/etc/apt/sources.list.d/nexus-${OS_KEY}.list"
+        yellow_echo "Injecting Nexus apt source into container: ${dest}  (codename=${codename})"
+        printf '%s\n' "$list_content" | $CONTAINER_ENGINE exec -i "$CONTAINER_NAME" \
+            bash -c "cat > ${dest}"
+        green_echo "Nexus apt source injected (3 lines, original sources.list kept)"
+    fi
+}
+
+# ======================== Default system packages ============
+# When the user omits --system-packages (common in CI/GitHub Actions), fill a
+# sensible set of packages based on the deployment type and OS package family.
+#
+# OS family detection:
+#   DEB (apt) : ubuntu, debian
+#   RPM (yum/dnf/rpm) : centos, kylin, openeuler  (and anything else)
+apply_default_system_packages() {
+    # Only apply defaults when a deployment type that needs them is requested.
+    [[ "$IDMP_ENABLED" != "true" && "$TDGPT_ENABLED" != "true" ]] && return 0
+
+    # Determine package manager family from OS_KEY.
+    local pkg_family="rpm"   # centos / kylin / openeuler
+    case "${OS_KEY:-}" in
+        ubuntu|debian) pkg_family="deb" ;;
+    esac
+
+    # Build the preset package list for the deployment type + OS family.
+    local preset=""
+    if [[ "$IDMP_ENABLED" == "true" ]]; then
+        if [[ "$pkg_family" == "deb" ]]; then
+            preset="unzip,libglib2.0-0,libdbus-1-3,libatk1.0-0,libatk-bridge2.0-0,libatspi2.0-0,libxcomposite1,libxdamage1,libxfixes3,libxrandr2,libgbm1,libxkbcommon0,libasound2,fonts-wqy-zenhei,fonts-wqy-microhei,ttf-wqy-zenhei,ttf-wqy-microhei"
+        else
+            preset="tar,gzip,curl,wget,vim,fontconfig,net-tools,libXrandr,wqy-microhei-fonts,libXcomposite,htop,tzdata,libXdamage,wqy-zenhei-fonts,mesa-libgbm,unzip,at-spi2-core,libxkbcommon,poppler-utils,glibc-all-langpacks,atk,libXfixes,dbus-libs,alsa-lib,glib2,ca-certificates,at-spi2-atk"
+        fi
+    elif [[ "$TDGPT_ENABLED" == "true" ]]; then
+        if [[ "$pkg_family" == "deb" ]]; then
+            preset="gcc,libc-dev,procps,g++,build-essential"
+        else
+            preset="tar,gcc,gcc-c++,glibc-devel,procps-ng"
+        fi
+    fi
+
+    local deploy_type="unknown"
+    [[ "$IDMP_ENABLED"  == "true" ]] && deploy_type="idmp"
+    [[ "$TDGPT_ENABLED" == "true" ]] && deploy_type="tdgpt"
+
+    if [[ -z "$SYSTEM_PACKAGES" ]]; then
+        # User did not specify any packages — use preset as-is.
+        SYSTEM_PACKAGES="$preset"
+        yellow_echo "No --system-packages specified; using defaults for ${pkg_family}/${deploy_type}:"
+        yellow_echo "  ${SYSTEM_PACKAGES}"
+    else
+        # User specified extra packages — prepend preset so required deps always present.
+        SYSTEM_PACKAGES="${preset},${SYSTEM_PACKAGES}"
+        yellow_echo "Prepending ${pkg_family}/${deploy_type} defaults to --system-packages:"
+        yellow_echo "  ${SYSTEM_PACKAGES}"
+    fi
+}
+
 # ======================== Main ================================
 main() {
     parse_args "$@"
     validate
+    apply_default_system_packages
+    # Push --system-packages into FORWARD_ARGS now (after defaults may have been filled).
+    [[ -n "$SYSTEM_PACKAGES" ]] && FORWARD_ARGS+=("--system-packages=${SYSTEM_PACKAGES}")
 
     # Trap for cleanup
     if [[ "$RUN_MODE" == "docker" && "$CLEANUP_CONTAINER" == "true" ]]; then
