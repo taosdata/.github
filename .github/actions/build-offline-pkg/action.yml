@@ -76,12 +76,12 @@ inputs:
     description: 'Package label / suffix for the tar.gz filename'
     required: false
     default: ''
-  tdgpt:
-    description: 'Enable TDgpt venv build (true/false)'
+  deploy-type:
+    description: 'Deployment type: tsdb (default) | idmp | tdgpt'
     required: false
-    default: 'false'
+    default: 'tsdb'
   tdgpt-all:
-    description: 'Build ALL TDgpt model venvs (flag, true/false)'
+    description: 'Build ALL TDgpt model venvs (only meaningful when deploy-type=tdgpt)'
     required: false
     default: 'false'
   tdengine-tsdb-ver:
@@ -120,16 +120,16 @@ inputs:
     description: 'Java version (8,11,17,21,23)'
     required: false
     default: ''
-  idmp:
-    description: 'Include IDMP packages (true/false)'
-    required: false
-    default: 'false'
   idmp-ver:
     description: 'IDMP version for downloading requirements from TDasset repo (e.g. 1.0.12.10, maps to tag ver-<ver>)'
     required: false
     default: ''
   gh-token:
     description: 'GitHub personal access token for private repos (required for TDasset)'
+    required: false
+    default: ''
+  nexus-url:
+    description: 'Nexus mirror base URL (e.g. https://nexus.example.com). Injects a transparent proxy repo into the build container. Leave empty to disable.'
     required: false
     default: ''
 
@@ -178,7 +178,7 @@ runs:
         [[ -n "${{ inputs.python-packages }}"      ]] && ARGS+=(--python-packages=${{ inputs.python-packages }})
         [[ -n "${{ inputs.python-requirements }}"  ]] && ARGS+=(--python-requirements=${{ inputs.python-requirements }})
         [[ -n "${{ inputs.pkg-label }}"            ]] && ARGS+=(--pkg-label=${{ inputs.pkg-label }})
-        [[ "${{ inputs.tdgpt }}" == "true"         ]] && ARGS+=(--tdgpt=true)
+        [[ -n "${{ inputs.deploy-type }}" && "${{ inputs.deploy-type }}" != "tsdb" ]] && ARGS+=(--deploy-type=${{ inputs.deploy-type }})
         [[ "${{ inputs.tdgpt-all }}" == "true"     ]] && ARGS+=(--tdgpt-all)
         [[ -n "${{ inputs.tdengine-tsdb-ver }}"    ]] && ARGS+=(--tdengine-tsdb-ver=${{ inputs.tdengine-tsdb-ver }})
         [[ -n "${{ inputs.pip-index-url }}"        ]] && ARGS+=(--pip-index-url=${{ inputs.pip-index-url }})
@@ -189,9 +189,9 @@ runs:
         [[ -n "${{ inputs.docker-compose-version }}" ]] && ARGS+=(--docker-compose-version=${{ inputs.docker-compose-version }})
         [[ "${{ inputs.install-java }}" == "true"  ]] && ARGS+=(--install-java)
         [[ -n "${{ inputs.java-version }}"         ]] && ARGS+=(--java-version=${{ inputs.java-version }})
-        [[ "${{ inputs.idmp }}" == "true"          ]] && ARGS+=(--idmp=true)
         [[ -n "${{ inputs.idmp-ver }}"             ]] && ARGS+=(--idmp-ver=${{ inputs.idmp-ver }})
         [[ -n "${{ inputs.gh-token }}"             ]] && ARGS+=(--gh-token=${{ inputs.gh-token }})
+        [[ -n "${{ inputs.nexus-url }}"             ]] && ARGS+=(--nexus-url=${{ inputs.nexus-url }})
 
         ${{ github.action_path }}/../../scripts/offline_env/build_offline_pkg.sh "${ARGS[@]}"
 
