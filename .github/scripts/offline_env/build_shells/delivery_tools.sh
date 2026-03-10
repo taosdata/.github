@@ -339,7 +339,7 @@ docker exec -ti offline_pkgs_builder \
     --system-packages=tar,gcc,gcc-c++,glibc-devel,procps-ng \
     --python-version=3.10 \
     --tdgpt=true --tdgpt-all \
-    --tdengine-tsdb-vder=3.4.0.9 \
+    --tdengine-tsdb-ver=3.4.0.9 \
     --pip-index-url=https://pypi.tuna.tsinghua.edu.cn/simple \
     --pkg-label=tdgpt-3.4.0.9 \
      --nexus-url=https://nexus.tdengine.net
