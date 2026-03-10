@@ -455,21 +455,8 @@ acquire_build_lock() {
     local lock_key="${os_part}-${ver_part}-${ARCH}-${label_part}"
     BUILD_LOCK_FILE="${host_cache_dir}/.build-lock-${lock_key}"
 
-    # Open the lock file on a free fd (search 200-209)
-    local fd
-    for fd in $(seq 200 209); do
-        if ! ( : >&${fd} ) 2>/dev/null; then
-            BUILD_LOCK_FD=$fd
-            break
-        fi
-    done
-    if [[ -z "$BUILD_LOCK_FD" ]]; then
-        red_echo "ERROR: Could not allocate a file descriptor for build lock"
-        exit 1
-    fi
-
-    # Open fd pointing at the lock file
-    eval "exec ${BUILD_LOCK_FD}>\"${BUILD_LOCK_FILE}\""
+    # Let bash allocate a free fd automatically (bash 4.1+); no eval needed.
+    exec {BUILD_LOCK_FD}>"$BUILD_LOCK_FILE"
 
     # Try non-blocking exclusive lock
     if ! flock -n "$BUILD_LOCK_FD"; then
@@ -483,7 +470,7 @@ acquire_build_lock() {
         red_echo "  Wait for that build to complete, or remove the lock file if it is stale:"
         red_echo "    rm -f ${BUILD_LOCK_FILE}"
         # Close the fd we opened
-        eval "exec ${BUILD_LOCK_FD}>&-"
+        exec {BUILD_LOCK_FD}>&-
         exit 1
     fi
 
@@ -809,7 +796,7 @@ metadata_expire=1h
         local dest="/etc/yum.repos.d/nexus-${OS_KEY}.repo"
         yellow_echo "Injecting Nexus yum repo into container: ${dest}"
         printf '%s' "$repo_content" | $CONTAINER_ENGINE exec -i "$CONTAINER_NAME" \
-            bash -c "cat > ${dest}"
+            bash -c 'cat > "$1"' -- "$dest"
         green_echo "Nexus yum repo injected (${#subrepos[@]} sections, original OS repo kept)"
 
     # ---- DEB family: build .list file ----
@@ -840,7 +827,7 @@ deb ${nexus_base}/repository/${security_repo} ${codename}-security ${components}
         local dest="/etc/apt/sources.list.d/nexus-${OS_KEY}.list"
         yellow_echo "Injecting Nexus apt source into container: ${dest}  (codename=${codename})"
         printf '%s\n' "$list_content" | $CONTAINER_ENGINE exec -i "$CONTAINER_NAME" \
-            bash -c "cat > ${dest}"
+            bash -c 'cat > "$1"' -- "$dest"
         green_echo "Nexus apt source injected (3 lines, original sources.list kept)"
     fi
 }

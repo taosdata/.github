@@ -293,9 +293,10 @@ function validate_params() {
         package_error="Cannot specify both **PYTHON_PACKAGES** and **PYTHON_REQUIREMENTS** at the same time. Please use only one."
     fi
 
-    # Check PYTHON_VERSION is provided when python packages are specified
-    if [[ ( -n "$PYTHON_PACKAGES" || -n "$PYTHON_REQUIREMENTS" ) && -z "$PYTHON_VERSION" ]]; then
-        package_error="**PYTHON_VERSION** is required when **PYTHON_PACKAGES** or **PYTHON_REQUIREMENTS** is specified."
+    # Check PYTHON_VERSION is provided when python packages are specified, or when
+    # TDGPT/IDMP is enabled (both require a Python venv at a specific version).
+    if [[ ( -n "$PYTHON_PACKAGES" || -n "$PYTHON_REQUIREMENTS" || -n "$TDGPT" || -n "$IDMP" ) && -z "$PYTHON_VERSION" ]]; then
+        package_error="**PYTHON_VERSION** is required when **PYTHON_PACKAGES**, **PYTHON_REQUIREMENTS**, **TDGPT**, or **IDMP** is specified."
     fi
 
     # Combined error message
@@ -449,7 +450,13 @@ function init() {
         OS_VERSION=""
     fi
 
-    formated_system_packages=$(echo "$SYSTEM_PACKAGES" | tr ',' ' ')
+    # Validate: only allow characters that are safe in package names
+    if [[ -n "$SYSTEM_PACKAGES" ]] && ! [[ "$SYSTEM_PACKAGES" =~ ^[a-zA-Z0-9_.+,-]+$ ]]; then
+        red_echo "ERROR: --system-packages contains invalid characters."
+        red_echo "       Allowed: letters, digits, dash, underscore, dot, plus, comma"
+        exit 1
+    fi
+    IFS=',' read -r -a formated_system_packages <<< "$SYSTEM_PACKAGES"
     formated_python_packages=$(echo "$PYTHON_PACKAGES" | tr ',' ' ')
     formated_python_requirements="$PYTHON_REQUIREMENTS"
     if [[ -z "$PARENT_DIR" ]]; then
@@ -853,7 +860,7 @@ function install_system_packages() {
                 $PKG_MGR install -q -y yum-utils
             fi
             $PKG_MGR install -q -y wget gcc gcc-c++
-            for pkg in $formated_system_packages;
+            for pkg in "${formated_system_packages[@]}";
             do
                 if [[ "$pkg" == "bpftrace" ]] && ([ "$ID" = "centos" ] || [ "$ID" = "openEuler" ]); then
                     download_bpftrace_binary "CentOS/RHEL/openEuler"
@@ -897,7 +904,7 @@ function install_system_packages() {
             raw_deps_file="$system_packages_dir/raw_deps.txt"
             dependencies_file="$system_packages_dir/dependencies.txt"
             
-            if ! apt-rdepends $formated_system_packages | grep -v "^ " > "$raw_deps_file"; then
+            if ! apt-rdepends "${formated_system_packages[@]}" | grep -v "^ " > "$raw_deps_file"; then
                 red_echo "Failed to resolve dependencies with apt-rdepends"
                 exit 1
             fi
@@ -927,7 +934,7 @@ function install_system_packages() {
             yellow_echo "$PKG_MGR updating"
             $PKG_MGR refresh
             $PKG_MGR install -y wget curl gcc gcc-c++
-            for pkg in $formated_system_packages;
+            for pkg in "${formated_system_packages[@]}";
             do
                 if [[ "$pkg" == "bpftrace" ]] && [ "$OS_ID" = "sles" ]; then
                     download_bpftrace_binary "SUSE/SLES"
@@ -1339,9 +1346,9 @@ function install_python_packages() {
             do
                 echo "installing: $pkg"
                 if [[ $pkg == *"--index-url"* ]]; then
-                    uv pip install $pkg
+                    uv pip install "$pkg"
                 else
-                    uv pip install $pkg "${pip_index_args[@]}"
+                    uv pip install "$pkg" "${pip_index_args[@]}"
                 fi
             done
         fi
@@ -1488,7 +1495,7 @@ function check_system_pkgs() {
     # System packages verification
     if [[ -n "$SYSTEM_PACKAGES" ]]; then
         failed_system_pkgs=()
-        for pkg in $formated_system_packages;
+        for pkg in "${formated_system_packages[@]}";
         do
             if printf '%s\n' "${BINARY_TOOLS[@]}" | grep -q -x "$pkg"; then
                 if ! command -v "$pkg" >/dev/null 2>&1; then

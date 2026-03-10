@@ -322,7 +322,7 @@ docker exec -ti offline_pkgs_builder \
 ./build_offline_pkg.sh \
     --mode=docker \
     --os=openeuler --os-ver=24.03-lts-sp1 \
-    --build \
+    --action=build \
     --system-packages=tar,gzip,curl,wget,vim,fontconfig,net-tools,libXrandr,wqy-microhei-fonts,libXcomposite,htop,tzdata,libXdamage,wqy-zenhei-fonts,mesa-libgbm,unzip,at-spi2-core,libxkbcommon,poppler-utils,glibc-all-langpacks,atk,libXfixes,dbus-libs,alsa-lib,glib2,ca-certificates,at-spi2-atk \
     --python-version=3.12 \
     --idmp=true \
@@ -335,7 +335,7 @@ docker exec -ti offline_pkgs_builder \
 ./build_offline_pkg.sh \
     --mode=docker \
     --os=openeuler --os-ver=24.03-lts-sp1 \
-    --build \
+    --action=build \
     --system-packages=tar,gcc,gcc-c++,glibc-devel,procps-ng \
     --python-version=3.10 \
     --tdgpt=true --tdgpt-all \
@@ -348,8 +348,7 @@ docker exec -ti offline_pkgs_builder \
 ./build_offline_pkg.sh \
     --mode=docker \
     --os=openeuler --os-ver=24.03-lts-sp1 \
-    --build \
-    --system-packages= \
+    --action=build \
     --python-version=3.12 \
     --idmp=true \
     --idmp-ver=1.0.13.0 \

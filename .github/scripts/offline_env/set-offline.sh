@@ -63,8 +63,8 @@ sudo iptables -A OUTPUT -o lo -j ACCEPT
 
 # Allow established and related connections (important to ensure LAN-initiated connections can respond)
 # 允许已建立的和相关连接通过（重要，确保局域网发起的连接能正常回应）
-sudo iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
-sudo iptables -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+sudo iptables -A INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+sudo iptables -A OUTPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
 
 # Allow LAN traffic: 192.168.0.0/16 covers the entire 192.168.x.x range
 # 允许局域网通信：192.168.0.0/16 覆盖所有 192.168.x.x 网段

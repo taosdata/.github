@@ -143,63 +143,99 @@ runs:
   steps:
     - name: Set script permissions
       shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
       run: |
-        chmod +x ${{ github.action_path }}/../../scripts/offline_env/build_offline_pkg.sh
-        chmod +x ${{ github.action_path }}/../../scripts/offline_env/prepare_offline_pkg.sh
+        chmod +x "$ACTION_PATH/../../scripts/offline_env/build_offline_pkg.sh"
+        chmod +x "$ACTION_PATH/../../scripts/offline_env/prepare_offline_pkg.sh"
 
     - name: Build offline package
       id: build
       shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        INPUT_MODE: ${{ inputs.mode }}
+        INPUT_ACTION: ${{ inputs.action }}
+        INPUT_OS: ${{ inputs.os }}
+        INPUT_OS_VER: ${{ inputs.os-ver }}
+        INPUT_ARCH: ${{ inputs.arch }}
+        INPUT_DOCKER_IMAGE: ${{ inputs.docker-image }}
+        INPUT_CONTAINER_NAME: ${{ inputs.container-name }}
+        INPUT_CONTAINER_ENGINE: ${{ inputs.container-engine }}
+        INPUT_DOCKER_PLATFORM: ${{ inputs.docker-platform }}
+        INPUT_DOCKER_EXTRA_ARGS: ${{ inputs.docker-extra-args }}
+        INPUT_OUTPUT_DIR: ${{ inputs.output-dir }}
+        INPUT_CACHE_DIR: ${{ inputs.cache-dir }}
+        INPUT_CLEANUP_CONTAINER: ${{ inputs.cleanup-container }}
+        INPUT_SYSTEM_PACKAGES: ${{ inputs.system-packages }}
+        INPUT_PYTHON_VERSION: ${{ inputs.python-version }}
+        INPUT_PYTHON_PACKAGES: ${{ inputs.python-packages }}
+        INPUT_PYTHON_REQUIREMENTS: ${{ inputs.python-requirements }}
+        INPUT_PKG_LABEL: ${{ inputs.pkg-label }}
+        INPUT_DEPLOY_TYPE: ${{ inputs.deploy-type }}
+        INPUT_TDGPT_ALL: ${{ inputs.tdgpt-all }}
+        INPUT_TDENGINE_TSDB_VER: ${{ inputs.tdengine-tsdb-ver }}
+        INPUT_PIP_INDEX_URL: ${{ inputs.pip-index-url }}
+        INPUT_PYTORCH_WHL_URL: ${{ inputs.pytorch-whl-url }}
+        INPUT_INSTALL_DOCKER: ${{ inputs.install-docker }}
+        INPUT_DOCKER_VERSION: ${{ inputs.docker-version }}
+        INPUT_INSTALL_DOCKER_COMPOSE: ${{ inputs.install-docker-compose }}
+        INPUT_DOCKER_COMPOSE_VERSION: ${{ inputs.docker-compose-version }}
+        INPUT_INSTALL_JAVA: ${{ inputs.install-java }}
+        INPUT_JAVA_VERSION: ${{ inputs.java-version }}
+        INPUT_IDMP_VER: ${{ inputs.idmp-ver }}
+        INPUT_GH_TOKEN: ${{ inputs.gh-token }}
+        INPUT_NEXUS_URL: ${{ inputs.nexus-url }}
       run: |
-        echo "::group::Building offline package (${{ inputs.mode }} mode, os=${{ inputs.os }}:${{ inputs.os-ver }})"
+        echo "::group::Building offline package ($INPUT_MODE mode, os=$INPUT_OS:$INPUT_OS_VER)"
 
         ARGS=()
-        ARGS+=(--mode=${{ inputs.mode }})
-        ARGS+=(--action=${{ inputs.action }})
+        ARGS+=(--mode="$INPUT_MODE")
+        ARGS+=(--action="$INPUT_ACTION")
 
         # OS target flags
-        [[ -n "${{ inputs.os }}"               ]] && ARGS+=(--os=${{ inputs.os }})
-        [[ -n "${{ inputs.os-ver }}"            ]] && ARGS+=(--os-ver=${{ inputs.os-ver }})
-        [[ -n "${{ inputs.arch }}"              ]] && ARGS+=(--arch=${{ inputs.arch }})
+        [[ -n "$INPUT_OS"              ]] && ARGS+=(--os="$INPUT_OS")
+        [[ -n "$INPUT_OS_VER"          ]] && ARGS+=(--os-ver="$INPUT_OS_VER")
+        [[ -n "$INPUT_ARCH"            ]] && ARGS+=(--arch="$INPUT_ARCH")
 
         # Orchestrator flags
-        [[ -n "${{ inputs.docker-image }}"       ]] && ARGS+=(--docker-image=${{ inputs.docker-image }})
-        [[ -n "${{ inputs.container-name }}"      ]] && ARGS+=(--container-name=${{ inputs.container-name }})
-        [[ -n "${{ inputs.container-engine }}"    ]] && ARGS+=(--container-engine=${{ inputs.container-engine }})
-        [[ -n "${{ inputs.docker-platform }}"     ]] && ARGS+=(--docker-platform=${{ inputs.docker-platform }})
-        [[ -n "${{ inputs.docker-extra-args }}"   ]] && ARGS+=(--docker-extra-args="${{ inputs.docker-extra-args }}")
-        [[ -n "${{ inputs.output-dir }}"          ]] && ARGS+=(--output-dir=${{ inputs.output-dir }})
-        [[ -n "${{ inputs.cache-dir }}"           ]] && ARGS+=(--cache-dir=${{ inputs.cache-dir }})
-        ARGS+=(--cleanup-container=${{ inputs.cleanup-container }})
+        [[ -n "$INPUT_DOCKER_IMAGE"      ]] && ARGS+=(--docker-image="$INPUT_DOCKER_IMAGE")
+        [[ -n "$INPUT_CONTAINER_NAME"    ]] && ARGS+=(--container-name="$INPUT_CONTAINER_NAME")
+        [[ -n "$INPUT_CONTAINER_ENGINE"  ]] && ARGS+=(--container-engine="$INPUT_CONTAINER_ENGINE")
+        [[ -n "$INPUT_DOCKER_PLATFORM"   ]] && ARGS+=(--docker-platform="$INPUT_DOCKER_PLATFORM")
+        [[ -n "$INPUT_DOCKER_EXTRA_ARGS" ]] && ARGS+=(--docker-extra-args="$INPUT_DOCKER_EXTRA_ARGS")
+        [[ -n "$INPUT_OUTPUT_DIR"        ]] && ARGS+=(--output-dir="$INPUT_OUTPUT_DIR")
+        [[ -n "$INPUT_CACHE_DIR"         ]] && ARGS+=(--cache-dir="$INPUT_CACHE_DIR")
+        ARGS+=(--cleanup-container="$INPUT_CLEANUP_CONTAINER")
 
         # Pass-through flags for prepare_offline_pkg.sh
-        [[ -n "${{ inputs.system-packages }}"      ]] && ARGS+=(--system-packages=${{ inputs.system-packages }})
-        [[ -n "${{ inputs.python-version }}"       ]] && ARGS+=(--python-version=${{ inputs.python-version }})
-        [[ -n "${{ inputs.python-packages }}"      ]] && ARGS+=(--python-packages=${{ inputs.python-packages }})
-        [[ -n "${{ inputs.python-requirements }}"  ]] && ARGS+=(--python-requirements=${{ inputs.python-requirements }})
-        [[ -n "${{ inputs.pkg-label }}"            ]] && ARGS+=(--pkg-label=${{ inputs.pkg-label }})
-        [[ -n "${{ inputs.deploy-type }}" && "${{ inputs.deploy-type }}" != "tsdb" ]] && ARGS+=(--deploy-type=${{ inputs.deploy-type }})
-        [[ "${{ inputs.tdgpt-all }}" == "true"     ]] && ARGS+=(--tdgpt-all)
-        [[ -n "${{ inputs.tdengine-tsdb-ver }}"    ]] && ARGS+=(--tdengine-tsdb-ver=${{ inputs.tdengine-tsdb-ver }})
-        [[ -n "${{ inputs.pip-index-url }}"        ]] && ARGS+=(--pip-index-url=${{ inputs.pip-index-url }})
-        [[ -n "${{ inputs.pytorch-whl-url }}"      ]] && ARGS+=(--pytorch-whl-url=${{ inputs.pytorch-whl-url }})
-        [[ "${{ inputs.install-docker }}" == "true" ]] && ARGS+=(--install-docker)
-        [[ -n "${{ inputs.docker-version }}"       ]] && ARGS+=(--docker-version=${{ inputs.docker-version }})
-        [[ "${{ inputs.install-docker-compose }}" == "true" ]] && ARGS+=(--install-docker-compose)
-        [[ -n "${{ inputs.docker-compose-version }}" ]] && ARGS+=(--docker-compose-version=${{ inputs.docker-compose-version }})
-        [[ "${{ inputs.install-java }}" == "true"  ]] && ARGS+=(--install-java)
-        [[ -n "${{ inputs.java-version }}"         ]] && ARGS+=(--java-version=${{ inputs.java-version }})
-        [[ -n "${{ inputs.idmp-ver }}"             ]] && ARGS+=(--idmp-ver=${{ inputs.idmp-ver }})
-        [[ -n "${{ inputs.gh-token }}"             ]] && ARGS+=(--gh-token=${{ inputs.gh-token }})
-        [[ -n "${{ inputs.nexus-url }}"             ]] && ARGS+=(--nexus-url=${{ inputs.nexus-url }})
+        [[ -n "$INPUT_SYSTEM_PACKAGES"     ]] && ARGS+=(--system-packages="$INPUT_SYSTEM_PACKAGES")
+        [[ -n "$INPUT_PYTHON_VERSION"      ]] && ARGS+=(--python-version="$INPUT_PYTHON_VERSION")
+        [[ -n "$INPUT_PYTHON_PACKAGES"     ]] && ARGS+=(--python-packages="$INPUT_PYTHON_PACKAGES")
+        [[ -n "$INPUT_PYTHON_REQUIREMENTS" ]] && ARGS+=(--python-requirements="$INPUT_PYTHON_REQUIREMENTS")
+        [[ -n "$INPUT_PKG_LABEL"           ]] && ARGS+=(--pkg-label="$INPUT_PKG_LABEL")
+        [[ -n "$INPUT_DEPLOY_TYPE" && "$INPUT_DEPLOY_TYPE" != "tsdb" ]] && ARGS+=(--deploy-type="$INPUT_DEPLOY_TYPE")
+        [[ "$INPUT_TDGPT_ALL" == "true"    ]] && ARGS+=(--tdgpt-all)
+        [[ -n "$INPUT_TDENGINE_TSDB_VER"   ]] && ARGS+=(--tdengine-tsdb-ver="$INPUT_TDENGINE_TSDB_VER")
+        [[ -n "$INPUT_PIP_INDEX_URL"       ]] && ARGS+=(--pip-index-url="$INPUT_PIP_INDEX_URL")
+        [[ -n "$INPUT_PYTORCH_WHL_URL"     ]] && ARGS+=(--pytorch-whl-url="$INPUT_PYTORCH_WHL_URL")
+        [[ "$INPUT_INSTALL_DOCKER" == "true" ]] && ARGS+=(--install-docker)
+        [[ -n "$INPUT_DOCKER_VERSION"      ]] && ARGS+=(--docker-version="$INPUT_DOCKER_VERSION")
+        [[ "$INPUT_INSTALL_DOCKER_COMPOSE" == "true" ]] && ARGS+=(--install-docker-compose)
+        [[ -n "$INPUT_DOCKER_COMPOSE_VERSION" ]] && ARGS+=(--docker-compose-version="$INPUT_DOCKER_COMPOSE_VERSION")
+        [[ "$INPUT_INSTALL_JAVA" == "true" ]] && ARGS+=(--install-java)
+        [[ -n "$INPUT_JAVA_VERSION"        ]] && ARGS+=(--java-version="$INPUT_JAVA_VERSION")
+        [[ -n "$INPUT_IDMP_VER"            ]] && ARGS+=(--idmp-ver="$INPUT_IDMP_VER")
+        [[ -n "$INPUT_GH_TOKEN"            ]] && ARGS+=(--gh-token="$INPUT_GH_TOKEN")
+        [[ -n "$INPUT_NEXUS_URL"           ]] && ARGS+=(--nexus-url="$INPUT_NEXUS_URL")
 
-        ${{ github.action_path }}/../../scripts/offline_env/build_offline_pkg.sh "${ARGS[@]}"
+        "$ACTION_PATH/../../scripts/offline_env/build_offline_pkg.sh" "${ARGS[@]}"
 
         # Export output directory
-        if [[ -n "${{ inputs.output-dir }}" ]]; then
-          echo "output_dir=${{ inputs.output-dir }}" >> $GITHUB_OUTPUT
+        if [[ -n "$INPUT_OUTPUT_DIR" ]]; then
+          echo "output_dir=$INPUT_OUTPUT_DIR" >> "$GITHUB_OUTPUT"
         else
-          echo "output_dir=${{ github.action_path }}/../../scripts/offline_env/offline_pkgs" >> $GITHUB_OUTPUT
+          echo "output_dir=$ACTION_PATH/../../scripts/offline_env/offline_pkgs" >> "$GITHUB_OUTPUT"
         fi
 
         echo "::endgroup::"
