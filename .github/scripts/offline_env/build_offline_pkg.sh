@@ -105,8 +105,7 @@ FORWARD_ARGS=()
 
 # -- Captured from FORWARD_ARGS for default-package logic --
 SYSTEM_PACKAGES=""                          # from --system-packages (not forwarded directly)
-IDMP_ENABLED="false"                        # from --idmp=true
-TDGPT_ENABLED="false"                       # from --tdgpt=true
+DEPLOY_TYPE="tsdb"                          # from --deploy-type=tsdb|idmp|tdgpt
 
 # ======================== Script location =====================
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -215,8 +214,12 @@ PASS-THROUGH OPTIONS (forwarded to prepare_offline_pkg.sh):
   --python-packages=<pkgs>      Comma-separated Python packages
   --python-requirements=<url>   Requirements file URL or path
   --pkg-label=<label>           Package label (e.g. delivery-20260227)
-  --tdgpt=<true|false>          Enable TDgpt venv build
-  --tdgpt-all                   Build all TDgpt model venvs
+  --deploy-type=<type>          Deployment type: tsdb (default) | idmp | tdgpt
+                                Controls which system-package preset is included.
+                                tsdb  — base tools only
+                                idmp  — base + IDMP packages (Chromium deps, fonts, etc.)
+                                tdgpt — base + TDgpt build tools (gcc, make, etc.)
+  --tdgpt-all                   Build all TDgpt model venvs (only meaningful with --deploy-type=tdgpt)
   --tdengine-tsdb-ver=<ver>     TDengine version tag for requirements download
   --pip-index-url=<url>         Pip mirror URL
   --pytorch-whl-url=<url>       PyTorch wheel mirror URL
@@ -226,7 +229,6 @@ PASS-THROUGH OPTIONS (forwarded to prepare_offline_pkg.sh):
   --docker-compose-version=<v>  Docker Compose version
   --install-java                Include Java JRE
   --java-version=<ver>          Java version (8,11,17,21,23)
-  --idmp=<true|false>           Include IDMP packages
   --idmp-ver=<ver>              IDMP version for requirements download (e.g. 1.0.12.10, maps to tag ver-<ver>)
   --gh-token=<token>            GitHub token for private repos (required for TDasset)
   --bpftrace-version=<ver>      bpftrace version
@@ -259,8 +261,12 @@ EXAMPLES:
 
   # Build TDgpt full package for Kylin V10 SP3
   ./build_offline_pkg.sh --mode=docker --os=kylin --os-ver=v10-sp3-2403 \
-      --system-packages=build-essential --python-version=3.10 \
-      --tdgpt=true --tdgpt-all --tdengine-tsdb-ver=3.4.0.8 --pkg-label=tdgpt-all
+      --deploy-type=tdgpt --tdgpt-all --tdengine-tsdb-ver=3.4.0.8 \
+      --python-version=3.10 --pkg-label=tdgpt-all
+
+  # Build IDMP package for openEuler
+  ./build_offline_pkg.sh --mode=docker --os=openeuler --os-ver=24.03-lts-sp1 \
+      --deploy-type=idmp --idmp-ver=1.0.13.0 --gh-token=<token> --pkg-label=idmp-1.0.13.0
 
   # Build + test in one go
   ./build_offline_pkg.sh --mode=docker --os=ubuntu --os-ver=22.04 \
@@ -334,17 +340,12 @@ parse_args() {
             --system-packages=*)
                 # Captured here; NOT added to FORWARD_ARGS yet.
                 # apply_default_system_packages() will prepend preset defaults
-                # (for idmp/tdgpt) in front of the user-supplied packages,
-                # then main() pushes the merged --system-packages=... into FORWARD_ARGS.
+                # based on DEPLOY_TYPE, then main() pushes the merged value into FORWARD_ARGS.
                 SYSTEM_PACKAGES="${1#*=}"
                 ;;
-            --idmp=*)
-                IDMP_ENABLED="${1#*=}"
-                FORWARD_ARGS+=("$1")   # still forwarded verbatim
-                ;;
-            --tdgpt=*)
-                TDGPT_ENABLED="${1#*=}"
-                FORWARD_ARGS+=("$1")   # still forwarded verbatim
+            --deploy-type=*)
+                DEPLOY_TYPE="${1#*=}"
+                FORWARD_ARGS+=("$1")   # forwarded to prepare_offline_pkg.sh
                 ;;
             --pkg-label=*)
                 # Peek at pkg-label so we can use it for the build lock key.
@@ -852,34 +853,40 @@ deb ${nexus_base}/repository/${security_repo} ${codename}-security ${components}
 #   DEB (apt) : ubuntu, debian
 #   RPM (yum/dnf/rpm) : centos, kylin, openeuler  (and anything else)
 apply_default_system_packages() {
-    # Only apply defaults when a deployment type that needs them is requested.
-    [[ "$IDMP_ENABLED" != "true" && "$TDGPT_ENABLED" != "true" ]] && return 0
-
     # Determine package manager family from OS_KEY.
     local pkg_family="rpm"   # centos / kylin / openeuler
     case "${OS_KEY:-}" in
         ubuntu|debian) pkg_family="deb" ;;
     esac
 
-    # Build the preset package list for the deployment type + OS family.
-    local preset=""
-    if [[ "$IDMP_ENABLED" == "true" ]]; then
+    # ── Base tools — always included for ALL build types (tsdb / idmp / tdgpt) ──
+    local base_tools="screen,tmux,gdb,fio,iperf3,sysstat,atop,net-tools,ntp,tree,wget"
+
+    # ── Deployment-type-specific preset ────────────────────────────────────────
+    local deploy_preset=""
+    if [[ "$DEPLOY_TYPE" == "idmp" ]]; then
         if [[ "$pkg_family" == "deb" ]]; then
-            preset="unzip,libglib2.0-0,libdbus-1-3,libatk1.0-0,libatk-bridge2.0-0,libatspi2.0-0,libxcomposite1,libxdamage1,libxfixes3,libxrandr2,libgbm1,libxkbcommon0,libasound2,fonts-wqy-zenhei,fonts-wqy-microhei,ttf-wqy-zenhei,ttf-wqy-microhei"
+            deploy_preset="unzip,libglib2.0-0,libdbus-1-3,libatk1.0-0,libatk-bridge2.0-0,libatspi2.0-0,libxcomposite1,libxdamage1,libxfixes3,libxrandr2,libgbm1,libxkbcommon0,libasound2,fonts-wqy-zenhei,fonts-wqy-microhei,ttf-wqy-zenhei,ttf-wqy-microhei"
         else
-            preset="tar,gzip,curl,wget,vim,fontconfig,net-tools,libXrandr,wqy-microhei-fonts,libXcomposite,htop,tzdata,libXdamage,wqy-zenhei-fonts,mesa-libgbm,unzip,at-spi2-core,libxkbcommon,poppler-utils,glibc-all-langpacks,atk,libXfixes,dbus-libs,alsa-lib,glib2,ca-certificates,at-spi2-atk"
+            # wget and net-tools are already in base_tools, removed here to avoid duplicates.
+            deploy_preset="tar,gzip,curl,vim,fontconfig,libXrandr,wqy-microhei-fonts,libXcomposite,htop,tzdata,libXdamage,wqy-zenhei-fonts,mesa-libgbm,unzip,at-spi2-core,libxkbcommon,poppler-utils,glibc-all-langpacks,atk,libXfixes,dbus-libs,alsa-lib,glib2,ca-certificates,at-spi2-atk"
         fi
-    elif [[ "$TDGPT_ENABLED" == "true" ]]; then
+    elif [[ "$DEPLOY_TYPE" == "tdgpt" ]]; then
         if [[ "$pkg_family" == "deb" ]]; then
-            preset="gcc,libc-dev,procps,g++,build-essential"
+            # build-essential is a meta-package that pulls in gcc, g++, make, libc6-dev, etc.
+            deploy_preset="gcc,libc-dev,procps,g++,build-essential"
         else
-            preset="tar,gcc,gcc-c++,glibc-devel,procps-ng"
+            # RPM equivalent of build-essential: explicit list (no group install support in repotrack)
+            # make is included because uv/setuptools may invoke it when building C-extension wheels (e.g. uwsgi)
+            deploy_preset="tar,gcc,gcc-c++,make,glibc-devel,procps-ng"
         fi
     fi
 
-    local deploy_type="unknown"
-    [[ "$IDMP_ENABLED"  == "true" ]] && deploy_type="idmp"
-    [[ "$TDGPT_ENABLED" == "true" ]] && deploy_type="tdgpt"
+    # Combine: base tools (always) + deploy-specific additions (if any)
+    local preset="$base_tools"
+    [[ -n "$deploy_preset" ]] && preset="${preset},${deploy_preset}"
+
+    local deploy_type="$DEPLOY_TYPE"
 
     if [[ -z "$SYSTEM_PACKAGES" ]]; then
         # User did not specify any packages — use preset as-is.

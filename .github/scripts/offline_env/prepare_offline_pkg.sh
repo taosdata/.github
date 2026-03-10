@@ -172,6 +172,16 @@ while [[ $# -gt 0 ]]; do
             PKG_LABEL="${1#*=}"
             shift
             ;;
+        --deploy-type=*)
+            # External-facing alias: tsdb (default) | idmp | tdgpt
+            case "${1#*=}" in
+                idmp)  IDMP="true"  ;;
+                tdgpt) TDGPT="true" ;;
+                tsdb)  ;;  # default — no extra venv flag needed
+                *) echo "[WARNING] Unknown --deploy-type value: ${1#*=}"; ;;
+            esac
+            shift
+            ;;
         --tdgpt=*)
             TDGPT="${1#*=}"
             shift

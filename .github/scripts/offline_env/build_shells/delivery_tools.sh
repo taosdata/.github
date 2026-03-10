@@ -358,3 +358,36 @@ docker exec -ti offline_pkgs_builder \
     --install-java --java-version=21 \
     --pkg-label=idmp-v1.0.13.0 \
     --nexus-url=https://nexus.tdengine.net
+
+
+# TSDB（默认，不传也行）
+./build_offline_pkg.sh \
+    --mode=docker \
+    --os=openeuler \
+    --os-ver=24.03-lts-sp1 \
+    --deploy-type=tsdb \
+    --pkg-label=delivery-20260310 \
+    --nexus-url=https://nexus.tdengine.net
+
+# TDgpt
+./build_offline_pkg.sh \
+    --mode=docker \
+    --os=kylin \
+    --os-ver=v10-sp3-2403 \
+    --deploy-type=tdgpt \
+    --tdgpt-all \
+    --tdengine-tsdb-ver=3.4.0.8 \
+    --python-version=3.10 \
+    --pkg-label=tdgpt-3.4.0.8 \
+    --nexus-url=https://nexus.tdengine.net
+
+# IDMP
+./build_offline_pkg.sh \
+    --mode=docker \
+    --os=openeuler \
+    --os-ver=24.03-lts-sp1 \
+    --deploy-type=idmp \
+    --idmp-ver=1.0.13.0 \
+    --gh-token=YOUR_GH_TOKEN \
+    --pkg-label=idmp-1.0.13.0 \
+    --nexus-url=https://nexus.tdengine.net
