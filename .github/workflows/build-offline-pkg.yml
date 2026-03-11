@@ -1,0 +1,404 @@
+name: Build Offline Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      # ---- Target OS + version (combined to avoid invalid os/os-ver combinations) ----
+      os-target:
+        description: 'Target OS and version'
+        required: true
+        type: choice
+        options:
+          - 'ubuntu:20.04'
+          - 'ubuntu:22.04'
+          - 'ubuntu:24.04'
+          - 'centos:7'
+          - 'kylin:v10-sp1'
+          - 'kylin:v10-sp2'
+          - 'kylin:v10-sp3-2403'
+          - 'openeuler:20.03-lts'
+          - 'openeuler:20.03-lts-sp1'
+          - 'openeuler:20.03-lts-sp2'
+          - 'openeuler:20.03-lts-sp3'
+          - 'openeuler:20.03-lts-sp4'
+          - 'openeuler:22.03-lts'
+          - 'openeuler:22.03-lts-sp1'
+          - 'openeuler:22.03-lts-sp2'
+          - 'openeuler:22.03-lts-sp3'
+          - 'openeuler:22.03-lts-sp4'
+          - 'openeuler:24.03-lts'
+          - 'openeuler:24.03-lts-sp1'
+          - 'openeuler:24.03-lts-sp2'
+          - 'openeuler:24.03-lts-sp3'
+        default: 'ubuntu:22.04'
+
+      # ---- Architecture ----
+      arch:
+        description: 'Target architecture'
+        required: true
+        type: choice
+        options:
+          - 'x64'
+          - 'arm64'
+        default: 'x64'
+
+      # ---- Package label ----
+      pkg-label:
+        description: 'Package label suffix (e.g. delivery-20260227, TDgpt-20260227)'
+        required: true
+        type: string
+        default: 'delivery'
+
+      # ---- System packages ----
+      system-packages:
+        description: 'Comma-separated system packages (e.g. gdb,valgrind,bpftrace,perf)'
+        required: false
+        type: string
+        default: 'gdb,valgrind'
+
+      # ---- Deployment type ----
+      deploy-type:
+        description: 'Deployment type'
+        required: false
+        type: choice
+        options:
+          - 'tsdb'
+          - 'idmp'
+          - 'tdgpt'
+        default: 'tsdb'
+
+      tdgpt-all:
+        description: 'Build ALL TDgpt model venvs (includes prophet, fastdtw, etc.)'
+        required: false
+        type: boolean
+        default: false
+
+      tdengine-tsdb-ver:
+        description: 'TDengine version tag for requirements download (e.g. 3.4.0.8)'
+        required: false
+        type: string
+        default: '3.4.0.9'
+
+      # ---- Python ----
+      python-version:
+        description: 'Python version (e.g. 3.10)'
+        required: false
+        type: string
+        default: '3.10'
+
+      # ---- Additional components ----
+      install-docker:
+        description: 'Include Docker in offline package'
+        required: false
+        type: boolean
+        default: false
+
+      install-java:
+        description: 'Include Java JRE in offline package'
+        required: false
+        type: boolean
+        default: false
+
+      java-version:
+        description: 'Java version (8,11,17,21,23)'
+        required: false
+        type: string
+        default: '21'
+
+      idmp-ver:
+        description: 'IDMP version for requirements download (e.g. 1.0.12.10, maps to tag ver-<ver>)'
+        required: false
+        type: string
+        default: '1.0.13.0'
+
+      # ---- Mirrors ----
+      pip-index-url:
+        description: 'Pip mirror URL (blank = default Tsinghua mirror)'
+        required: false
+        type: string
+        default: 'https://pypi.tuna.tsinghua.edu.cn/simple'
+
+      pytorch-whl-url:
+        description: 'PyTorch wheel mirror URL (blank = default Aliyun mirror)'
+        required: false
+        type: string
+        default: 'https://download.pytorch.org/whl/cpu'
+
+      # ---- Cache ----
+      cache-dir:
+        description: 'Host cache directory for downloads (default: /tmp/taos-packages)'
+        required: false
+        type: string
+        default: '/tmp/taos-packages'
+
+      # ---- Cleanup ----
+      cleanup-container:
+        description: 'Remove Docker container after build'
+        required: false
+        type: boolean
+        default: true
+
+      # ---- Nexus mirror ----
+      nexus-url:
+        description: 'Nexus mirror base URL (e.g. https://nexus.example.com). Injects a transparent proxy repo into the build container. Leave empty to disable.'
+        required: false
+        type: string
+        default: 'https://nexus.tdengine.net'
+
+      # ---- NAS upload ----
+      upload-nas:
+        description: 'Upload built package to NAS via SCP'
+        required: false
+        type: boolean
+        default: false
+
+      nas-dir:
+        description: 'NAS destination directory (e.g. /pkgs/offline-env/tsdb)'
+        required: false
+        type: string
+        default: '/pkgs/offline-env'
+
+  workflow_call:
+    inputs:
+      os:
+        description: 'Target OS name: ubuntu, centos, kylin, openeuler'
+        required: true
+        type: string
+      os-ver:
+        description: 'OS version: 22.04, 7, v10-sp3-2403, 24.03-lts-sp2'
+        required: true
+        type: string
+      arch:
+        description: 'Target architecture: x64 or arm64'
+        required: false
+        type: string
+        default: 'x64'
+      action:
+        description: 'build, test, or build-and-test'
+        required: false
+        type: string
+        default: 'build'
+      pkg-label:
+        description: 'Package label suffix'
+        required: false
+        type: string
+        default: 'delivery'
+      system-packages:
+        description: 'Comma-separated system packages'
+        required: false
+        type: string
+        default: 'gdb,valgrind'
+      deploy-type:
+        description: 'Deployment type: tsdb | idmp | tdgpt'
+        required: false
+        type: string
+        default: 'tsdb'
+      tdgpt-all:
+        description: 'Build all TDgpt model venvs (true/false)'
+        required: false
+        type: string
+        default: 'false'
+      tdengine-tsdb-ver:
+        description: 'TDengine version tag'
+        required: false
+        type: string
+        default: ''
+      python-version:
+        description: 'Python version'
+        required: false
+        type: string
+        default: ''
+      install-docker:
+        description: 'Include Docker (true/false)'
+        required: false
+        type: string
+        default: 'false'
+      install-java:
+        description: 'Include Java (true/false)'
+        required: false
+        type: string
+        default: 'false'
+      java-version:
+        description: 'Java version'
+        required: false
+        type: string
+        default: ''
+      idmp-ver:
+        description: 'IDMP version for requirements download (e.g. 1.0.12.10)'
+        required: false
+        type: string
+        default: ''
+      pip-index-url:
+        description: 'Pip mirror URL'
+        required: false
+        type: string
+        default: ''
+      pytorch-whl-url:
+        description: 'PyTorch wheel mirror URL'
+        required: false
+        type: string
+        default: ''
+      cache-dir:
+        description: 'Host cache directory for downloads'
+        required: false
+        type: string
+        default: ''
+      cleanup-container:
+        description: 'Remove container after build (true/false)'
+        required: false
+        type: string
+        default: 'true'
+      nexus-url:
+        description: 'Nexus mirror base URL (empty = disabled)'
+        required: false
+        type: string
+        default: ''
+      upload-nas:
+        description: 'Upload built package to NAS via SCP (true/false)'
+        required: false
+        type: string
+        default: 'false'
+      nas-dir:
+        description: 'NAS destination directory'
+        required: false
+        type: string
+        default: ''
+    secrets:
+      gh-token:
+        description: 'GitHub token for private repos (TDasset)'
+        required: false
+      nas-ssh-key:
+        description: 'NAS SSH private key'
+        required: false
+      nas-host:
+        description: 'NAS hostname or IP'
+        required: false
+      nas-port:
+        description: 'NAS SSH port'
+        required: false
+      nas-username:
+        description: 'NAS SSH username'
+        required: false
+
+jobs:
+  build-offline-pkg:
+    name: "Build ${{ inputs.os-target || format('{0}:{1}', inputs.os, inputs.os-ver) }} (${{ inputs.arch }})"
+    runs-on:
+      labels: [self-hosted, Linux, offline-env-build, "${{ inputs.arch == 'arm64' && 'ARM64' || 'X64' }}"]
+
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Parse os-target
+        id: parse
+        shell: bash
+        run: |
+          # workflow_dispatch uses os-target (e.g. "ubuntu:22.04")
+          # workflow_call uses separate os + os-ver for programmatic use
+          if [[ -n "${{ inputs.os-target }}" ]]; then
+            OS="${{ inputs.os-target }%%:*}"
+            OS_VER="${{ inputs.os-target }#*:}"
+          else
+            OS="${{ inputs.os }}"
+            OS_VER="${{ inputs.os-ver }}"
+          fi
+          echo "os=${OS}" >> $GITHUB_OUTPUT
+          echo "os-ver=${OS_VER}" >> $GITHUB_OUTPUT
+          echo "Resolved: os=${OS}, os-ver=${OS_VER}"
+
+      - name: Build offline package
+        uses: ./.github/actions/build-offline-pkg
+        with:
+          mode: docker
+          os: ${{ steps.parse.outputs.os }}
+          os-ver: ${{ steps.parse.outputs.os-ver }}
+          arch: ${{ inputs.arch }}
+          action: ${{ inputs.action || 'build' }}
+          cleanup-container: ${{ inputs.cleanup-container }}
+          cache-dir: ${{ inputs.cache-dir }}
+          system-packages: ${{ inputs.system-packages }}
+          python-version: ${{ inputs.python-version }}
+          pkg-label: ${{ inputs.pkg-label }}
+          deploy-type: ${{ inputs.deploy-type }}
+          tdgpt-all: ${{ inputs.tdgpt-all }}
+          tdengine-tsdb-ver: ${{ inputs.tdengine-tsdb-ver }}
+          install-docker: ${{ inputs.install-docker }}
+          install-java: ${{ inputs.install-java }}
+          java-version: ${{ inputs.java-version }}
+          idmp-ver: ${{ inputs.idmp-ver }}
+          gh-token: ${{ inputs.gh-token || secrets.RUNNER_PAT }}
+          pip-index-url: ${{ inputs.pip-index-url }}
+          pytorch-whl-url: ${{ inputs.pytorch-whl-url }}
+          nexus-url: ${{ inputs.nexus-url }}
+
+      - name: List output artifacts
+        if: always()
+        shell: bash
+        run: |
+          echo "=== Output directory ==="
+          OUTPUT_DIR="${{ github.workspace }}/.github/scripts/offline_env/offline_pkgs"
+          if [[ -d "$OUTPUT_DIR" ]]; then
+            ls -lhR "$OUTPUT_DIR" | head -100
+            echo ""
+            echo "=== tar.gz files ==="
+            find "$OUTPUT_DIR" -name '*.tar.gz' -exec ls -lh {} \;
+          else
+            echo "Output directory not found: $OUTPUT_DIR"
+          fi
+
+      - name: Find built tarball
+        if: success()
+        id: find-tarball
+        shell: bash
+        run: |
+          OUTPUT_DIR="${{ github.workspace }}/.github/scripts/offline_env/offline_pkgs"
+          TARBALL=$(find "$OUTPUT_DIR" -maxdepth 2 -name '*.tar.gz' -type f 2>/dev/null \
+            | xargs ls -t 2>/dev/null | head -1)
+          if [[ -z "$TARBALL" ]]; then
+            echo "::warning::No .tar.gz artifact found"
+          fi
+          echo "path=${TARBALL}" >> $GITHUB_OUTPUT
+
+      - name: Upload to NAS
+        if: success() && (inputs.upload-nas == true || inputs.upload-nas == 'true') && steps.find-tarball.outputs.path != ''
+        id: nas-upload
+        uses: ./.github/actions/upload-nas
+        with:
+          file:        ${{ steps.find-tarball.outputs.path }}
+          nas-ssh-key: ${{ secrets.NAS_SSH_KEY || secrets.nas-ssh-key }}
+          nas-host:    ${{ secrets.NAS_HOST    || secrets.nas-host }}
+          nas-port:    ${{ secrets.NAS_PORT    || secrets.nas-port || '22' }}
+          nas-username: ${{ secrets.NAS_USERNAME || secrets.nas-username }}
+          nas-dir:     ${{ inputs.nas-dir }}
+
+      - name: Build summary
+        if: always()
+        shell: bash
+        run: |
+          TARBALL="${{ steps.find-tarball.outputs.path }}"
+          PKG_SIZE=$(du -sh "$TARBALL" 2>/dev/null | awk '{print $1}' || echo 'N/A')
+          FILENAME=$(basename "${TARBALL:-unknown}")
+
+          {
+            echo "## 📦 Offline Package Build Summary"
+            echo ""
+            echo "| Item | Value |"
+            echo "|------|-------|"
+            echo "| Runner | \`$(hostname)\` |"
+            echo "| OS Target | \`${{ steps.parse.outputs.os }}:${{ steps.parse.outputs.os-ver }}\` |"
+            echo "| Arch | \`${{ inputs.arch }}\` |"
+            echo "| Deploy Type | \`${{ inputs.deploy-type || 'tsdb' }}\` |"
+            echo "| Package Label | \`${{ inputs.pkg-label }}\` |"
+            if [[ -n "$TARBALL" ]]; then
+              echo "| Package File | \`${FILENAME}\` |"
+              echo "| Package Size | \`${PKG_SIZE}\` |"
+              echo "| Local Path | \`${TARBALL}\` |"
+            fi
+            if [[ "${{ inputs.upload-nas }}" == "true" ]]; then
+              echo "| NAS Host | \`${{ secrets.NAS_HOST || secrets.nas-host }}\` |"
+              echo "| NAS Path | \`${{ steps.nas-upload.outputs.nas-path }}\` |"
+            fi
+          } >> $GITHUB_STEP_SUMMARY
