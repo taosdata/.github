@@ -59,8 +59,9 @@ class TestRunner:
 
         allowed_case_prefix = "test/cases/"
         allowed_task_file = "test/ci/cases.task"
+        allowed_yml_file = ".github/workflows/new-framework-test.yml"
         return all(
-            file_path.startswith(allowed_case_prefix) or file_path == allowed_task_file
+            file_path.startswith(allowed_case_prefix) or file_path == allowed_task_file or file_path == allowed_yml_file
             for file_path in changed_files
         )
 
