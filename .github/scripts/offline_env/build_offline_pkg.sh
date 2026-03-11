@@ -847,7 +847,10 @@ apply_default_system_packages() {
     esac
 
     # ── Base tools — always included for ALL build types (tsdb / idmp / tdgpt) ──
-    local base_tools="screen,tmux,gdb,fio,iperf3,sysstat,atop,net-tools,ntp,tree,wget"
+    # Note: atop is DEB-only (not available in openEuler/Kylin/CentOS repos);
+    #       sysstat (sar/iostat) covers the equivalent monitoring use case on RPM systems.
+    local base_tools="screen,tmux,gdb,fio,iperf3,sysstat,net-tools,ntp,tree,wget"
+    [[ "$pkg_family" == "deb" ]] && base_tools="${base_tools},atop"
 
     # ── Deployment-type-specific preset ────────────────────────────────────────
     local deploy_preset=""
@@ -893,6 +896,43 @@ main() {
     parse_args "$@"
     validate
     apply_default_system_packages
+
+    # Apply default python-version for deploy types that require a venv,
+    # unless the caller already supplied --python-version in FORWARD_ARGS.
+    if [[ "$DEPLOY_TYPE" == "idmp" || "$DEPLOY_TYPE" == "tdgpt" ]]; then
+        local has_python_ver=false
+        local arg
+        for arg in "${FORWARD_ARGS[@]}"; do
+            [[ "$arg" == --python-version=* ]] && { has_python_ver=true; break; }
+        done
+        if [[ "$has_python_ver" == false ]]; then
+            local default_python_ver
+            case "$DEPLOY_TYPE" in
+                idmp)  default_python_ver="3.12" ;;
+                tdgpt) default_python_ver="3.10" ;;
+            esac
+            yellow_echo "No --python-version specified; defaulting to ${default_python_ver} for deploy-type=${DEPLOY_TYPE}"
+            FORWARD_ARGS+=("--python-version=${default_python_ver}")
+        fi
+    fi
+
+    # For idmp: default to --install-java --java-version=21 unless already supplied.
+    if [[ "$DEPLOY_TYPE" == "idmp" ]]; then
+        local has_install_java=false has_java_ver=false
+        local arg
+        for arg in "${FORWARD_ARGS[@]}"; do
+            [[ "$arg" == "--install-java" ]] && has_install_java=true
+            [[ "$arg" == --java-version=* ]] && has_java_ver=true
+        done
+        if [[ "$has_install_java" == false ]]; then
+            yellow_echo "No --install-java specified; defaulting to --install-java --java-version=21 for deploy-type=idmp"
+            FORWARD_ARGS+=("--install-java")
+        fi
+        if [[ "$has_java_ver" == false ]]; then
+            FORWARD_ARGS+=("--java-version=21")
+        fi
+    fi
+
     # Push --system-packages into FORWARD_ARGS now (after defaults may have been filled).
     [[ -n "$SYSTEM_PACKAGES" ]] && FORWARD_ARGS+=("--system-packages=${SYSTEM_PACKAGES}")
 

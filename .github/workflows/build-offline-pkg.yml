@@ -284,7 +284,7 @@ jobs:
   build-offline-pkg:
     name: "Build ${{ inputs.os-target || format('{0}:{1}', inputs.os, inputs.os-ver) }} (${{ inputs.arch }})"
     runs-on:
-      labels: [self-hosted, Linux, "${{ inputs.arch == 'arm64' && 'ARM64' || 'X64' }}"]
+      labels: [self-hosted, Linux, offline-env-build, "${{ inputs.arch == 'arm64' && 'ARM64' || 'X64' }}"]
 
     timeout-minutes: 120
 

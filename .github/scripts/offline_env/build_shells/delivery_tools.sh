@@ -365,7 +365,7 @@ docker exec -ti offline_pkgs_builder \
     --os=openeuler \
     --os-ver=24.03-lts-sp1 \
     --deploy-type=tsdb \
-    --pkg-label=delivery-20260310 \
+    --pkg-label=delivery-20260311 \
     --nexus-url=https://nexus.tdengine.net
 
 # TDgpt
@@ -377,7 +377,18 @@ docker exec -ti offline_pkgs_builder \
     --tdgpt-all \
     --tdengine-tsdb-ver=3.4.0.8 \
     --python-version=3.10 \
-    --pkg-label=tdgpt-3.4.0.8 \
+    --pkg-label=tdgpt-3.4.0.8-0311 \
+    --nexus-url=https://nexus.tdengine.net
+
+./build_offline_pkg.sh \
+    --mode=docker \
+    --os=openeuler \
+    --os-ver=24.03-lts-sp1 \
+    --deploy-type=tdgpt \
+    --tdgpt-all \
+    --tdengine-tsdb-ver=3.4.0.8 \
+    --python-version=3.10 \
+    --pkg-label=tdgpt-3.4.0.8-0311 \
     --nexus-url=https://nexus.tdengine.net
 
 # IDMP

@@ -1172,6 +1172,14 @@ function build_tdgpt_venvs() {
         rm -rf "$req_dir"
     fi
 
+    # Remove distutils-precedence.pth from all TDgpt venvs.
+    # This .pth file (seeded by pip) references _distutils_hack which is only
+    # present when setuptools is installed as a standalone package.  Deployed
+    # venvs never build packages, so the distutils shim is not needed and its
+    # absence causes a harmless-but-noisy ModuleNotFoundError on every Python
+    # startup.  Deleting the file silences the error without side-effects.
+    find "$py_venv_dir" -name "distutils-precedence.pth" -delete 2>/dev/null || true
+
     # Copy .local directory for uv
     cp -r "$HOME/.local" "$py_venv_dir/"
 
@@ -1241,6 +1249,9 @@ function build_idmp_venvs() {
 
     # Clean up temp dir
     rm -rf "$req_dir"
+
+    # Same rationale as TDgpt venvs: remove stale distutils-precedence.pth.
+    find "$py_venv_dir" -name "distutils-precedence.pth" -delete 2>/dev/null || true
 
     # Copy .local directory for uv
     cp -r "$HOME/.local" "$py_venv_dir/"
