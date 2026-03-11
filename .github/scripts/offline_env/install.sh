@@ -122,7 +122,8 @@ function install_venv() {
         done
 
         venv_dir=$(find "$script_path/py_venv" -maxdepth 1 -type d -name ".venv*" -print -quit)
-        venv_name=$(basename "$venv_dir")
+        venv_name=""
+        [[ -n "$venv_dir" ]] && venv_name=$(basename "$venv_dir")
         if [ -d "$script_path/py_venv/venv" ];then
             if [ -d "$script_path/idmp" ]; then
                 # IDMP deployment: install to /usr/local/taos/idmp/venv
@@ -145,8 +146,11 @@ function install_venv() {
             venv_label=0
         elif [ -d "$script_path/py_venv/idmp_venv" ]; then
             # IDMP venv built by build_idmp_venvs (saved as py_venv/idmp_venv/)
-            mkdir -p "/usr/local/taos/idmp"
-            cp -r "$script_path/py_venv/idmp_venv" "/usr/local/taos/idmp/venv"
+            # Remove existing dest first to avoid nested venv/idmp_venv/... on re-runs
+            mkdir -p "$(dirname "$IDMP_VENV_DIR")"
+            rm -rf "$IDMP_VENV_DIR"
+            mkdir -p "$IDMP_VENV_DIR"
+            cp -r "$script_path/py_venv/idmp_venv/." "$IDMP_VENV_DIR/"
             venv_label=0
         else
             venv_label=1
@@ -589,11 +593,17 @@ function install_system_packages() {
     fi
 }
 
-# Disable SELinux permanently on RPM-based distros (CentOS/RHEL/openEuler/Kylin).
-# Required for TDgpt/IDMP services: SELinux blocks uwsgi/Python dynamic library loading
-# (status=203/EXEC from systemd) even when the binary path is correct.
-# Also disables it for the current session via setenforce so no reboot is needed.
-function disable_selinux() {
+# Relax SELinux enforcement on RPM-based distros (CentOS/RHEL/openEuler/Kylin).
+# TDgpt/IDMP services (uwsgi, Python dynamic library loading) may fail under
+# strict Enforcing mode.  Rather than globally disabling SELinux — which removes
+# host-level protection for ALL services — this function switches the machine to
+# Permissive mode for the current session only and prints a prominent warning.
+#
+# Permanent policy changes (writing SELINUX=disabled to /etc/selinux/config) are
+# intentionally NOT performed here.  If you need a permanent change, either:
+#   (a) craft an application-specific SELinux policy/boolean for uwsgi/tdgpt, or
+#   (b) pass --disable-selinux to this script and acknowledge the security impact.
+function relax_selinux() {
     local selinux_config="/etc/selinux/config"
 
     # Only applies to RPM-based systems that have SELinux
@@ -604,28 +614,53 @@ function disable_selinux() {
     # Check if SELinux is enabled
     local current_mode
     current_mode=$(getenforce 2>/dev/null || echo "Disabled")
-    if [ "$current_mode" = "Disabled" ]; then
+    if [ "$current_mode" = "Disabled" ] || [ "$current_mode" = "Permissive" ]; then
         return 0
     fi
 
-    yellow_echo "Disabling SELinux (current mode: $current_mode)..."
+    yellow_echo "WARNING: SELinux is Enforcing. Switching to Permissive for this session only."
+    yellow_echo "  This does NOT permanently disable SELinux."
+    yellow_echo "  For a permanent, least-privilege fix, create an application-specific SELinux policy."
+    yellow_echo "  To permanently disable (not recommended), re-run with: --disable-selinux"
 
-    # Disable for current session immediately (no reboot needed)
+    # Permissive for the current session — SELinux still logs denials but does not block
     setenforce 0 2>/dev/null || true
 
-    # Persist: set SELINUX=disabled in /etc/selinux/config
+    green_echo "SELinux set to Permissive (current session only; Enforcing will resume after reboot)"
+}
+
+# Permanently disable SELinux — opt-in only, called when --disable-selinux is passed.
+# WARNING: This removes SELinux confinement for ALL processes on the host.
+function disable_selinux_permanent() {
+    local selinux_config="/etc/selinux/config"
+    if [ ! -f "$selinux_config" ]; then
+        return 0
+    fi
+
+    yellow_echo "WARNING: Permanently disabling SELinux as requested (--disable-selinux)."
+    yellow_echo "  This removes SELinux confinement for ALL services on this host."
+    setenforce 0 2>/dev/null || true
     if grep -q '^SELINUX=' "$selinux_config"; then
         sed -i 's/^SELINUX=.*/SELINUX=disabled/' "$selinux_config"
     else
         echo "SELINUX=disabled" >> "$selinux_config"
     fi
-
-    green_echo "SELinux disabled (current session + permanent after reboot)"
+    green_echo "SELinux permanently disabled (effective after reboot)"
 }
 
 function main() {
+    # Parse optional flags
+    local disable_selinux_flag=false
+    for arg in "$@"; do
+        [[ "$arg" == "--disable-selinux" ]] && disable_selinux_flag=true
+    done
+
     if [ -f /etc/os-release ]; then
-        disable_selinux
+        if [[ "$disable_selinux_flag" == true ]]; then
+            disable_selinux_permanent
+        else
+            relax_selinux
+        fi
         install_venv
         install_binary_tools
         install_docker
@@ -637,20 +672,30 @@ function main() {
         if [ $venv_label -eq 0 ];then
             green_echo "You can activate pyvenv via:\n\tsource $python_venv_dir/bin/activate"
         elif [ $venv_label -eq 1 ];then
-            green_echo "You can activate pyvenv via:\n\tsource $HOME/$venv_name/bin/activate"
+            if [[ -n "$venv_name" ]]; then
+                green_echo "You can activate pyvenv via:\n\tsource $HOME/$venv_name/bin/activate"
+            else
+                green_echo "No .venv* directory found under py_venv; skipping activation hint"
+            fi
         else
             green_echo "No pyvenv activate"
         fi
         if [ "$java_installed" = "true" ]; then
             yellow_echo "Please run 'source /etc/profile.d/java.sh' or re-login to use java command"
         fi
-        # SELinux reminder: only shown when /etc/selinux/config exists (RPM-based systems)
-        if [ -f /etc/selinux/config ] && grep -q '^SELINUX=disabled' /etc/selinux/config; then
-            yellow_echo "SELinux has been disabled (effective now; permanent after re-login)"
+        # SELinux reminder: only shown on RPM-based systems
+        if [ -f /etc/selinux/config ]; then
+            local cur_mode
+            cur_mode=$(getenforce 2>/dev/null || echo "Disabled")
+            if [ "$cur_mode" = "Permissive" ]; then
+                yellow_echo "SELinux is Permissive (session only). Consider a proper app policy for production."
+            elif grep -q '^SELINUX=disabled' /etc/selinux/config; then
+                yellow_echo "SELinux is permanently disabled. Re-enable and create an app policy when possible."
+            fi
         fi
     else
         red_echo "Cannot detect OS and set OS_ID and OS_VERSION to unknown"
     fi
 }
 
-main
+main "$@"

@@ -56,7 +56,7 @@ install_uv_cached() {
                 exit 1
             fi
         else
-            local setup_env="$script_dir/setup_env.sh"
+            local setup_env="$CACHE_DIR/setup_env.sh"
             if ! curl -o "$setup_env" https://raw.githubusercontent.com/taosdata/TDengine/main/packaging/setup_env.sh; then
                 red_echo "Failed to download setup_env.sh"
                 exit 1
@@ -121,9 +121,10 @@ function show_usage() {
     echo "  Path Options: [--bpftrace-version=<version>] (default: 0.23.2) [--tdgpt-base-dir=<path>] (default: /var/lib/taos/taosanode) [--idmp-venv-dir=<path>] (default: /usr/local/taos/idmp/venv)"
     echo ""
     echo "TDgpt Model Options:"
-    echo "  --tdengine-tsdb-ver=<ver>  TDengine version to download requirements files from GitHub"
+    echo "  --tdengine-tsdb-ver=<ver>  (REQUIRED for --tdgpt) TDengine version used to download requirements files from GitHub"
     echo "                            (e.g. 3.4.0.8). Downloads tools/tdgpt/requirements_*.txt from tag ver-<ver>."
-    echo "                            If not specified, falls back to local requirements files in script dir."
+    echo "                            requirements_ess.txt / requirements_docker.txt are NOT vendored in this repo;"
+    echo "                            --tdengine-tsdb-ver must always be specified when using --tdgpt=true."
     echo "  --tdgpt-all               Build all model venvs (mirrors install_tdgpt.sh -a flag)"
     echo "                            Default (without --tdgpt-all): only build main venv for tdtsfm/timemoe"
     echo "                            With --tdgpt-all: also build timesfm/moirai/chronos/moment extra venvs"
@@ -297,6 +298,13 @@ function validate_params() {
     # TDGPT/IDMP is enabled (both require a Python venv at a specific version).
     if [[ ( -n "$PYTHON_PACKAGES" || -n "$PYTHON_REQUIREMENTS" || -n "$TDGPT" || -n "$IDMP" ) && -z "$PYTHON_VERSION" ]]; then
         package_error="**PYTHON_VERSION** is required when **PYTHON_PACKAGES**, **PYTHON_REQUIREMENTS**, **TDGPT**, or **IDMP** is specified."
+    fi
+
+    # Check TDENGINE_TSDB_VER is provided for TDgpt builds:
+    # requirements_ess.txt / requirements_docker.txt are not vendored in this repo,
+    # so the local fallback path is always unavailable.
+    if [[ -n "$TDGPT" && -z "$TDENGINE_TSDB_VER" ]]; then
+        package_error="**--tdengine-tsdb-ver** is required when **--tdgpt=true** is specified (requirements files are not vendored in this repo)."
     fi
 
     # Combined error message
@@ -492,12 +500,12 @@ function init() {
 
 function config_yum() {
     # Define the line to be added
-    if ! curl -o "$script_dir"/setup_env.sh https://raw.githubusercontent.com/taosdata/TDengine/main/packaging/setup_env.sh; then
+    if ! curl -o "$CACHE_DIR/setup_env.sh" https://raw.githubusercontent.com/taosdata/TDengine/main/packaging/setup_env.sh; then
         red_echo "Failed to download setup_env.sh"
         exit 1
     fi
-    chmod +x "$script_dir"/setup_env.sh
-    if ! "$script_dir"/setup_env.sh replace_sources; then
+    chmod +x "$CACHE_DIR/setup_env.sh"
+    if ! "$CACHE_DIR/setup_env.sh" replace_sources; then
         red_echo "Failed to replace sources"
         exit 1
     fi
@@ -1066,14 +1074,22 @@ function build_tdgpt_venvs() {
         fi
         green_echo "Successfully downloaded requirements files from tag ver-${TDENGINE_TSDB_VER}"
     else
-        # Fallback to local files in script directory
-        req_dir="$script_dir"
-        if [ ! -f "$req_dir/requirements_ess.txt" ]; then
+        # Fallback to local files in script directory — copy to a temp dir so that
+        # (a) sed -i doesn't mutate repo files in native mode, and
+        # (b) the files are writable when /build-scripts is mounted read-only in Docker.
+        local local_req_dir
+        local_req_dir=$(mktemp -d)
+        if [ ! -f "$script_dir/requirements_ess.txt" ]; then
             red_echo "Local requirements_ess.txt not found and --tdengine-tsdb-ver not specified."
             red_echo "Please specify --tdengine-tsdb-ver=<ver> (e.g. --tdengine-tsdb-ver=3.4.0.8) to download from GitHub."
+            rm -rf "$local_req_dir"
             exit 1
         fi
-        yellow_echo "Using local requirements files from: $req_dir"
+        cp "$script_dir/requirements_ess.txt" "$local_req_dir/requirements_ess.txt"
+        [ -f "$script_dir/requirements_docker.txt" ] && \
+            cp "$script_dir/requirements_docker.txt" "$local_req_dir/requirements_docker.txt"
+        req_dir="$local_req_dir"
+        yellow_echo "Using local requirements files (copied to temp dir): $req_dir"
     fi
 
     yellow_echo "Building main venv for tdtsfm/timemoe (via requirements_ess.txt)..."
@@ -1151,8 +1167,8 @@ function build_tdgpt_venvs() {
         green_echo "momentfm venv built successfully"
     fi
 
-    # Clean up downloaded requirements temp dir
-    if [ -n "$TDENGINE_TSDB_VER" ] && [ -d "$req_dir" ] && [[ "$req_dir" == /tmp/* ]]; then
+    # Clean up temp requirements dir (both downloaded and locally-copied)
+    if [ -d "$req_dir" ] && [ "$req_dir" != "$script_dir" ]; then
         rm -rf "$req_dir"
     fi
 

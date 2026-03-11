@@ -374,15 +374,6 @@ jobs:
           nas-username: ${{ secrets.NAS_USERNAME || secrets.nas-username }}
           nas-dir:     ${{ inputs.nas-dir }}
 
-      - name: Upload artifact to GitHub
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: "offline-pkg-${{ steps.parse.outputs.os }}-${{ steps.parse.outputs.os-ver }}-${{ inputs.pkg-label }}-${{ inputs.arch }}"
-          path: "${{ github.workspace }}/.github/scripts/offline_env/offline_pkgs/*.tar.gz"
-          retention-days: 30
-          if-no-files-found: warn
-
       - name: Build summary
         if: always()
         shell: bash
