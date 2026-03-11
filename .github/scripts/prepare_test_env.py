@@ -56,6 +56,41 @@ class TestPreparer:
 
         # Set branch variables
         self._set_branch_variables()
+        self.temp_dir = self.utils.path(
+            self.wkdir, "tmp", f"{self.pr_number}_{self.run_number}_{self.run_attempt}"
+        )
+
+    def _run_git_command(self, repo_path, args):
+        """Run a git command and return stdout."""
+        result = subprocess.run(
+            ["git", *args],
+            cwd=repo_path,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return result.stdout
+
+    def _get_merge_base(self, repo_path):
+        """Get merge-base between the PR merge commit and target branch."""
+        return self._run_git_command(
+            repo_path,
+            ["merge-base", "FETCH_HEAD", f"origin/{self.target_branch}"],
+        ).strip()
+
+    def _filter_non_doc_files(self, changed_files):
+        """Filter out docs-only and markdown-only changes."""
+        filtered_files = []
+        for file_path in changed_files:
+            normalized = file_path.strip().replace("\\", "/")
+            if not normalized:
+                continue
+            if normalized.startswith("docs/en/") or normalized.startswith("docs/zh/"):
+                continue
+            if normalized.endswith(".md"):
+                continue
+            filtered_files.append(normalized)
+        return filtered_files
 
     def _get_local_ip(self) -> str:
         """get local IP address"""
@@ -248,15 +283,27 @@ class TestPreparer:
             f.write(f"{repo_log_name} log merged: {log_merged}\n")
 
     def output_file_no_doc_change(self):
-        cmds = [
-            f"mkdir -p {self.wkdir}/tmp/{self.pr_number}_{self.run_number}_{self.run_attempt}",
-            f"""
-            cd {self.wkc} \
-            && changed_files_non_doc=$(git --no-pager diff --name-only FETCH_HEAD `git merge-base FETCH_HEAD origin/{self.target_branch}` | grep -v '^docs/en/' | grep -v '^docs/zh/' | grep -v '.md$' | tr '\n' ' ' || :) \
-            && echo $changed_files_non_doc > {self.wkdir}/tmp/{self.pr_number}_{self.run_number}_{self.run_attempt}/docs_changed.txt
-            """,
-        ]
-        self.utils.run_commands(cmds)
+        self.utils.mkdir(self.temp_dir)
+        merge_base = self._get_merge_base(self.wkc)
+
+        changed_files_output = self._run_git_command(
+            self.wkc, ["diff", "--name-only", merge_base, "FETCH_HEAD", "--"]
+        )
+        changed_files = self._filter_non_doc_files(changed_files_output.splitlines())
+        docs_changed_path = self.utils.path(self.temp_dir, "docs_changed.txt")
+        docs_changed_content = "\n".join(changed_files)
+        if docs_changed_content:
+            docs_changed_content += "\n"
+        self.utils.write_file(docs_changed_path, docs_changed_content)
+
+        cases_task_diff = self._run_git_command(
+            self.wkc,
+            ["diff", "--unified=0", merge_base, "FETCH_HEAD", "--", "test/ci/cases.task"],
+        )
+        self.utils.write_file(
+            self.utils.path(self.temp_dir, "cases_task_diff.txt"),
+            cases_task_diff,
+        )
 
     def output_environment_info(self):
         cmd = f"echo {self.wkdir}/restore.sh -p PR-{self.pr_number} -n {self.run_number} -c {self.container_name}"
@@ -500,24 +547,6 @@ class TestPreparer:
             return False
         return True
 
-    def _output_file_no_doc_change_remote(self, host_config):
-        """Output file without doc changes on remote host"""
-        host = host_config["host"]
-        workdir = host_config["workdir"]
-
-        logger.info(f"Outputting file without doc changes on {host}...")
-        cmd = f"""
-        mkdir -p {workdir}/tmp/{self.pr_number}_{self.run_number}_{self.run_attempt} && \
-        cd {workdir}/TDinternal/community && \
-        changed_files_non_doc=$(git --no-pager diff --name-only FETCH_HEAD `git merge-base FETCH_HEAD {self.target_branch}` | grep -v '^docs/en/' | grep -v '^docs/zh/' | grep -v '.md$' | tr '\\n' ' ' || :) && \
-        echo $changed_files_non_doc > {workdir}/tmp/{self.pr_number}_{self.run_number}_{self.run_attempt}/docs_changed.txt
-        """
-        success, _ = self._execute_remote_command(host_config, cmd)
-        if not success:
-            logger.error(f"Failed to output file without doc changes on {host}")
-            return False
-        return True
-
     def _get_testing_params_remote(self, host_config):
         """Get testing parameters on remote host"""
         host = host_config["host"]
@@ -573,12 +602,8 @@ class TestPreparer:
             # if not self._update_submodules_remote(host_config):
             #     return False
 
-            # Output file without doc changes (Linux only)
+            # Get testing parameters
             if platform.system().lower() == "linux":
-                if not self._output_file_no_doc_change_remote(host_config):
-                    return False
-
-                # Get testing parameters
                 if not self._get_testing_params_remote(host_config):
                     return False
 
@@ -612,8 +637,8 @@ class TestPreparer:
             self.prepare_repositories()
             self.update_codes()
             # self.update_submodules()
+            self.output_file_no_doc_change()
             if platform.system().lower() == "linux":
-                self.output_file_no_doc_change()
                 self.get_testing_params()
 
             logger.info("Preparation phase completed successfully.")
