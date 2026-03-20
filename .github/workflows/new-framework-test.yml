@@ -163,71 +163,53 @@ jobs:
         env:
           TEST_TYPE: "function_returns"
 
-      - name: Start upgrade compatibility tests task on background
-        if: matrix.platform == 'linux'
+      - name: Run function and upgrade compatibility tests
+        if: matrix.platform == 'linux' || env.TARGET_BRANCH != '3.3.6'
         run: |
           log_dir="${WKDIR}/log/upgrade_compat"
-          mkdir -p "${WKDIR}/tmp" "$log_dir"
-          (
-            bash ${WKC}/test/ci/run_upgrade_compat.sh -w ${WKDIR} -l ${log_dir} -e \
-              >> "${log_dir}/ci_output.log" 2>&1
-            echo $? > "${WKDIR}/tmp/upgrade_compat_exit.txt"
-          ) &
-          echo $! > "${WKDIR}/tmp/upgrade_compat.pid"
-          echo "[upgrade_compat] Started in background, PID=$(cat ${WKDIR}/tmp/upgrade_compat.pid)"
+          mkdir -p "$log_dir"
+          exit_file="${log_dir}/upgrade_compat_exit.txt"
+          compat_pid=""
 
-      - name: Run function test cases
-        if: matrix.platform == 'linux' || env.TARGET_BRANCH != '3.3.6'
-        run: python3 test_runner.py
+          #
+          #  Run compatible cases in background
+          #
+          http_base=$(echo "$extra_param" | grep -oE 'http://[^ ]+' || true)
+          rel_path="${log_dir#${WKDIR}/}"
+          log_url="${http_base}/${rel_path}/ci_output.log"
+
+          compat_start=$(date +%s)
+          container_name="upgrade-compat-${PR_NUMBER:-0}_${GITHUB_RUN_NUMBER:-0}_${GITHUB_RUN_ATTEMPT:-0}"
+          echo "[upgrade_compat]  START >>>>>  cold/hot upgrade compatibility tests [$(date '+%Y-%m-%d %H:%M:%S')]"
+          echo "[upgrade_compat]  Docker container name: ${container_name}"
+
+          (
+            set +e +o pipefail
+            bash ${WKC}/test/ci/run_upgrade_compat.sh -w ${WKDIR} -l ${log_dir} 2>&1 | \
+              sed -u 's/^/[upgrade_compat] /'
+            echo ${PIPESTATUS[0]} > "$exit_file"
+          ) &
+          compat_pid=$!
+
+
+          #
+          # Run function tests (foreground, blocking)
+          #
+          python3 test_runner.py
+          func_ret=$?
+
+          if [ -n "$compat_pid" ]; then
+            wait $compat_pid 2>/dev/null || true
+            compat_ret=$(cat "$exit_file" 2>/dev/null || echo "1")
+            compat_end=$(date +%s)
+            elapsed=$((compat_end - compat_start))
+            status="success"
+            [ "$compat_ret" != "0" ] && status="failure"
+            echo "[upgrade_compat]  DONE  <<<<<  cold/hot upgrade compatibility tests [${elapsed}s]  ${status}"
+            echo "[upgrade_compat]  Log: ${log_url}"
+          fi
+
+          [ $func_ret -eq 0 ] || exit $func_ret
+          [ -z "$compat_pid" ] || [ "${compat_ret:-0}" -eq 0 ] || exit $compat_ret
         env:
           TEST_TYPE: "function"
-
-      - name: Checking upgrade compatibility tests finished
-        if: matrix.platform == 'linux'
-        run: |
-          pid_file="${WKDIR}/tmp/upgrade_compat.pid"
-          exit_file="${WKDIR}/tmp/upgrade_compat_exit.txt"
-          log_file="${WKDIR}/log/upgrade_compat/ci_output.log"
-
-          if [ ! -f "$pid_file" ]; then
-            echo "ERROR: upgrade compat was not started (no PID file found)"
-            exit 1
-          fi
-
-          pid=$(cat "$pid_file")
-          echo "[upgrade_compat] Streaming live output (PID: $pid)..."
-
-          # Wait up to 60s for the log file to appear
-          waited=0
-          while [ ! -f "$log_file" ] && [ $waited -lt 60 ]; do
-            sleep 1
-            waited=$((waited + 1))
-          done
-
-          # Stream log in real-time via tail -f (background)
-          if [ -f "$log_file" ]; then
-            tail -f "$log_file" &
-            tail_pid=$!
-          fi
-
-          # Wait for the main process to exit
-          while kill -0 "$pid" 2>/dev/null; do
-            sleep 5
-          done
-
-          # Give tail 1s to flush remaining output before killing it
-          sleep 1
-          kill $tail_pid 2>/dev/null || true
-          wait $tail_pid 2>/dev/null || true
-
-          echo ""
-          echo "[upgrade_compat] Process completed."
-
-          if [ -f "$exit_file" ]; then
-            ret=$(cat "$exit_file")
-            echo "[upgrade_compat] Exit code: $ret"
-            exit $ret
-          else
-            echo "ERROR: no exit code file found, assuming failure"
-            exit 1
-          fi
