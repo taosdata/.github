@@ -356,6 +356,16 @@ class TestRunner:
             self.utils.run_command(windows_copy_dll_cmd)
             self.utils.run_command(windows_cmds)
 
+    def run_upgrade_compat_test(self):
+        """Run cold/hot upgrade compatibility tests in an isolated Docker container (Linux only)"""
+        print(f"PR number: {self.pr_number}, run number: {self.run_number}, attempt: {self.run_attempt}")
+        log_dir = self.utils.path(self.wkdir, "log", "upgrade_compat")
+        cmd = (
+            f"cd {self.wkc}/test/ci && "
+            f"bash run_upgrade_compat.sh -w {self.wkdir} -l {log_dir} -e"
+        )
+        self.utils.run_command(cmd, silent=False)
+
     def run_tdgpt_test(self):
         print(f"timeout: {self.timeout}")
 
@@ -378,6 +388,8 @@ class TestRunner:
             self.run_function_test()
             if self.platform == "linux":
                 self.cleanup()
+        elif self.test_type == "upgrade_compat":
+            self.run_upgrade_compat_test()
         elif self.test_type == "tdgpt":
             self.run_tdgpt_test()
         else:
