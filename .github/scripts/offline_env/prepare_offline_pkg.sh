@@ -13,7 +13,11 @@ PYTHON_REQUIREMENTS=""
 PKG_LABEL=""
 BINARY_TOOLS=("bpftrace")
 TDGPT=""
-TDGPT_MODELS=""  # New: comma-separated list of models to build/install
+TDGPT_ALL=""  # Install all model venvs (mirrors install_tdgpt.sh -a flag)
+TDENGINE_TSDB_VER=""  # TDengine version for downloading requirements files (e.g. 3.4.0.8)
+IDMP_VER=""  # IDMP version for downloading requirements from TDasset repo (e.g. 1.0.12.10, maps to tag ver-1.0.12.10)
+GH_TOKEN=""  # GitHub personal access token for private repos (required for TDasset)
+PIP_INDEX_URL="https://pypi.tuna.tsinghua.edu.cn/simple"  # Default pip index mirror
 DOCKER_VERSION="latest"
 DOCKER_COMPOSE_VERSION="latest"
 INSTALL_DOCKER=""
@@ -22,6 +26,88 @@ JAVA_VERSION="21"
 INSTALL_JAVA=""
 IDMP=""
 CACHE_DIR="/tmp/taos-packages"
+BPFTRACE_VERSION="0.23.2"  # Configurable bpftrace version
+TDGPT_BASE_DIR="/var/lib/taos/taosanode"  # Configurable TDgpt base directory
+IDMP_VENV_DIR="/usr/local/taos/idmp/venv"  # Configurable IDMP venv directory
+PYTORCH_WHL_URL="https://mirrors.aliyun.com/pytorch-wheels/cpu"  # PyTorch CPU wheel mirror (China CDN)
+BUILD_NOTES=()  # Post-build notes collected during the run, re-printed in summary()
+
+# Install uv with download caching (shared via $CACHE_DIR across container runs)
+# Populates BUILD_NOTES with PATH reminder if uv was newly installed.
+install_uv_cached() {
+    local uv_bin="$HOME/.local/bin/uv"
+    local cached_uv="$CACHE_DIR/uv"
+
+    if command -v uv &>/dev/null; then
+        return 0  # already on PATH, nothing to do
+    fi
+
+    mkdir -p "$HOME/.local/bin"
+
+    if [[ -f "$cached_uv" ]]; then
+        yellow_echo "Restoring uv from cache: $cached_uv"
+        cp "$cached_uv" "$uv_bin"
+        chmod +x "$uv_bin"
+    else
+        yellow_echo "Downloading and installing uv..."
+        if [[ -f /etc/kylin-release || "$OS_ID" == "openEuler" ]]; then
+            if ! curl -LsSf https://astral.sh/uv/install.sh | sh; then
+                red_echo "Failed to install uv"
+                exit 1
+            fi
+        else
+            local setup_env="$CACHE_DIR/setup_env.sh"
+            if ! curl -o "$setup_env" https://raw.githubusercontent.com/taosdata/TDengine/main/packaging/setup_env.sh; then
+                red_echo "Failed to download setup_env.sh"
+                exit 1
+            fi
+            chmod +x "$setup_env"
+            if ! "$setup_env" install_uv; then
+                red_echo "Failed to install uv"
+                exit 1
+            fi
+        fi
+        # Cache the binary for next run
+        if [[ -f "$uv_bin" ]]; then
+            cp "$uv_bin" "$cached_uv"
+            green_echo "uv binary cached: $cached_uv"
+        fi
+    fi
+
+    # Update PATH for current shell session.
+    # Always export ~/.local/bin first (handles cache-restore path where
+    # ~/.local/bin/env does not exist but the binary is already there).
+    export PATH="$HOME/.local/bin:$PATH"
+    # Also source the env file if it exists (sets any extra vars the installer created)
+    if [[ -f "$HOME/.local/bin/env" ]]; then
+        # shellcheck source=/dev/null
+        source "$HOME/.local/bin/env"
+    fi
+
+    # Persist uv's wheel/package cache on the host-mounted CACHE_DIR so that large
+    # wheels (torch ~200 MB, tensorflow ~600 MB) are only downloaded once across
+    # container runs.  Without this, every new container re-downloads from scratch.
+    export UV_CACHE_DIR="${CACHE_DIR}/uv-cache"
+    mkdir -p "$UV_CACHE_DIR"
+    # Cache dir is on a host-mounted volume; venv targets are inside the container,
+    # so they are on different filesystems — hardlinks won't work.  Tell uv to use
+    # copy mode explicitly to suppress the "Failed to hardlink" warning.
+    export UV_LINK_MODE=copy
+
+    # Sanity check — fail loudly rather than silently proceeding with uv missing
+    if ! command -v uv &>/dev/null; then
+        red_echo "ERROR: uv still not found on PATH after install/restore."
+        red_echo "  Expected location: $uv_bin"
+        red_echo "  PATH: $PATH"
+        exit 1
+    fi
+
+    # Record PATH reminder for summary
+    BUILD_NOTES+=("  uv installed to: $uv_bin")
+    BUILD_NOTES+=("  To make uv available in new shells, run:")
+    BUILD_NOTES+=("    source \$HOME/.local/bin/env          (sh, bash, zsh)")
+    BUILD_NOTES+=("    source \$HOME/.local/bin/env.fish     (fish)")
+}
 
 function show_usage() {
     echo "Usage:"
@@ -29,13 +115,25 @@ function show_usage() {
     echo "  Docker Options: [--install-docker] [--docker-version=<version>] [--install-docker-compose] [--docker-compose-version=<version>]"
     echo "  Java Options: [--install-java] [--java-version=<version>] (default: 21, supported: 8,11,17,21,23)"
     echo "  Python Options: [--python-requirements=<url_or_path>] (alternative to --python-packages)"
-    echo "  Special Options: [--tdgpt=<true|false>] [--tdgpt-models=<model1,model2,...>] [--idmp=<true|false>]"
+    echo "  Special Options: [--tdgpt=<true|false>] [--tdgpt-all] [--idmp=<true|false>] [--idmp-ver=<ver>] [--gh-token=<token>]"
+    echo "  Mirror Options:  [--pip-index-url=<url>] (default: https://pypi.tuna.tsinghua.edu.cn/simple, set empty to use PyPI)"
+    echo "                   [--pytorch-whl-url=<url>] (default: https://mirrors.aliyun.com/pytorch-wheels/cpu, Aliyun PyTorch mirror)"
+    echo "  Path Options: [--bpftrace-version=<version>] (default: 0.23.2) [--tdgpt-base-dir=<path>] (default: /var/lib/taos/taosanode) [--idmp-venv-dir=<path>] (default: /usr/local/taos/idmp/venv)"
     echo ""
     echo "TDgpt Model Options:"
-    echo "  --tdgpt-models=<models>   Specify which TDgpt models to build/install (comma-separated)"
-    echo "                            Available models: tdtsfm,timemoe,timesfm,moirai,chronos,moment"
-    echo "                            If not specified or empty, all models will be built/installed"
-    echo "                            Example: --tdgpt-models=timesfm,chronos,moirai"
+    echo "  --tdengine-tsdb-ver=<ver>  (REQUIRED for --tdgpt) TDengine version used to download requirements files from GitHub"
+    echo "                            (e.g. 3.4.0.8). Downloads tools/tdgpt/requirements_*.txt from tag ver-<ver>."
+    echo "                            requirements_ess.txt / requirements_docker.txt are NOT vendored in this repo;"
+    echo "                            --tdengine-tsdb-ver must always be specified when using --tdgpt=true."
+    echo "  --tdgpt-all               Build all model venvs (mirrors install_tdgpt.sh -a flag)"
+    echo "                            Default (without --tdgpt-all): only build main venv for tdtsfm/timemoe"
+    echo "                            With --tdgpt-all: also build timesfm/moirai/chronos/moment extra venvs"
+    echo ""
+    echo "IDMP Options:"
+    echo "  --idmp-ver=<ver>          IDMP version to download requirements from TDasset repo"
+    echo "                            (e.g. 1.0.12.10). Downloads ai-server/requirements.txt from tag ver-<ver>."
+    echo "                            Requires --gh-token since TDasset is a private repository."
+    echo "  --gh-token=<token>        GitHub personal access token for accessing private repositories."
     echo ""
     echo "Example:"
     echo "  $0 --build --system-packages=vim,ntp --python-version=3.10 --python-packages=fabric2,requests --pkg-label=1.0.20250409"
@@ -43,8 +141,9 @@ function show_usage() {
     echo "  $0 --build --install-docker --docker-version=27.5.1 --install-docker-compose --docker-compose-version=v2.40.2 --pkg-label=test"
     echo "  $0 --build --install-java --java-version=21 --pkg-label=java-test"
     echo "  $0 --build --install-java --idmp=true --pkg-label=idmp-env"
-    echo "  $0 --build --tdgpt=true --tdgpt-models=timesfm,chronos,moirai --pkg-label=tdgpt-partial"
-    echo "  $0 --build --tdgpt=true --pkg-label=tdgpt-all  # Build all models"
+    echo "  $0 --build --idmp=true --idmp-ver=1.0.12.10 --gh-token=ghp_xxx --python-version=3.10 --pkg-label=idmp-ai"
+    echo "  $0 --build --tdgpt=true --tdengine-tsdb-ver=3.4.0.8 --pkg-label=tdgpt-default  # Download requirements from ver"
+    echo "  $0 --build --tdgpt=true --tdengine-tsdb-ver=3.4.0.8 --tdgpt-all --pkg-label=tdgpt-all  # All venvs from ver"
     exit 1
 }
 
@@ -74,12 +173,42 @@ while [[ $# -gt 0 ]]; do
             PKG_LABEL="${1#*=}"
             shift
             ;;
+        --deploy-type=*)
+            # External-facing alias: tsdb (default) | idmp | tdgpt
+            case "${1#*=}" in
+                idmp)  IDMP="true"  ;;
+                tdgpt) TDGPT="true" ;;
+                tsdb)  ;;  # default — no extra venv flag needed
+                *) echo "[WARNING] Unknown --deploy-type value: ${1#*=}"; ;;
+            esac
+            shift
+            ;;
         --tdgpt=*)
             TDGPT="${1#*=}"
             shift
             ;;
-        --tdgpt-models=*)
-            TDGPT_MODELS="${1#*=}"
+        --tdgpt-all)
+            TDGPT_ALL="true"
+            shift
+            ;;
+        --tdengine-tsdb-ver=*)
+            TDENGINE_TSDB_VER="${1#*=}"
+            shift
+            ;;
+        --idmp-ver=*)
+            IDMP_VER="${1#*=}"
+            shift
+            ;;
+        --gh-token=*)
+            GH_TOKEN="${1#*=}"
+            shift
+            ;;
+        --pip-index-url=*)
+            PIP_INDEX_URL="${1#*=}"
+            shift
+            ;;
+        --pytorch-whl-url=*)
+            PYTORCH_WHL_URL="${1#*=}"
             shift
             ;;
         --install-docker)
@@ -108,6 +237,18 @@ while [[ $# -gt 0 ]]; do
             ;;
         --idmp=*)
             IDMP="${1#*=}"
+            shift
+            ;;
+        --bpftrace-version=*)
+            BPFTRACE_VERSION="${1#*=}"
+            shift
+            ;;
+        --tdgpt-base-dir=*)
+            TDGPT_BASE_DIR="${1#*=}"
+            shift
+            ;;
+        --idmp-venv-dir=*)
+            IDMP_VENV_DIR="${1#*=}"
             shift
             ;;
         -h|--help)
@@ -153,6 +294,19 @@ function validate_params() {
         package_error="Cannot specify both **PYTHON_PACKAGES** and **PYTHON_REQUIREMENTS** at the same time. Please use only one."
     fi
 
+    # Check PYTHON_VERSION is provided when python packages are specified, or when
+    # TDGPT/IDMP is enabled (both require a Python venv at a specific version).
+    if [[ ( -n "$PYTHON_PACKAGES" || -n "$PYTHON_REQUIREMENTS" || -n "$TDGPT" || -n "$IDMP" ) && -z "$PYTHON_VERSION" ]]; then
+        package_error="**PYTHON_VERSION** is required when **PYTHON_PACKAGES**, **PYTHON_REQUIREMENTS**, **TDGPT**, or **IDMP** is specified."
+    fi
+
+    # Check TDENGINE_TSDB_VER is provided for TDgpt builds:
+    # requirements_ess.txt / requirements_docker.txt are not vendored in this repo,
+    # so the local fallback path is always unavailable.
+    if [[ -n "$TDGPT" && -z "$TDENGINE_TSDB_VER" ]]; then
+        package_error="**--tdengine-tsdb-ver** is required when **--tdgpt=true** is specified (requirements files are not vendored in this repo)."
+    fi
+
     # Combined error message
     local error_msg=""
     # if [ ${#missing_required[@]} -gt 0 ]; then
@@ -176,6 +330,22 @@ RESET='\033[0m'
 red_echo() { echo -e "${RED}$*${RESET}"; }
 green_echo() { echo -e "${GREEN}$*${RESET}"; }
 yellow_echo() { echo -e "${YELLOW}$*${RESET}"; }
+
+# Build pip index args (mirrors install_tdgpt.sh pip_extra_args logic)
+# Usage: uv pip install <pkg> "${pip_index_args[@]}"
+pip_index_args=()
+if [ -n "$PIP_INDEX_URL" ]; then
+    pip_index_args+=(-i "$PIP_INDEX_URL")
+fi
+
+# Build PyTorch wheel args (uses --find-links with Chinese CDN mirror)
+# Aliyun mirror serves a flat directory listing (not PEP 503), so --find-links is required.
+# The index page (~940KB) downloads in ~1s from Chinese CDN, and wheels download at ~10 MB/s.
+# Usage: uv pip install torch "${pytorch_index_args[@]}"
+pytorch_index_args=()
+if [ -n "$PYTORCH_WHL_URL" ]; then
+    pytorch_index_args=(--find-links "$PYTORCH_WHL_URL")
+fi
 
 # Detect system architecture and normalize to standard format
 # Returns: x86_64 or aarch64
@@ -229,11 +399,22 @@ function init() {
                 ;;
             centos|rhel|rocky|kylin)
                 if [ "$OS_ID" = "kylin" ]; then
-                    # Extract both SP version and code name from /etc/.productinfo
-                    # Example line: "release V10 (SP3) /(Lance)-x86_64-Build23.02/20230324"
-                    # Extract: SP3-Lance
+                    # Extract SP version + code name from /etc/.productinfo
+                    # Handles multiple real-world formats:
+                    #   SP3-2403 format:  "release V10 SP3 2403/(Halberd)-x86_64-Build20/20240426"
+                    #   SP2 format:       "release V10 (SP2) /(Sword)-aarch64-Build09/20210524"
+                    # Regex: match SPx (with or without parens), then /(CodeName)
                     if [ -f /etc/.productinfo ]; then
-                        SUB_VERSION="$(sed -n '2p' /etc/.productinfo | sed -n 's/.*(\(SP[0-9]\+\)).*\/(\([^)]\+\)).*/\1-\2/p')-"
+                        SUB_VERSION="$(sed -n '2p' /etc/.productinfo | sed -n 's/.*V10[[:space:]]*[( ]*\(SP[0-9]\+\)[) ].*\/(\([^)]*\)).*/\1-\2/p')-"
+                    fi
+                    # Fallback: extract from /etc/os-release VERSION field
+                    # Example: VERSION="V10 (Halberd)" → Halberd
+                    if [ -z "$SUB_VERSION" ] || [ "$SUB_VERSION" = "-" ]; then
+                        local os_codename
+                        os_codename=$(grep -E '^VERSION=' /etc/os-release | sed -n 's/.*( *\([^)]*\) *).*/\1/p')
+                        if [ -n "$os_codename" ]; then
+                            SUB_VERSION="${os_codename}-"
+                        fi
                     fi
                 fi
                 PKG_MGR="yum"
@@ -270,13 +451,20 @@ function init() {
                 PKG_MGR=""
                 PKG_CONFIRM=""
         esac
+
     else
         red_echo "Cannot detect OS and set OS_ID and OS_VERSION to unknown"
         OS_ID=unknown_os
         OS_VERSION=""
     fi
 
-    formated_system_packages=$(echo "$SYSTEM_PACKAGES" | tr ',' ' ')
+    # Validate: only allow characters that are safe in package names
+    if [[ -n "$SYSTEM_PACKAGES" ]] && ! [[ "$SYSTEM_PACKAGES" =~ ^[a-zA-Z0-9_.+,-]+$ ]]; then
+        red_echo "ERROR: --system-packages contains invalid characters."
+        red_echo "       Allowed: letters, digits, dash, underscore, dot, plus, comma"
+        exit 1
+    fi
+    IFS=',' read -r -a formated_system_packages <<< "$SYSTEM_PACKAGES"
     formated_python_packages=$(echo "$PYTHON_PACKAGES" | tr ',' ' ')
     formated_python_requirements="$PYTHON_REQUIREMENTS"
     if [[ -z "$PARENT_DIR" ]]; then
@@ -303,7 +491,7 @@ function init() {
         if [[ -n "$SYSTEM_PACKAGES" ]]; then
             mkdir -p "$system_packages_dir"
         fi
-        if [[ -n "$PYTHON_PACKAGES" ]] || [[ -n "$PYTHON_REQUIREMENTS" ]]; then
+        if [[ -n "$PYTHON_PACKAGES" ]] || [[ -n "$PYTHON_REQUIREMENTS" ]] || [[ "$TDGPT" == "true" ]] || [[ "$IDMP" == "true" && -n "$IDMP_VER" ]]; then
             mkdir -p "$py_venv_dir"
         fi
     fi
@@ -312,9 +500,15 @@ function init() {
 
 function config_yum() {
     # Define the line to be added
-    curl -o "$script_dir"/setup_env.sh https://raw.githubusercontent.com/taosdata/TDengine/main/packaging/setup_env.sh
-    chmod +x "$script_dir"/setup_env.sh
-    "$script_dir"/setup_env.sh replace_sources
+    if ! curl -o "$CACHE_DIR/setup_env.sh" https://raw.githubusercontent.com/taosdata/TDengine/main/packaging/setup_env.sh; then
+        red_echo "Failed to download setup_env.sh"
+        exit 1
+    fi
+    chmod +x "$CACHE_DIR/setup_env.sh"
+    if ! "$CACHE_DIR/setup_env.sh" replace_sources; then
+        red_echo "Failed to replace sources"
+        exit 1
+    fi
     EXCLUDE_LINE="exclude=*.i?86"
 
     # Check if the /etc/yum.conf file exists
@@ -335,17 +529,29 @@ function config_yum() {
 function download_bpftrace_binary() {
     local os_type="$1"  # e.g., "CentOS/RHEL" or "SUSE/SLES"
     yellow_echo "Handling bpftrace specially for ${os_type}..."
-    
-    local BPFTRACE_URL="https://github.com/bpftrace/bpftrace/releases/download/v0.23.2/bpftrace"
+
+    local host_arch
+    host_arch=$(uname -m)
+
+    # bpftrace releases only provide a static binary for x86_64.
+    # aarch64 has no prebuilt binary; users must install via package manager or build from source.
+    if [ "$host_arch" != "x86_64" ]; then
+        red_echo "No prebuilt bpftrace binary is available for arch=${host_arch} on GitHub Releases."
+        red_echo "Please install bpftrace via your package manager or build from source:"
+        red_echo "  https://github.com/bpftrace/bpftrace/blob/master/INSTALL.md"
+        exit 1
+    fi
+
+    local BPFTRACE_URL="https://github.com/bpftrace/bpftrace/releases/download/v${BPFTRACE_VERSION}/bpftrace"
     mkdir -p "$offline_env_path/binary_tools"
-    
+
     if ! wget -q "$BPFTRACE_URL" -O "$offline_env_path/binary_tools/bpftrace"; then
         red_echo "Failed to download bpftrace binary"
         exit 1
     fi
-    
+
     chmod +x "$offline_env_path/binary_tools/bpftrace"
-    green_echo "Successfully downloaded bpftrace binary for ${os_type}"
+    green_echo "Successfully downloaded bpftrace binary (x86_64) for ${os_type}"
 }
 
 function download_docker() {
@@ -452,19 +658,28 @@ function download_java() {
     
     local download_url="${base_url}/${tar_name}"
     local cached_file="$CACHE_DIR/${tar_name}"
-    
-    # Check if file exists in cache
-    if [ -f "$cached_file" ]; then
-        yellow_echo "Using cached Java JRE from: $cached_file"
-    else
+
+    # Helper: download (or re-download) the JRE into the cache
+    _download_jre() {
         yellow_echo "Downloading from: $download_url"
         if ! curl -fsSL "$download_url" -o "$cached_file"; then
             red_echo "Failed to download Java JRE ${JAVA_VERSION}"
             exit 1
         fi
-        green_echo "Downloaded to cache: $cached_file"
+        green_echo "Downloaded to cache: $cached_file ($(du -sh "$cached_file" 2>/dev/null | cut -f1))"
+    }
+
+    # Check if a non-empty file already exists in cache
+    if [ -f "$cached_file" ] && [ -s "$cached_file" ]; then
+        yellow_echo "Using cached Java JRE from: $cached_file ($(du -sh "$cached_file" 2>/dev/null | cut -f1))"
+    else
+        if [ -f "$cached_file" ]; then
+            yellow_echo "Cached file is empty/corrupt, re-downloading: $cached_file"
+            rm -f "$cached_file"
+        fi
+        _download_jre
     fi
-    
+
     # SHA256 verification for Java 21 only
     if [ "$JAVA_VERSION" = "21" ]; then
         yellow_echo "Verifying SHA256 checksum..."
@@ -474,12 +689,22 @@ function download_java() {
         else
             expected_sha256="$sha256_aarch64"
         fi
-        
-        echo "${expected_sha256}  $cached_file" | sha256sum -c - || {
+
+        if ! echo "${expected_sha256}  $cached_file" | sha256sum -c - &>/dev/null; then
             red_echo "SHA256 checksum verification failed!"
-            exit 1
-        }
-        green_echo "SHA256 checksum verified successfully"
+            red_echo "  File:     $cached_file"
+            red_echo "  Expected: $expected_sha256"
+            red_echo "  Actual:   $(sha256sum "$cached_file" 2>/dev/null | awk '{print $1}')"
+            red_echo "Removing corrupt cached file and re-downloading..."
+            rm -f "$cached_file"
+            _download_jre
+            # Verify freshly downloaded file
+            if ! echo "${expected_sha256}  $cached_file" | sha256sum -c - &>/dev/null; then
+                red_echo "SHA256 verification failed again after re-download. Aborting."
+                exit 1
+            fi
+        fi
+        green_echo "SHA256 checksum verified"
     fi
     
     # Copy from cache to offline package directory
@@ -585,8 +810,18 @@ function download_docker_compose() {
     # Get latest version if not specified
     if [ "$DOCKER_COMPOSE_VERSION" = "latest" ]; then
         yellow_echo "Fetching latest Docker Compose version..."
+        
+        # Check if jq is available
+        if ! command -v jq &> /dev/null; then
+            red_echo "jq is required but not installed. Please install jq first:"
+            red_echo "  - Ubuntu/Debian: apt-get install jq"
+            red_echo "  - RHEL/CentOS: yum install jq"
+            red_echo "  - SUSE: zypper install jq"
+            exit 1
+        fi
+        
         DOCKER_COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | jq -r '.tag_name')
-        if [ -z "$DOCKER_COMPOSE_VERSION" ]; then
+        if [ -z "$DOCKER_COMPOSE_VERSION" ] || [ "$DOCKER_COMPOSE_VERSION" = "null" ]; then
             red_echo "Failed to fetch latest Docker Compose version"
             exit 1
         fi
@@ -633,7 +868,7 @@ function install_system_packages() {
                 $PKG_MGR install -q -y yum-utils
             fi
             $PKG_MGR install -q -y wget gcc gcc-c++
-            for pkg in $formated_system_packages;
+            for pkg in "${formated_system_packages[@]}";
             do
                 if [[ "$pkg" == "bpftrace" ]] && ([ "$ID" = "centos" ] || [ "$ID" = "openEuler" ]); then
                     download_bpftrace_binary "CentOS/RHEL/openEuler"
@@ -677,7 +912,10 @@ function install_system_packages() {
             raw_deps_file="$system_packages_dir/raw_deps.txt"
             dependencies_file="$system_packages_dir/dependencies.txt"
             
-            apt-rdepends $formated_system_packages | grep -v "^ " > "$raw_deps_file"
+            if ! apt-rdepends "${formated_system_packages[@]}" | grep -v "^ " > "$raw_deps_file"; then
+                red_echo "Failed to resolve dependencies with apt-rdepends"
+                exit 1
+            fi
             # echo $(cat raw_deps.txt) | xargs -n 5 apt-cache policy | awk '
             #     /^[^ ]/ { pkg=$0 }
             #     /Candidate:/ && $2 == "(none)" { print pkg >> dependencies.txt }
@@ -695,13 +933,16 @@ function install_system_packages() {
             chmod -R 700 "$system_packages_dir"
             cd "$system_packages_dir" || exit
             yellow_echo "Downloading offline pkgs......"
-            apt-get download $(cat "$dependencies_file")
+            if ! apt-get download $(cat "$dependencies_file"); then
+                red_echo "Failed to download packages with apt-get"
+                exit 1
+            fi
         elif [ -f /etc/SuSE-release ] || [ "$OS_ID" = "sles" ] || [ "$OS_ID" = "opensuse-leap" ] || [ "$OS_ID" = "suse" ]; then
             # SUSE/openSUSE systems using zypper
             yellow_echo "$PKG_MGR updating"
             $PKG_MGR refresh
             $PKG_MGR install -y wget curl gcc gcc-c++
-            for pkg in $formated_system_packages;
+            for pkg in "${formated_system_packages[@]}";
             do
                 if [[ "$pkg" == "bpftrace" ]] && [ "$OS_ID" = "sles" ]; then
                     download_bpftrace_binary "SUSE/SLES"
@@ -793,143 +1034,151 @@ function build_tdgpt_venvs() {
         return 0
     fi
 
-    yellow_echo "Building TDgpt model virtual environments..."
-
-    # Determine which models to build
-    local models_to_build=()
-    if [ -n "$TDGPT_MODELS" ]; then
-        IFS=',' read -ra models_to_build <<< "$TDGPT_MODELS"
-        yellow_echo "Building venvs for specified models: $TDGPT_MODELS"
-    else
-        models_to_build=(tdtsfm timemoe timesfm moirai chronos moment)
-        yellow_echo "Building venvs for all models"
-    fi
-
-    # Base directory for TDgpt venvs
-    local tdgpt_base_dir="/var/lib/taos/taosanode"
+    # Base directory for TDgpt venvs (configurable via TDGPT_BASE_DIR)
+    local tdgpt_base_dir="$TDGPT_BASE_DIR"
     mkdir -p "$tdgpt_base_dir"
 
-    # Install uv if not available
-    if ! command -v uv &> /dev/null; then
-        if [ -f /etc/kylin-release ] || [ "$OS_ID" = "openEuler" ]; then
-            curl -LsSf https://astral.sh/uv/install.sh | sh
-        else
-            curl -o "$script_dir"/setup_env.sh https://raw.githubusercontent.com/taosdata/TDengine/main/packaging/setup_env.sh
-            chmod +x "$script_dir"/setup_env.sh
-            "$script_dir"/setup_env.sh install_uv
-        fi
-    fi
-
-    if [ -f "$HOME/.local/bin/env" ]; then
-        source "$HOME/.local/bin/env"
-    fi
+    install_uv_cached
 
     # Determine Python version
     local python_ver="${PYTHON_VERSION:-3.10}"
     yellow_echo "Using Python version: $python_ver"
     uv python install "$python_ver"
 
-    # Build venvs for each model
-    for model in "${models_to_build[@]}"; do
-        model=$(echo "$model" | xargs)  # trim whitespace
+    # --------------------------------------------------
+    # Step 1: Always build the main venv (mirrors install_tdgpt.sh install_anode_venv)
+    #   requirements_ess.txt includes -r requirements_docker.txt (basic deps),
+    #   plus transformers==4.40.0, torch==2.3.1+cpu, tensorflow-cpu
+    # --------------------------------------------------
 
-        case "$model" in
-            tdtsfm|timemoe)
-                # Default venv (transformers==4.40.0)
-                if [ ! -d "${py_venv_dir}/venv" ]; then
-                    yellow_echo "Building default venv for tdtsfm/timemoe..."
-                    local venv_path="${tdgpt_base_dir}/venv"
-                    uv venv --python "$python_ver" "$venv_path" --clear
-                    source "$venv_path/bin/activate"
-                    # Install pip in the virtual environment
-                    uv pip install pip
-                    uv pip install --index-url https://download.pytorch.org/whl/cpu torch==2.3.1+cpu
-                    uv pip install -i https://pypi.tuna.tsinghua.edu.cn/simple \
-                        pandas==1.5.3 scipy==1.15.0 scikit-learn==1.5.2 outlier-utils==0.0.5 \
-                        statsmodels==0.14.4 pyculiarity==0.0.7 Cython==3.0.11 pmdarima==2.0.4 \
-                        Flask==3.0.3 matplotlib==3.9.2 uWSGI==2.0.27 keras==3.9.0 taospy==2.8.6 \
-                        transformers==4.40.0 accelerate==0.34.2 cmdstanpy==1.2.0 fastdtw==0.3.4 \
-                        prophet==1.1.7 numpy==1.26.4 xlsxwriter==3.2.1
+    # Determine requirements file location: download from GitHub tag or use local fallback
+    local req_dir
+    if [ -n "$TDENGINE_TSDB_VER" ]; then
+        req_dir=$(mktemp -d)
+        local tdengine_tag="ver-${TDENGINE_TSDB_VER}"
+        local base_url="https://raw.githubusercontent.com/taosdata/TDengine/${tdengine_tag}/tools/tdgpt"
+        yellow_echo "Downloading requirements files from TDengine version: ${TDENGINE_TSDB_VER} (tag: ${tdengine_tag})"
+        yellow_echo "  URL: ${base_url}/requirements_ess.txt"
 
-                    uv pip install -i https://pypi.tuna.tsinghua.edu.cn/simple tensorflow-cpu==2.18.0
-                    deactivate
-                    mkdir -p "${py_venv_dir}/venv"
-                    cp -r "$venv_path" "${py_venv_dir}/"
-                    green_echo "Default venv built successfully"
-                fi
-                ;;
+        # Download requirements_docker.txt first (referenced by requirements_ess.txt via -r)
+        if ! curl -fsSL "${base_url}/requirements_docker.txt" -o "${req_dir}/requirements_docker.txt"; then
+            red_echo "Failed to download requirements_docker.txt from tag ver-${TDENGINE_TSDB_VER}"
+            rm -rf "$req_dir"
+            exit 1
+        fi
+        # Download requirements_ess.txt
+        if ! curl -fsSL "${base_url}/requirements_ess.txt" -o "${req_dir}/requirements_ess.txt"; then
+            red_echo "Failed to download requirements_ess.txt from tag ver-${TDENGINE_TSDB_VER}"
+            rm -rf "$req_dir"
+            exit 1
+        fi
+        green_echo "Successfully downloaded requirements files from tag ver-${TDENGINE_TSDB_VER}"
+    else
+        # Fallback to local files in script directory — copy to a temp dir so that
+        # (a) sed -i doesn't mutate repo files in native mode, and
+        # (b) the files are writable when /build-scripts is mounted read-only in Docker.
+        local local_req_dir
+        local_req_dir=$(mktemp -d)
+        if [ ! -f "$script_dir/requirements_ess.txt" ]; then
+            red_echo "Local requirements_ess.txt not found and --tdengine-tsdb-ver not specified."
+            red_echo "Please specify --tdengine-tsdb-ver=<ver> (e.g. --tdengine-tsdb-ver=3.4.0.8) to download from GitHub."
+            rm -rf "$local_req_dir"
+            exit 1
+        fi
+        cp "$script_dir/requirements_ess.txt" "$local_req_dir/requirements_ess.txt"
+        [ -f "$script_dir/requirements_docker.txt" ] && \
+            cp "$script_dir/requirements_docker.txt" "$local_req_dir/requirements_docker.txt"
+        req_dir="$local_req_dir"
+        yellow_echo "Using local requirements files (copied to temp dir): $req_dir"
+    fi
 
-            timesfm)
-                yellow_echo "Building timesfm venv (transformers==4.40.0)..."
-                local venv_path="${tdgpt_base_dir}/timesfm_venv"
-                uv venv --python "$python_ver" "$venv_path" --clear
-                source "$venv_path/bin/activate"
-                # Install pip in the virtual environment
-                uv pip install pip
-                uv pip install --index-url https://download.pytorch.org/whl/cpu \
-                    torch==2.3.1+cpu
-                uv pip install -i https://pypi.tuna.tsinghua.edu.cn/simple jax timesfm flask==3.0.3
-                deactivate
-                mkdir -p "${py_venv_dir}/timesfm_venv"
-                cp -r "$venv_path" "${py_venv_dir}/"
-                green_echo "timesfm venv built successfully"
-                ;;
+    yellow_echo "Building main venv for tdtsfm/timemoe (via requirements_ess.txt)..."
+    local main_venv_path="${tdgpt_base_dir}/venv"
+    uv venv --python "$python_ver" "$main_venv_path" --seed --clear
+    source "$main_venv_path/bin/activate"
 
-            moirai)
-                yellow_echo "Building moirai venv (transformers==4.40.0)..."
-                local venv_path="${tdgpt_base_dir}/moirai_venv"
-                uv venv --python "$python_ver" "$venv_path" --clear
-                source "$venv_path/bin/activate"
-                # Install pip in the virtual environment
-                uv pip install pip
-                uv pip install --index-url https://download.pytorch.org/whl/cpu \
-                    torch==2.3.1+cpu
-                uv pip install -i https://pypi.tuna.tsinghua.edu.cn/simple uni2ts flask
-                deactivate
-                mkdir -p "${py_venv_dir}/moirai_venv"
-                cp -r "$venv_path" "${py_venv_dir}/"
-                green_echo "moirai venv built successfully"
-                ;;
-
-            chronos)
-                yellow_echo "Building chronos venv (transformers==4.55.0)..."
-                local venv_path="${tdgpt_base_dir}/chronos_venv"
-                uv venv --python "$python_ver" "$venv_path" --clear
-                source "$venv_path/bin/activate"
-                # Install pip in the virtual environment
-                uv pip install pip
-                uv pip install --index-url https://download.pytorch.org/whl/cpu \
-                    torch==2.3.1+cpu
-                uv pip install -i https://pypi.tuna.tsinghua.edu.cn/simple chronos-forecasting flask
-                deactivate
-                mkdir -p "${py_venv_dir}/chronos_venv"
-                cp -r "$venv_path" "${py_venv_dir}/"
-                green_echo "chronos venv built successfully"
-                ;;
-
-            moment)
-                yellow_echo "Building moment venv (transformers==4.33.3)..."
-                local venv_path="${tdgpt_base_dir}/momentfm_venv"
-                uv venv --python "$python_ver" "$venv_path" --clear
-                source "$venv_path/bin/activate"
-                # Install pip in the virtual environment
-                uv pip install pip
-                uv pip install --index-url https://download.pytorch.org/whl/cpu \
-                    torch==2.3.1+cpu
-                uv pip install -i https://pypi.tuna.tsinghua.edu.cn/simple \
-                    transformers==4.33.3 numpy==1.25.2 matplotlib pandas==1.5 \
-                    scikit-learn flask==3.0.3 momentfm
-                deactivate
-                mkdir -p "${py_venv_dir}/momentfm_venv"
-                cp -r "$venv_path" "${py_venv_dir}/"
-                green_echo "moment venv built successfully"
-                ;;
-
-            *)
-                yellow_echo "Warning: Unknown model '$model', skipping..."
-                ;;
-        esac
+    # Strip all pytorch.org index/find-links directives from requirements files
+    # so that our pytorch_index_args (aliyun CDN mirror) are the sole source for
+    # torch wheels. Apply to both known files (requirements_ess.txt includes -r
+    # requirements_docker.txt, so both need to be cleaned).
+    # Note: avoid 'find' — it may not be on PATH in minimal containers.
+    for _req_file in "${req_dir}/requirements_ess.txt" "${req_dir}/requirements_docker.txt"; do
+        [ -f "$_req_file" ] && sed -i '/pytorch\.org/d' "$_req_file"
     done
+
+    uv pip install -r "${req_dir}/requirements_ess.txt" \
+        "${pip_index_args[@]}" "${pytorch_index_args[@]}"
+    deactivate
+    mv "$main_venv_path" "${py_venv_dir}/venv"
+    green_echo "Main venv built successfully"
+
+    # --------------------------------------------------
+    # Step 2: Build extra model venvs only when --tdgpt-all is specified
+    #         (mirrors install_tdgpt.sh install_extra_venvs called under -a flag)
+    # --------------------------------------------------
+    if [ "$TDGPT_ALL" != "true" ]; then
+        yellow_echo "Skipping extra model venvs (use --tdgpt-all to build timesfm/moirai/chronos/moment)"
+    else
+        yellow_echo "Building extra model venvs (timesfm/moirai/chronos/moment)..."
+
+        # timesfm venv
+        yellow_echo "Building timesfm venv..."
+        local venv_path="${tdgpt_base_dir}/timesfm_venv"
+        uv venv --python "$python_ver" "$venv_path" --seed --clear
+        source "$venv_path/bin/activate"
+        uv pip install torch==2.3.1+cpu jax timesfm flask==3.0.3 \
+            "${pip_index_args[@]}" "${pytorch_index_args[@]}"
+        deactivate
+        mv "$venv_path" "${py_venv_dir}/timesfm_venv"
+        green_echo "timesfm venv built successfully"
+
+        # moirai venv
+        yellow_echo "Building moirai venv..."
+        venv_path="${tdgpt_base_dir}/moirai_venv"
+        uv venv --python "$python_ver" "$venv_path" --seed --clear
+        source "$venv_path/bin/activate"
+        uv pip install torch==2.3.1+cpu uni2ts flask \
+            "${pip_index_args[@]}" "${pytorch_index_args[@]}"
+        deactivate
+        mv "$venv_path" "${py_venv_dir}/moirai_venv"
+        green_echo "moirai venv built successfully"
+
+        # chronos venv
+        yellow_echo "Building chronos venv..."
+        venv_path="${tdgpt_base_dir}/chronos_venv"
+        uv venv --python "$python_ver" "$venv_path" --seed --clear
+        source "$venv_path/bin/activate"
+        uv pip install torch==2.3.1+cpu chronos-forecasting flask \
+            "${pip_index_args[@]}" "${pytorch_index_args[@]}"
+        deactivate
+        mv "$venv_path" "${py_venv_dir}/chronos_venv"
+        green_echo "chronos venv built successfully"
+
+        # momentfm venv
+        yellow_echo "Building momentfm venv..."
+        venv_path="${tdgpt_base_dir}/momentfm_venv"
+        uv venv --python "$python_ver" "$venv_path" --seed --clear
+        source "$venv_path/bin/activate"
+        uv pip install torch==2.3.1+cpu transformers==4.33.3 numpy==1.25.2 \
+            matplotlib pandas==1.5 scikit-learn flask==3.0.3 momentfm \
+            "${pip_index_args[@]}" "${pytorch_index_args[@]}"
+        deactivate
+        mv "$venv_path" "${py_venv_dir}/momentfm_venv"
+        green_echo "momentfm venv built successfully"
+    fi
+
+    # Clean up temp requirements dir (both downloaded and locally-copied)
+    if [ -d "$req_dir" ] && [ "$req_dir" != "$script_dir" ]; then
+        rm -rf "$req_dir"
+    fi
+
+    # Remove distutils-precedence.pth from all TDgpt venvs.
+    # This .pth file (seeded by pip) references _distutils_hack which is only
+    # present when setuptools is installed as a standalone package.  Deployed
+    # venvs never build packages, so the distutils shim is not needed and its
+    # absence causes a harmless-but-noisy ModuleNotFoundError on every Python
+    # startup.  Deleting the file silences the error without side-effects.
+    find "$py_venv_dir" -name "distutils-precedence.pth" -delete 2>/dev/null || true
 
     # Copy .local directory for uv
     cp -r "$HOME/.local" "$py_venv_dir/"
@@ -937,8 +1186,91 @@ function build_tdgpt_venvs() {
     green_echo "TDgpt venvs built successfully"
 }
 
+function build_idmp_venvs() {
+    if [ "$IDMP" != "true" ] || [ -z "$IDMP_VER" ]; then
+        return 0
+    fi
+
+    # Validate GH_TOKEN is provided (TDasset is a private repository)
+    if [ -z "$GH_TOKEN" ]; then
+        red_echo "ERROR: --gh-token is required when using --idmp-ver (TDasset is a private repository)."
+        red_echo "Usage: --idmp-ver=<ver> --gh-token=<your_github_token>"
+        exit 1
+    fi
+
+    yellow_echo "Building IDMP Python venv from TDasset requirements..."
+
+    install_uv_cached
+
+    # Determine Python version
+    local python_ver="${PYTHON_VERSION:-3.10}"
+    yellow_echo "Using Python version: $python_ver"
+    uv python install "$python_ver"
+
+    # Download requirements.txt from TDasset private repo
+    local req_dir
+    req_dir=$(mktemp -d)
+    local idmp_tag="ver-${IDMP_VER}"
+    local raw_url="https://raw.githubusercontent.com/taosdata/TDasset/${idmp_tag}/ai-server/requirements.txt"
+    yellow_echo "Downloading IDMP requirements from TDasset version: ${IDMP_VER} (tag: ${idmp_tag})"
+    yellow_echo "  URL: ${raw_url}"
+
+    if ! curl -fsSL -H "Authorization: token ${GH_TOKEN}" "${raw_url}" -o "${req_dir}/requirements.txt"; then
+        red_echo "Failed to download requirements.txt from TDasset tag '${idmp_tag}'"
+        red_echo "Please check: 1) --idmp-ver is a valid version (e.g. 1.0.12.10)  2) --gh-token has repo access"
+        rm -rf "$req_dir"
+        exit 1
+    fi
+    green_echo "Successfully downloaded requirements.txt from TDasset ${idmp_tag}"
+
+    # Append extra packages from --python-packages if specified
+    if [ -n "$PYTHON_PACKAGES" ]; then
+        yellow_echo "Appending extra packages from --python-packages..."
+        IFS=',' read -ra extra_pkgs <<< "$PYTHON_PACKAGES"
+        for pkg in "${extra_pkgs[@]}"; do
+            echo "$pkg" >> "${req_dir}/requirements.txt"
+            yellow_echo "  + $pkg"
+        done
+    fi
+
+    # Create venv and install packages
+    local idmp_venv_path="${IDMP_VENV_DIR}"
+    mkdir -p "$idmp_venv_path"
+    uv venv --python "$python_ver" "$idmp_venv_path" --seed --clear
+    source "$idmp_venv_path/bin/activate"
+
+    yellow_echo "Installing IDMP packages from requirements.txt..."
+    uv pip install -r "${req_dir}/requirements.txt" "${pip_index_args[@]}"
+    deactivate
+
+    # Move venv to offline package
+    mv "$idmp_venv_path" "${py_venv_dir}/idmp_venv"
+    green_echo "IDMP venv built successfully"
+
+    # Clean up temp dir
+    rm -rf "$req_dir"
+
+    # Same rationale as TDgpt venvs: remove stale distutils-precedence.pth.
+    find "$py_venv_dir" -name "distutils-precedence.pth" -delete 2>/dev/null || true
+
+    # Copy .local directory for uv
+    cp -r "$HOME/.local" "$py_venv_dir/"
+
+    green_echo "IDMP venvs built successfully"
+}
+
 function install_python_packages() {
     if [ -n "$PYTHON_PACKAGES" ] || [ -n "$PYTHON_REQUIREMENTS" ]; then
+        # TDgpt mode: all venvs (main + model-specific) are fully managed by build_tdgpt_venvs
+        if [ "$TDGPT" == "true" ]; then
+            yellow_echo "TDgpt mode: Python venvs are managed by build_tdgpt_venvs, skipping install_python_packages."
+            return 0
+        fi
+        # IDMP mode: venv is managed by build_idmp_venvs when --idmp-ver is set
+        if [ "$IDMP" == "true" ] && [ -n "$IDMP_VER" ]; then
+            yellow_echo "IDMP mode: Python venv is managed by build_idmp_venvs, skipping install_python_packages."
+            return 0
+        fi
         if [ -n "$PYTHON_REQUIREMENTS" ]; then
             yellow_echo "Installing uv and Python $PYTHON_VERSION from requirements file: $PYTHON_REQUIREMENTS"
         else
@@ -946,29 +1278,19 @@ function install_python_packages() {
         fi
 
         # Install uv with setup_env.sh
-        if ! command -v uv &> /dev/null; then
-            if [ -f /etc/kylin-release ] || [ "$OS_ID" = "openEuler" ]; then
-                curl -LsSf https://astral.sh/uv/install.sh | sh
-            else
-                curl -o "$script_dir"/setup_env.sh https://raw.githubusercontent.com/taosdata/TDengine/main/packaging/setup_env.sh
-                chmod +x "$script_dir"/setup_env.sh
-                "$script_dir"/setup_env.sh install_uv
-            fi
-        fi
+        install_uv_cached
 
-        if [ -f "$HOME/.local/bin/env" ]; then
-            source "$HOME/.local/bin/env"
-        else
-            red_echo "Error: $HOME/.local/bin/env not found."
+        if ! command -v uv &>/dev/null; then
+            red_echo "Error: uv not found after installation. $HOME/.local/bin/env may be missing."
             exit 1
         fi
 
         if [ "$TDGPT" == "true" ];then
-            python_venv_dir="/var/lib/taos/taosanode/venv"
+            python_venv_dir="${TDGPT_BASE_DIR}/venv"
             # Export TDGPT_MODELS for install.sh to use
             export TDGPT_MODELS
         elif [ "$IDMP" == "true" ];then
-            python_venv_dir="/usr/local/taos/idmp/venv"
+            python_venv_dir="$IDMP_VENV_DIR"
         else
             python_venv_dir="$HOME/.venv$PYTHON_VERSION"
         fi
@@ -977,7 +1299,7 @@ function install_python_packages() {
 
         yellow_echo "Installing Python $PYTHON_VERSION using uv..."
         uv python install "$PYTHON_VERSION"
-        uv venv --python "$PYTHON_VERSION" "$python_venv_dir" --clear
+        uv venv --python "$PYTHON_VERSION" "$python_venv_dir" --seed --clear
 
         yellow_echo "Installing Python packages..."
         source "$python_venv_dir"/bin/activate
@@ -1010,7 +1332,7 @@ function install_python_packages() {
             
             # Parse and install packages from requirements.txt
             yellow_echo "Installing packages from requirements.txt..."
-            local current_index="-i https://pypi.tuna.tsinghua.edu.cn/simple"
+            local current_index="${pip_index_args[*]}"
             local current_find_links=""
             
             # Install packages line by line, respecting index-url changes
@@ -1051,15 +1373,11 @@ function install_python_packages() {
             do
                 echo "installing: $pkg"
                 if [[ $pkg == *"--index-url"* ]]; then
-                    uv pip install $pkg
+                    uv pip install "$pkg"
                 else
-                    uv pip install $pkg -i https://pypi.tuna.tsinghua.edu.cn/simple
+                    uv pip install "$pkg" "${pip_index_args[@]}"
                 fi
             done
-        fi
-        # uv pip install $formated_python_packages -i https://pypi.tuna.tsinghua.edu.cn/simple
-        if [ "$TDGPT" == "true" ];then
-            uv pip install numpy==1.26.4 -i https://pypi.tuna.tsinghua.edu.cn/simple
         fi
         uv pip install --upgrade pip
 
@@ -1076,25 +1394,33 @@ function summary() {
     cp -f "$script_dir"/install.sh "$offline_env_dir"
     cp /etc/os-release "$offline_env_path"/os-release
 
-    # Save TDGPT_MODELS configuration for install.sh
-    if [ "$TDGPT" == "true" ] && [ -n "$TDGPT_MODELS" ]; then
-        echo "$TDGPT_MODELS" > "$offline_env_path"/tdgpt_models.txt
-        green_echo "TDgpt models to build/install: $TDGPT_MODELS"
-    elif [ "$TDGPT" == "true" ]; then
-        green_echo "TDgpt models to build/install: all"
+    if [ "$TDGPT" == "true" ]; then
+        if [ "$TDGPT_ALL" == "true" ]; then
+            green_echo "TDgpt: built all model venvs (main + timesfm/moirai/chronos/momentfm)"
+        else
+            green_echo "TDgpt: built main venv only (tdtsfm/timemoe); use --tdgpt-all to build extra model venvs"
+        fi
     fi
 
     tar zcf "$offline_env_dir.tar.gz" "$offline_env_dir"
     mv "$offline_env_dir.tar.gz" "$offline_env_path"
     green_echo "Offline env completed, please check $offline_env_path/$offline_env_dir.tar.gz"
-    # cp -r .[!.]* ~
-    # rpm -ivh --nodeps --force *.rpm
+
+    if [[ ${#BUILD_NOTES[@]} -gt 0 ]]; then
+        echo ""
+        yellow_echo "========== POST-BUILD NOTES =========="
+        for note in "${BUILD_NOTES[@]}"; do
+            yellow_echo "$note"
+        done
+        yellow_echo "======================================"
+    fi
 }
 
 function build_pkgs() {
     install_system_packages
     install_python_packages
     build_tdgpt_venvs
+    build_idmp_venvs
     download_docker
     download_docker_compose
     download_java
@@ -1179,12 +1505,16 @@ function install_binary_tools() {
         yellow_echo "Installing binary_tools ..."
         binary_dir=/usr/bin
         for tool in "$HOME/$offline_env_dir/binary_tools"/*; do
+            [ -e "$tool" ] || continue
             tool_name=$(basename "$tool")
             if [ -f "$binary_dir/$tool_name" ];then
+                yellow_echo "Backing up existing $tool_name"
                 mv "$binary_dir/$tool_name" "$binary_dir/$tool_name.bak"
             fi
             cp -rf "$tool" "$binary_dir"
+            chmod +x "$binary_dir/$tool_name"
         done
+        green_echo "Binary tools installed successfully"
     fi
 }
 
@@ -1192,7 +1522,7 @@ function check_system_pkgs() {
     # System packages verification
     if [[ -n "$SYSTEM_PACKAGES" ]]; then
         failed_system_pkgs=()
-        for pkg in $formated_system_packages;
+        for pkg in "${formated_system_packages[@]}";
         do
             if printf '%s\n' "${BINARY_TOOLS[@]}" | grep -q -x "$pkg"; then
                 if ! command -v "$pkg" >/dev/null 2>&1; then

@@ -317,3 +317,87 @@ docker exec -ti offline_pkgs_builder \
             --python-packages=\"numpy==1.26.4,pandas==1.5.0,scikit-learn,outlier_utils,statsmodels,pyculiarity,pmdarima,flask,matplotlib,uwsgi,torch==2.3.1+cpu --index-url https://download.pytorch.org/whl/cpu,--upgrade keras,requests,taospy,transformers==4.40.0,accelerate\" \
             --pkg-label=TDgpt-20250529 \
             --tdgpt=true"
+
+# openEuler 24.03-lts-sp1 + IDMP
+./build_offline_pkg.sh \
+    --mode=docker \
+    --os=openeuler --os-ver=24.03-lts-sp1 \
+    --action=build \
+    --system-packages=tar,gzip,curl,wget,vim,fontconfig,net-tools,libXrandr,wqy-microhei-fonts,libXcomposite,htop,tzdata,libXdamage,wqy-zenhei-fonts,mesa-libgbm,unzip,at-spi2-core,libxkbcommon,poppler-utils,glibc-all-langpacks,atk,libXfixes,dbus-libs,alsa-lib,glib2,ca-certificates,at-spi2-atk \
+    --python-version=3.12 \
+    --idmp=true \
+    --idmp-ver=1.0.13.0 \
+    --gh-token=YOUR_GH_TOKEN \
+    --install-java --java-version=21 \
+    --pkg-label=idmp-v1.0.13.0
+
+# openEuler 24.03-lts-sp1 + TDgpt
+./build_offline_pkg.sh \
+    --mode=docker \
+    --os=openeuler --os-ver=24.03-lts-sp1 \
+    --action=build \
+    --system-packages=tar,gcc,gcc-c++,glibc-devel,procps-ng \
+    --python-version=3.10 \
+    --tdgpt=true --tdgpt-all \
+    --tdengine-tsdb-ver=3.4.0.9 \
+    --pip-index-url=https://pypi.tuna.tsinghua.edu.cn/simple \
+    --pkg-label=tdgpt-3.4.0.9 \
+     --nexus-url=https://nexus.tdengine.net
+
+
+./build_offline_pkg.sh \
+    --mode=docker \
+    --os=openeuler --os-ver=24.03-lts-sp1 \
+    --action=build \
+    --python-version=3.12 \
+    --idmp=true \
+    --idmp-ver=1.0.13.0 \
+    --pip-index-url=https://pypi.tuna.tsinghua.edu.cn/simple \
+    --gh-token=YOUR_GH_TOKEN \
+    --install-java --java-version=21 \
+    --pkg-label=idmp-v1.0.13.0 \
+    --nexus-url=https://nexus.tdengine.net
+
+
+# TSDB（默认，不传也行）
+./build_offline_pkg.sh \
+    --mode=docker \
+    --os=openeuler \
+    --os-ver=24.03-lts-sp1 \
+    --deploy-type=tsdb \
+    --pkg-label=delivery-20260311 \
+    --nexus-url=https://nexus.tdengine.net
+
+# TDgpt
+./build_offline_pkg.sh \
+    --mode=docker \
+    --os=kylin \
+    --os-ver=v10-sp3-2403 \
+    --deploy-type=tdgpt \
+    --tdgpt-all \
+    --tdengine-tsdb-ver=3.4.0.8 \
+    --python-version=3.10 \
+    --pkg-label=tdgpt-3.4.0.8-0311 \
+    --nexus-url=https://nexus.tdengine.net
+
+./build_offline_pkg.sh \
+    --mode=docker \
+    --os=openeuler \
+    --os-ver=24.03-lts-sp1 \
+    --deploy-type=tdgpt \
+    --tdgpt-all \
+    --tdengine-tsdb-ver=3.4.0.8 \
+    --python-version=3.10 \
+    --pkg-label=tdgpt-3.4.0.8-0311 \
+    --nexus-url=https://nexus.tdengine.net
+
+# IDMP
+./build_offline_pkg.sh \
+    --mode=docker \
+    --os=openeuler \
+    --os-ver=24.03-lts-sp1 \
+    --deploy-type=idmp \
+    --idmp-ver=1.0.13.0 \
+    --gh-token=YOUR_GH_TOKEN \
+    --pkg-label=idmp-1.0.13.0 \
+    --nexus-url=https://nexus.tdengine.net

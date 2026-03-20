@@ -1,0 +1,67 @@
+name: 'Upload File to NAS'
+description: >
+  Upload a file to NAS via SCP using an SSH private key stored in a secret.
+  The SSH key is written to a temp file, used for scp, then immediately removed.
+
+inputs:
+  # ---- File to upload ----
+  file:
+    description: 'Absolute path to the local file to upload'
+    required: true
+
+  # ---- NAS connection (passed explicitly so the action can be reused across repos) ----
+  nas-ssh-key:
+    description: 'NAS SSH private key (PEM content)'
+    required: true
+  nas-host:
+    description: 'NAS hostname or IP address'
+    required: true
+  nas-port:
+    description: 'NAS SSH port'
+    required: false
+    default: '22'
+  nas-username:
+    description: 'NAS SSH username'
+    required: true
+
+  # ---- Destination ----
+  nas-dir:
+    description: 'Remote directory on NAS where the file will be placed'
+    required: true
+
+outputs:
+  nas-path:
+    description: 'Full remote path of the uploaded file (nas-dir/filename)'
+    value: ${{ steps.upload.outputs.nas_path }}
+  filename:
+    description: 'Basename of the uploaded file'
+    value: ${{ steps.upload.outputs.filename }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set script permissions
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+      run: chmod +x "$ACTION_PATH/../../scripts/upload_to_nas.sh"
+
+    - name: Upload to NAS
+      id: upload
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        INPUT_FILE: ${{ inputs.file }}
+        INPUT_SSH_KEY: ${{ inputs.nas-ssh-key }}
+        INPUT_HOST: ${{ inputs.nas-host }}
+        INPUT_PORT: ${{ inputs.nas-port }}
+        INPUT_USERNAME: ${{ inputs.nas-username }}
+        INPUT_NAS_DIR: ${{ inputs.nas-dir }}
+      run: |
+        "$ACTION_PATH/../../scripts/upload_to_nas.sh" \
+          "$INPUT_FILE" \
+          "$INPUT_SSH_KEY" \
+          "$INPUT_HOST" \
+          "$INPUT_PORT" \
+          "$INPUT_USERNAME" \
+          "$INPUT_NAS_DIR"

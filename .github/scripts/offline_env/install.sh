@@ -11,18 +11,78 @@ yellow_echo() { echo -e "${YELLOW}$*${RESET}"; }
 script_path=$(dirname "$(readlink -f "$0")")
 binary_dir=/usr/bin
 taos_anode_dir=/var/lib/taos/taosanode
+IDMP_VENV_DIR="/usr/local/taos/idmp/venv"  # Configurable IDMP venv directory
 
 # Determine python venv directory based on deployment type
 if [ -d "$script_path/idmp" ]; then
     # IDMP deployment uses dedicated venv path
-    python_venv_dir="/usr/local/taos/idmp/venv"
+    python_venv_dir="$IDMP_VENV_DIR"
 else
     # Default TDengine deployment
     python_venv_dir="${taos_anode_dir}/venv"
 fi
 venv_label=2
+java_installed=false
 EXPECTED_OS_RELEASE="$script_path"/os-release
 CURRENT_OS_RELEASE="/etc/os-release"
+
+# Detect system architecture and normalize to standard format
+# Returns: x86_64 or aarch64
+get_system_arch() {
+    local arch
+    arch=$(uname -m)
+    case "$arch" in
+        x86_64)
+            echo "x86_64"
+            ;;
+        aarch64|arm64)
+            echo "aarch64"
+            ;;
+        *)
+            red_echo "Unsupported architecture: $arch"
+            return 1
+            ;;
+    esac
+}
+
+# Verify architecture compatibility
+# Args: $1 - expected architecture, $2 - current architecture
+verify_arch_compatibility() {
+    local expected_arch="$1"
+    local current_arch="$2"
+    
+    # Normalize both architectures
+    local normalized_expected normalized_current
+    case "$expected_arch" in
+        x86_64|amd64|x64)
+            normalized_expected="x86_64"
+            ;;
+        aarch64|arm64)
+            normalized_expected="aarch64"
+            ;;
+        *)
+            normalized_expected="$expected_arch"
+            ;;
+    esac
+    
+    case "$current_arch" in
+        x86_64|amd64|x64)
+            normalized_current="x86_64"
+            ;;
+        aarch64|arm64)
+            normalized_current="aarch64"
+            ;;
+        *)
+            normalized_current="$current_arch"
+            ;;
+    esac
+    
+    if [ "$normalized_expected" != "$normalized_current" ]; then
+        red_echo "Architecture mismatch: package built for $expected_arch, but current system is $current_arch"
+        return 1
+    fi
+    return 0
+}
 
 compare_field() {
     local field=$1
@@ -61,8 +121,9 @@ function install_venv() {
             fi
         done
 
-        venv_dir=$(find . -type d -name ".venv*" -print -quit)
-        venv_name=$(basename "$venv_dir")
+        venv_dir=$(find "$script_path/py_venv" -maxdepth 1 -type d -name ".venv*" -print -quit)
+        venv_name=""
+        [[ -n "$venv_dir" ]] && venv_name=$(basename "$venv_dir")
         if [ -d "$script_path/py_venv/venv" ];then
             if [ -d "$script_path/idmp" ]; then
                 # IDMP deployment: install to /usr/local/taos/idmp/venv
@@ -83,6 +144,14 @@ function install_venv() {
                 done
             fi
             venv_label=0
+        elif [ -d "$script_path/py_venv/idmp_venv" ]; then
+            # IDMP venv built by build_idmp_venvs (saved as py_venv/idmp_venv/)
+            # Remove existing dest first to avoid nested venv/idmp_venv/... on re-runs
+            mkdir -p "$(dirname "$IDMP_VENV_DIR")"
+            rm -rf "$IDMP_VENV_DIR"
+            mkdir -p "$IDMP_VENV_DIR"
+            cp -r "$script_path/py_venv/idmp_venv/." "$IDMP_VENV_DIR/"
+            venv_label=0
         else
             venv_label=1
         fi
@@ -94,12 +163,16 @@ function install_binary_tools() {
     if [ -d "$script_path/binary_tools" ];then
         yellow_echo "Installing binary_tools ..."
         for tool in "$script_path/binary_tools"/*; do
+            [ -e "$tool" ] || continue
             tool_name=$(basename "$tool")
             if [ -f "$binary_dir/$tool_name" ];then
+                yellow_echo "Backing up existing $tool_name"
                 mv "$binary_dir/$tool_name" "$binary_dir/$tool_name.bak"
             fi
             cp -rf "$script_path/binary_tools/$tool_name" "$binary_dir"
+            chmod +x "$binary_dir/$tool_name"
         done
+        green_echo "Binary tools installed successfully"
     fi
 }
 
@@ -112,6 +185,19 @@ function install_docker() {
             local docker_version
             docker_version=$(cat "$script_path/docker/version.txt")
             yellow_echo "Docker version: $docker_version"
+        fi
+        
+        # Verify architecture compatibility
+        if [ -f "$script_path/docker/arch.txt" ]; then
+            local package_arch
+            package_arch=$(cat "$script_path/docker/arch.txt")
+            local current_arch
+            current_arch=$(get_system_arch) || exit 1
+            if ! verify_arch_compatibility "$package_arch" "$current_arch"; then
+                red_echo "Cannot install Docker: architecture mismatch"
+                exit 1
+            fi
+            green_echo "Docker architecture verification passed"
         fi
         
         # Extract Docker binaries
@@ -272,6 +358,19 @@ function install_docker_compose() {
             yellow_echo "Docker Compose version: $compose_version"
         fi
         
+        # Verify architecture compatibility
+        if [ -f "$script_path/docker_compose/arch.txt" ]; then
+            local package_arch
+            package_arch=$(cat "$script_path/docker_compose/arch.txt")
+            local current_arch
+            current_arch=$(get_system_arch) || exit 1
+            if ! verify_arch_compatibility "$package_arch" "$current_arch"; then
+                red_echo "Cannot install Docker Compose: architecture mismatch"
+                exit 1
+            fi
+            green_echo "Docker Compose architecture verification passed"
+        fi
+        
         # Backup existing docker-compose if it exists
         if [ -f /usr/local/bin/docker-compose ]; then
             yellow_echo "Backing up existing docker-compose to /usr/local/bin/docker-compose.bak"
@@ -300,6 +399,19 @@ function install_java() {
             local java_version
             java_version=$(cat "$script_path/java/version.txt")
             yellow_echo "Java version: $java_version"
+        fi
+        
+        # Verify architecture compatibility
+        if [ -f "$script_path/java/arch.txt" ]; then
+            local package_arch
+            package_arch=$(cat "$script_path/java/arch.txt")
+            local current_arch
+            current_arch=$(get_system_arch) || exit 1
+            if ! verify_arch_compatibility "$package_arch" "$current_arch"; then
+                red_echo "Cannot install Java: architecture mismatch"
+                exit 1
+            fi
+            green_echo "Java architecture verification passed"
         fi
         
         if [ -f "$script_path/java/tarname.txt" ]; then
@@ -345,7 +457,7 @@ EOF
                 yellow_echo "Java version:"
                 /opt/jre/bin/java -version 2>&1 | head -3
                 green_echo "Environment variables configured in /etc/profile.d/java.sh"
-                yellow_echo "Please run 'source /etc/profile.d/java.sh' or re-login to use java command"
+                java_installed=true
             else
                 red_echo "Java installation verification failed"
                 return 1
@@ -361,11 +473,28 @@ function install_idmp() {
     if [ -d "$script_path/idmp" ]; then
         yellow_echo "Installing IDMP packages..."
         
-        # Read architecture info
+        # Read architecture info from package
+        local package_arch=""
         if [ -f "$script_path/idmp/arch.txt" ]; then
-            local arch
-            arch=$(cat "$script_path/idmp/arch.txt")
-            yellow_echo "Architecture: $arch"
+            package_arch=$(cat "$script_path/idmp/arch.txt")
+            yellow_echo "Package architecture: $package_arch"
+        fi
+        
+        # Get current system architecture
+        local current_arch
+        current_arch=$(get_system_arch) || exit 1
+        
+        # Verify architecture compatibility if package arch is specified
+        if [ -n "$package_arch" ]; then
+            if ! verify_arch_compatibility "$package_arch" "$current_arch"; then
+                red_echo "Cannot install IDMP packages: architecture mismatch"
+                exit 1
+            fi
+            green_echo "Architecture verification passed"
+            arch="$package_arch"
+        else
+            yellow_echo "No arch.txt found, using current system architecture: $current_arch"
+            arch="$current_arch"
         fi
         
         # 1. Install Arthas (requires Java)
@@ -436,35 +565,25 @@ function install_system_packages() {
             compare_field "VERSION_ID" || exit 1
             for i in "$script_path/system_packages/"*.rpm;
             do
+                [ -e "$i" ] || continue
                 rpm -ivh --nodeps "$i"  >/dev/null 2>&1
             done
-            # rpm -Uvh --replacepkgs --nodeps "$script_path/system_packages/"*.rpm >/dev/null 2>&1
-            # yum localinstall -y "$script_path"/py_venv/system_packages/*.rpm >/dev/null 2>&1
         elif [ -f /etc/debian_version ]; then
             DEBIAN_FRONTEND=noninteractive dpkg -i "$script_path/system_packages/"*.deb >/dev/null 2>&1
         elif [ -f /etc/SuSE-release ] || [ -f /etc/os-release ]; then
-            # Check if it's a SUSE system or openEuler
-            if [ -f /etc/os-release ]; then
-                OS_ID=$(grep -E '^ID=' /etc/os-release | cut -d= -f2 | tr -d '"')
-                if [ "$OS_ID" = "sles" ] || [ "$OS_ID" = "opensuse-leap" ] || [ "$OS_ID" = "suse" ]; then
-                    compare_field "ID" || exit 1
-                    compare_field "VERSION_ID" || exit 1
-                    # Install RPM packages on SUSE systems
-                    for i in "$script_path/system_packages/"*.rpm;
-                    do
-                        rpm -ivh --nodeps "$i" >/dev/null 2>&1
-                    done
-                elif [ "$OS_ID" = "openEuler" ]; then
-                    compare_field "ID" || exit 1
-                    compare_field "VERSION_ID" || exit 1
-                    # Install RPM packages on openEuler systems
-                    for i in "$script_path/system_packages/"*.rpm;
-                    do
-                        rpm -ivh --nodeps "$i" >/dev/null 2>&1
-                    done
-                else
-                    red_echo "Unsupported Linux distribution.. Please install the packages manually."
-                fi
+            # Read OS_ID to precisely identify SUSE/openEuler; fall back to /etc/SuSE-release
+            # for legacy SUSE systems that predate /etc/os-release
+            OS_ID=$(grep -E '^ID=' /etc/os-release 2>/dev/null | cut -d= -f2 | tr -d '"')
+            if [ "$OS_ID" = "sles" ] || [ "$OS_ID" = "opensuse-leap" ] || [ "$OS_ID" = "suse" ] || \
+               [ "$OS_ID" = "openEuler" ] || [ -f /etc/SuSE-release ]; then
+                compare_field "ID" || exit 1
+                compare_field "VERSION_ID" || exit 1
+                # Install RPM packages on SUSE/openEuler systems
+                for i in "$script_path/system_packages/"*.rpm;
+                do
+                    [ -e "$i" ] || continue
+                    rpm -ivh --nodeps "$i" >/dev/null 2>&1
+                done
             else
                 red_echo "Unsupported Linux distribution.. Please install the packages manually."
             fi
@@ -474,8 +593,74 @@ function install_system_packages() {
     fi
 }
 
+# Relax SELinux enforcement on RPM-based distros (CentOS/RHEL/openEuler/Kylin).
+# TDgpt/IDMP services (uwsgi, Python dynamic library loading) may fail under
+# strict Enforcing mode.  Rather than globally disabling SELinux — which removes
+# host-level protection for ALL services — this function switches the machine to
+# Permissive mode for the current session only and prints a prominent warning.
+#
+# Permanent policy changes (writing SELINUX=disabled to /etc/selinux/config) are
+# intentionally NOT performed here.  If you need a permanent change, either:
+#   (a) craft an application-specific SELinux policy/boolean for uwsgi/tdgpt, or
+#   (b) pass --disable-selinux to this script and acknowledge the security impact.
+function relax_selinux() {
+    local selinux_config="/etc/selinux/config"
+
+    # Only applies to RPM-based systems that have SELinux
+    if [ ! -f "$selinux_config" ]; then
+        return 0
+    fi
+
+    # Check if SELinux is enabled
+    local current_mode
+    current_mode=$(getenforce 2>/dev/null || echo "Disabled")
+    if [ "$current_mode" = "Disabled" ] || [ "$current_mode" = "Permissive" ]; then
+        return 0
+    fi
+
+    yellow_echo "WARNING: SELinux is Enforcing. Switching to Permissive for this session only."
+    yellow_echo "  This does NOT permanently disable SELinux."
+    yellow_echo "  For a permanent, least-privilege fix, create an application-specific SELinux policy."
+    yellow_echo "  To permanently disable (not recommended), re-run with: --disable-selinux"
+
+    # Permissive for the current session — SELinux still logs denials but does not block
+    setenforce 0 2>/dev/null || true
+
+    green_echo "SELinux set to Permissive (current session only; Enforcing will resume after reboot)"
+}
+
+# Permanently disable SELinux — opt-in only, called when --disable-selinux is passed.
+# WARNING: This removes SELinux confinement for ALL processes on the host.
+function disable_selinux_permanent() {
+    local selinux_config="/etc/selinux/config"
+    if [ ! -f "$selinux_config" ]; then
+        return 0
+    fi
+
+    yellow_echo "WARNING: Permanently disabling SELinux as requested (--disable-selinux)."
+    yellow_echo "  This removes SELinux confinement for ALL services on this host."
+    setenforce 0 2>/dev/null || true
+    if grep -q '^SELINUX=' "$selinux_config"; then
+        sed -i 's/^SELINUX=.*/SELINUX=disabled/' "$selinux_config"
+    else
+        echo "SELINUX=disabled" >> "$selinux_config"
+    fi
+    green_echo "SELinux permanently disabled (effective after reboot)"
+}
+
 function main() {
+    # Parse optional flags
+    local disable_selinux_flag=false
+    for arg in "$@"; do
+        [[ "$arg" == "--disable-selinux" ]] && disable_selinux_flag=true
+    done
+
     if [ -f /etc/os-release ]; then
+        if [[ "$disable_selinux_flag" == true ]]; then
+            disable_selinux_permanent
+        else
+            relax_selinux
+        fi
         install_venv
         install_binary_tools
         install_docker
@@ -487,13 +672,30 @@ function main() {
         if [ $venv_label -eq 0 ];then
             green_echo "You can activate pyvenv via:\n\tsource $python_venv_dir/bin/activate"
         elif [ $venv_label -eq 1 ];then
-            green_echo "You can activate pyvenv via:\n\tsource $HOME/$venv_name/bin/activate"
+            if [[ -n "$venv_name" ]]; then
+                green_echo "You can activate pyvenv via:\n\tsource $HOME/$venv_name/bin/activate"
+            else
+                green_echo "No .venv* directory found under py_venv; skipping activation hint"
+            fi
         else
             green_echo "No pyvenv activate"
+        fi
+        if [ "$java_installed" = "true" ]; then
+            yellow_echo "Please run 'source /etc/profile.d/java.sh' or re-login to use java command"
+        fi
+        # SELinux reminder: only shown on RPM-based systems
+        if [ -f /etc/selinux/config ]; then
+            local cur_mode
+            cur_mode=$(getenforce 2>/dev/null || echo "Disabled")
+            if [ "$cur_mode" = "Permissive" ]; then
+                yellow_echo "SELinux is Permissive (session only). Consider a proper app policy for production."
+            elif grep -q '^SELINUX=disabled' /etc/selinux/config; then
+                yellow_echo "SELinux is permanently disabled. Re-enable and create an app policy when possible."
+            fi
         fi
     else
         red_echo "Cannot detect OS and set OS_ID and OS_VERSION to unknown"
     fi
 }
 
-main
+main "$@"
