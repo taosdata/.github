@@ -163,14 +163,53 @@ jobs:
         env:
           TEST_TYPE: "function_returns"
 
+      - name: Start upgrade compatibility tests
+        if: matrix.platform == 'linux'
+        run: |
+          log_dir="${WKDIR}/log/upgrade_compat"
+          mkdir -p "${WKDIR}/tmp" "$log_dir"
+          (
+            bash ${WKC}/test/ci/run_upgrade_compat.sh -w ${WKDIR} -l ${log_dir} -e \
+              >> "${log_dir}/ci_output.log" 2>&1
+            echo $? > "${WKDIR}/tmp/upgrade_compat_exit.txt"
+          ) &
+          echo $! > "${WKDIR}/tmp/upgrade_compat.pid"
+          echo "[upgrade_compat] Started in background, PID=$(cat ${WKDIR}/tmp/upgrade_compat.pid)"
+
       - name: Run function test cases
         if: matrix.platform == 'linux' || env.TARGET_BRANCH != '3.3.6'
         run: python3 test_runner.py
         env:
           TEST_TYPE: "function"
 
-      - name: Run upgrade compatibility tests
+      - name: Wait upgrade compatibility tests finished
         if: matrix.platform == 'linux'
-        run: python3 test_runner.py
-        env:
-          TEST_TYPE: "upgrade_compat"
+        run: |
+          pid_file="${WKDIR}/tmp/upgrade_compat.pid"
+          exit_file="${WKDIR}/tmp/upgrade_compat_exit.txt"
+          log_file="${WKDIR}/log/upgrade_compat/ci_output.log"
+
+          if [ ! -f "$pid_file" ]; then
+            echo "ERROR: upgrade compat was not started (no PID file found)"
+            exit 1
+          fi
+
+          pid=$(cat "$pid_file")
+          echo "[upgrade_compat] Waiting for process (PID: $pid) to finish..."
+          while kill -0 "$pid" 2>/dev/null; do
+            sleep 10
+          done
+          echo "[upgrade_compat] Process completed."
+
+          echo "==================== upgrade_compat output ===================="
+          [ -f "$log_file" ] && cat "$log_file" || echo "(no log file found)"
+          echo "==============================================================="
+
+          if [ -f "$exit_file" ]; then
+            ret=$(cat "$exit_file")
+            echo "[upgrade_compat] Exit code: $ret"
+            exit $ret
+          else
+            echo "ERROR: no exit code file found, assuming failure"
+            exit 1
+          fi
