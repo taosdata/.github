@@ -176,8 +176,7 @@ jobs:
           #
           if [ "$CURRENT_PLATFORM" = "linux" ]; then
             http_base=$(echo "$extra_param" | grep -oE 'http://[^ ]+' || true)
-            rel_path="${log_dir#${WKDIR}/log/}"
-            log_url="${http_base}/${rel_path}/"
+            log_url="${http_base}/upgrade_compat/PR-${PR_NUMBER}_${GITHUB_RUN_NUMBER}_${GITHUB_RUN_ATTEMPT}"
 
             compat_start=$(date +%s)
             container_name="upgrade-compat-${PR_NUMBER:-0}_${GITHUB_RUN_NUMBER:-0}_${GITHUB_RUN_ATTEMPT:-0}"
