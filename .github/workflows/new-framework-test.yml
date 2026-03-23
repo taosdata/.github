@@ -166,7 +166,7 @@ jobs:
       - name: Run function and upgrade compatibility tests
         if: (matrix.platform == 'linux' || env.TARGET_BRANCH != '3.3.6') && matrix.platform != 'windows'
         run: |
-          log_dir="${WKDIR}/log/upgrade_compat"
+          log_dir="${WKDIR}/log/upgrade_compat/PR-${PR_NUMBER}_${GITHUB_RUN_NUMBER}_${GITHUB_RUN_ATTEMPT}"
           mkdir -p "$log_dir"
           exit_file="${log_dir}/upgrade_compat_exit.txt"
           compat_pid=""
@@ -176,8 +176,8 @@ jobs:
           #
           if [ "$CURRENT_PLATFORM" = "linux" ]; then
             http_base=$(echo "$extra_param" | grep -oE 'http://[^ ]+' || true)
-            rel_path="${log_dir#${WKDIR}/}"
-            log_url="${http_base}/${rel_path}/ci_output.log"
+            rel_path="${log_dir#${WKDIR}/log/}"
+            log_url="${http_base}/${rel_path}/"
 
             compat_start=$(date +%s)
             container_name="upgrade-compat-${PR_NUMBER:-0}_${GITHUB_RUN_NUMBER:-0}_${GITHUB_RUN_ATTEMPT:-0}"
