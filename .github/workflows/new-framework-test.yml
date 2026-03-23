@@ -164,7 +164,7 @@ jobs:
           TEST_TYPE: "function_returns"
 
       - name: Run function and upgrade compatibility tests
-        if: matrix.platform == 'linux' || env.TARGET_BRANCH != '3.3.6'
+        if: (matrix.platform == 'linux' || env.TARGET_BRANCH != '3.3.6') && matrix.platform != 'windows'
         run: |
           log_dir="${WKDIR}/log/upgrade_compat"
           mkdir -p "$log_dir"
@@ -199,6 +199,9 @@ jobs:
           python3 test_runner.py
           func_ret=$?
 
+          #
+          # wait compat tests finished and check result (if started)
+          #
           if [ -n "$compat_pid" ]; then
             wait $compat_pid 2>/dev/null || true
             compat_ret=$(cat "$exit_file" 2>/dev/null || echo "1")
@@ -212,5 +215,12 @@ jobs:
 
           [ $func_ret -eq 0 ] || exit $func_ret
           [ -z "$compat_pid" ] || [ "${compat_ret:-0}" -eq 0 ] || exit $compat_ret
+        env:
+          TEST_TYPE: "function"
+
+      - name: Run function tests (Windows)
+        if: matrix.platform == 'windows' && env.TARGET_BRANCH != '3.3.6'
+        shell: cmd
+        run: python3 test_runner.py
         env:
           TEST_TYPE: "function"
