@@ -219,7 +219,6 @@ jobs:
 
       - name: Run function tests (Windows)
         if: matrix.platform == 'windows' && env.TARGET_BRANCH != '3.3.6'
-        shell: cmd
         run: python3 test_runner.py
         env:
           TEST_TYPE: "function"
