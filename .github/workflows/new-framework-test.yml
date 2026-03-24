@@ -163,8 +163,62 @@ jobs:
         env:
           TEST_TYPE: "function_returns"
 
-      - name: Run function test cases
-        if: matrix.platform == 'linux' || env.TARGET_BRANCH != '3.3.6'
+      - name: Run function and upgrade compatibility tests
+        if: (matrix.platform == 'linux' || env.TARGET_BRANCH != '3.3.6') && matrix.platform != 'windows'
+        run: |
+          log_dir="${WKDIR}/log/upgrade_compat/PR-${PR_NUMBER}_${GITHUB_RUN_NUMBER}_${GITHUB_RUN_ATTEMPT}"
+          mkdir -p "$log_dir"
+          exit_file="${log_dir}/upgrade_compat_exit.txt"
+          compat_pid=""
+
+          #
+          #  Run compatible cases in background
+          #
+          if [ "$CURRENT_PLATFORM" = "linux" ]; then
+            http_base=$(echo "$extra_param" | grep -oE 'http://[^ ]+' || true)
+            log_url="${http_base}/upgrade_compat/PR-${PR_NUMBER}_${GITHUB_RUN_NUMBER}_${GITHUB_RUN_ATTEMPT}"
+
+            compat_start=$(date +%s)
+            container_name="upgrade-compat-${PR_NUMBER:-0}_${GITHUB_RUN_NUMBER:-0}_${GITHUB_RUN_ATTEMPT:-0}"
+            echo "[upgrade_compat]  START >>>>>  cold/hot upgrade compatibility tests [$(date '+%Y-%m-%d %H:%M:%S')]"
+            echo "[upgrade_compat]  Docker container name: ${container_name}"
+
+            (
+              set +e +o pipefail
+              bash ${WKC}/test/ci/run_upgrade_compat.sh -w ${WKDIR} -l ${log_dir} 2>&1 | \
+                sed -u 's/^/[upgrade_compat] /'
+              echo ${PIPESTATUS[0]} > "$exit_file"
+            ) &
+            compat_pid=$!
+          fi
+
+          #
+          # Run function tests (foreground, blocking)
+          #
+          python3 test_runner.py
+          func_ret=$?
+
+          #
+          # wait compat tests finished and check result (if started)
+          #
+          if [ -n "$compat_pid" ]; then
+            wait $compat_pid 2>/dev/null || true
+            compat_ret=$(cat "$exit_file" 2>/dev/null || echo "1")
+            compat_end=$(date +%s)
+            elapsed=$((compat_end - compat_start))
+            status="success"
+            [ "$compat_ret" != "0" ] && status="failure"
+            echo "[upgrade_compat]  DONE  <<<<<  cold/hot upgrade compatibility tests [${elapsed}s]  ${status}"
+            echo "[upgrade_compat]  Log: ${log_url}"
+          fi
+
+          [ $func_ret -eq 0 ] || exit $func_ret
+          [ -z "$compat_pid" ] || [ "${compat_ret:-0}" -eq 0 ] || exit $compat_ret
+        env:
+          TEST_TYPE: "function"
+
+      - name: Run function tests (Windows)
+        if: matrix.platform == 'windows' && env.TARGET_BRANCH != '3.3.6'
         run: python3 test_runner.py
         env:
           TEST_TYPE: "function"
