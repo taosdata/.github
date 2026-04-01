@@ -175,21 +175,25 @@ jobs:
           #  Run compatible cases in background
           #
           if [ "$CURRENT_PLATFORM" = "linux" ]; then
-            http_base=$(echo "$extra_param" | grep -oE 'http://[^ ]+' || true)
-            log_url="${http_base}/upgrade_compat/PR-${PR_NUMBER}_${GITHUB_RUN_NUMBER}_${GITHUB_RUN_ATTEMPT}"
+            if [ ! -f "${WKC}/test/ci/run_upgrade_compat.sh" ]; then
+              echo "[upgrade_compat]  SKIP  -----  ${WKC}/test/ci/run_upgrade_compat.sh file not exists, skip upgrade compatibility tests"
+            else
+              http_base=$(echo "$extra_param" | grep -oE 'http://[^ ]+' || true)
+              log_url="${http_base}/upgrade_compat/PR-${PR_NUMBER}_${GITHUB_RUN_NUMBER}_${GITHUB_RUN_ATTEMPT}"
 
-            compat_start=$(date +%s)
-            container_name="upgrade-compat-${PR_NUMBER:-0}_${GITHUB_RUN_NUMBER:-0}_${GITHUB_RUN_ATTEMPT:-0}"
-            echo "[upgrade_compat]  START >>>>>  cold/hot upgrade compatibility tests [$(date '+%Y-%m-%d %H:%M:%S')]"
-            echo "[upgrade_compat]  Docker container name: ${container_name}"
+              compat_start=$(date +%s)
+              container_name="upgrade-compat-${PR_NUMBER:-0}_${GITHUB_RUN_NUMBER:-0}_${GITHUB_RUN_ATTEMPT:-0}"
+              echo "[upgrade_compat]  START >>>>>  cold/hot upgrade compatibility tests [$(date '+%Y-%m-%d %H:%M:%S')]"
+              echo "[upgrade_compat]  Docker container name: ${container_name}"
 
-            (
-              set +e +o pipefail
-              bash ${WKC}/test/ci/run_upgrade_compat.sh -w ${WKDIR} -l ${log_dir} 2>&1 | \
-                sed -u 's/^/[upgrade_compat] /'
-              echo ${PIPESTATUS[0]} > "$exit_file"
-            ) &
-            compat_pid=$!
+              (
+                set +e +o pipefail
+                bash ${WKC}/test/ci/run_upgrade_compat.sh -w ${WKDIR} -l ${log_dir} 2>&1 | \
+                  sed -u 's/^/[upgrade_compat] /'
+                echo ${PIPESTATUS[0]} > "$exit_file"
+              ) &
+              compat_pid=$!
+            fi
           fi
 
           #
