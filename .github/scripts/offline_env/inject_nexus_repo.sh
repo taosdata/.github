@@ -294,8 +294,8 @@ metadata_expire=1h
         _write_file "$dest" "$repo_content"
 
         # Override reposdir in yum.conf so yum only looks in our dedicated dir.
-        if grep -q '^reposdir=' /etc/yum.conf 2>/dev/null; then
-            sed -i "s|^reposdir=.*|reposdir=${nexus_reposdir}|" /etc/yum.conf
+        if grep -q '^[[:space:]]*reposdir[[:space:]]*=' /etc/yum.conf 2>/dev/null; then
+            sed -i "s|^[[:space:]]*reposdir[[:space:]]*=.*|reposdir=${nexus_reposdir}|" /etc/yum.conf
         else
             echo "reposdir=${nexus_reposdir}" >> /etc/yum.conf
         fi
