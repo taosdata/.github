@@ -86,7 +86,7 @@ _field() {
     local content="$1" field="$2"
     printf '%s' "$content" \
         | grep -i "^${field}=" | head -1 \
-        | cut -d= -f2- | tr -d '"' | tr -d "'"
+        | cut -d= -f2- | tr -d '"' | tr -d "'" || true
 }
 
 detect_os() {
