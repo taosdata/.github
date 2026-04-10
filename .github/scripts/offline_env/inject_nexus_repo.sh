@@ -42,7 +42,10 @@ red_echo()    { echo -e "${RED}$*${RESET}" >&2; }
 green_echo()  { echo -e "${GREEN}$*${RESET}"; }
 yellow_echo() { echo -e "${YELLOW}$*${RESET}"; }
 cyan_echo()   { echo -e "${CYAN}$*${RESET}"; }
-
+if [[ $EUID -ne 0 ]]; then
+    red_echo "ERROR: This script must be run as root"
+    exit 1
+fi
 # ======================== Defaults ============================
 NEXUS_URL="https://nexus.tdengine.net"
 OS_KEY=""           # auto-detect from /etc/os-release if empty
