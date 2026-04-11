@@ -56,7 +56,10 @@ red_echo()    { echo -e "${RED}$*${RESET}" >&2; }
 green_echo()  { echo -e "${GREEN}$*${RESET}"; }
 yellow_echo() { echo -e "${YELLOW}$*${RESET}"; }
 cyan_echo()   { echo -e "${CYAN}$*${RESET}"; }
-
+if [[ $EUID -ne 0 ]]; then
+    red_echo "ERROR: This script must be run as root"
+    exit 1
+fi
 # ======================== Defaults ============================
 NEXUS_URL="https://nexus.tdengine.net"
 OS_KEY=""              # auto-detect from /etc/os-release if empty
@@ -114,7 +117,7 @@ _field() {
     local content="$1" field="$2"
     printf '%s' "$content" \
         | grep -i "^${field}=" | head -1 \
-        | cut -d= -f2- | tr -d '"' | tr -d "'"
+        | cut -d= -f2- | tr -d '"' | tr -d "'" || true
 }
 
 detect_os() {
@@ -334,27 +337,26 @@ metadata_expire=1h
 "
         done
 
-        if [[ "$DISABLE_ORIGINALS" == true ]]; then
-            # Validate Nexus is reachable before disabling originals — if the URL is
-            # wrong the system must not be left without any working package source.
-            _check_nexus_reachability "${nexus_base}"
-            # Write nexus repo to the standard directory alongside existing repos,
-            # then rename originals so yum ignores them (.repo suffix required by yum).
-            # NOTE: package updates (e.g. centos-release) may restore original .repo
-            # files; re-run this script or exclude such packages with
-            # `yum update --exclude=centos-release` if that is a concern.
-            local dest="/etc/yum.repos.d/nexus-${OS_KEY}.repo"
-            yellow_echo "Writing: ${dest}  (${#subrepos[@]} sections)"
-            _write_file "$dest" "$repo_content"
-            _disable_original_repos "rpm"
-            green_echo "Done — Nexus yum repo active; original repos disabled"
+        # Write the nexus repo into a dedicated directory that yum.conf will
+        # point reposdir at.  This way, even if a package update (e.g. centos-release)
+        # restores files under /etc/yum.repos.d/, yum never loads them again.
+        local nexus_reposdir="/etc/yum.repos.d.nexus"
+        mkdir -p "$nexus_reposdir"
+        local dest="${nexus_reposdir}/nexus-${OS_KEY}.repo"
+        yellow_echo "Writing: ${dest}  (${#subrepos[@]} sections)"
+        _write_file "$dest" "$repo_content"
+
+        # Override reposdir in yum.conf so yum only looks in our dedicated dir.
+        if grep -q '^[[:space:]]*reposdir[[:space:]]*=' /etc/yum.conf 2>/dev/null; then
+            sed -i "s|^[[:space:]]*reposdir[[:space:]]*=.*|reposdir=${nexus_reposdir}|" /etc/yum.conf
         else
-            # Safe mode: write into the standard reposdir; existing repos are kept.
-            local dest="/etc/yum.repos.d/nexus-${OS_KEY}.repo"
-            yellow_echo "Writing: ${dest}  (${#subrepos[@]} sections)"
-            _write_file "$dest" "$repo_content"
-            green_echo "Done — Nexus yum repo added; original repos kept"
+            echo "reposdir=${nexus_reposdir}" >> /etc/yum.conf
         fi
+        yellow_echo "Set reposdir=${nexus_reposdir} in /etc/yum.conf"
+
+        # Also disable existing repo files to avoid confusion if reposdir is ever reset.
+        _disable_original_repos "rpm"
+        green_echo "Done — Nexus yum repo active; original repos disabled"
 
     # ---- DEB: write .list file ----
     else
