@@ -2,8 +2,19 @@
 # =============================================================================
 # inject_nexus_repo.sh — Inject a Nexus mirror repo into the current OS
 #
-# Writes a nexus-<os>.repo (RPM) or nexus-<os>.list (DEB) alongside the
-# original OS repo file.  The original repo is NEVER modified.
+# Adds a nexus-<os>.repo (RPM) or nexus-<os>.list + apt.conf.d ssl snippet
+# (DEB) so the system can pull packages from a private Nexus instance.
+#
+# Default behaviour (safe / additive):
+#   The existing OS repo files are LEFT INTACT.  Nexus is added alongside
+#   them; the package manager will use whichever source responds first.
+#
+# With --disable-originals (destructive / offline mode):
+#   Existing repo files are renamed to *.disabled so the Nexus mirror
+#   becomes the sole package source.  The Nexus URL is validated for
+#   reachability before any files are renamed.
+#   Original repo files are preserved with the .disabled suffix and can
+#   be restored manually by renaming them back.
 #
 # Run this script directly on the target machine.  All parameters have
 # defaults or are auto-detected, so a plain invocation with no args works
@@ -31,6 +42,9 @@
 #                              Default: auto-detect from /etc/os-release
 #   --os-ver=<ver>             OS version string (e.g. 22.04, v10-sp3-2403)
 #                              Default: auto-detect from /etc/os-release
+#   --disable-originals        Rename existing OS repo files to *.disabled and
+#                              (RPM) redirect yum reposdir to a nexus-only dir.
+#                              Default: off (original files are not touched)
 #   -h|--help                  Show this help and exit
 # =============================================================================
 
@@ -45,8 +59,9 @@ cyan_echo()   { echo -e "${CYAN}$*${RESET}"; }
 
 # ======================== Defaults ============================
 NEXUS_URL="https://nexus.tdengine.net"
-OS_KEY=""           # auto-detect from /etc/os-release if empty
-OS_VER=""           # auto-detect from /etc/os-release if empty
+OS_KEY=""              # auto-detect from /etc/os-release if empty
+OS_VER=""              # auto-detect from /etc/os-release if empty
+DISABLE_ORIGINALS=false  # rename existing repo files (opt-in)
 
 # ======================== Parse args ==========================
 show_usage() {
@@ -56,13 +71,26 @@ show_usage() {
 
 for arg in "$@"; do
     case "$arg" in
-        --nexus-url=*) NEXUS_URL="${arg#*=}" ;;
-        --os-key=*)    OS_KEY="${arg#*=}" ;;
-        --os-ver=*)    OS_VER="${arg#*=}" ;;
-        -h|--help)     show_usage ;;
+        --nexus-url=*)       NEXUS_URL="${arg#*=}" ;;
+        --os-key=*)          OS_KEY="${arg#*=}" ;;
+        --os-ver=*)          OS_VER="${arg#*=}" ;;
+        --disable-originals) DISABLE_ORIGINALS=true ;;
+        -h|--help)           show_usage ;;
         *) red_echo "Unknown argument: $arg"; exit 1 ;;
     esac
 done
+
+# ======================== Validate user-supplied OS_KEY =======
+# Validate early so a typo fails loudly before any OS changes are made.
+if [[ -n "$OS_KEY" ]]; then
+    case "$OS_KEY" in
+        ubuntu|debian|centos|kylin|openeuler) ;;
+        *)
+            red_echo "ERROR: Unsupported --os-key '${OS_KEY}' — must be one of: ubuntu debian centos kylin openeuler"
+            exit 1
+            ;;
+    esac
+fi
 
 # ======================== OS auto-detection ===================
 # Reads /etc/os-release from the host (native mode) or from the target
@@ -187,6 +215,30 @@ _write_file() {
     printf '%s' "$content" > "$dest"
 }
 
+# Validate that the Nexus base URL is reachable before making destructive changes.
+# Uses curl with a short timeout; skips check if curl is not available.
+_check_nexus_reachability() {
+    local url="$1"
+    if ! command -v curl &>/dev/null; then
+        yellow_echo "WARNING: curl not found — skipping Nexus reachability check"
+        return 0
+    fi
+    yellow_echo "Checking Nexus reachability: ${url}"
+    local http_code
+    http_code=$(curl -sko /dev/null -w '%{http_code}' \
+        --connect-timeout 5 --max-time 10 \
+        --insecure "${url}" 2>/dev/null || true)
+    # Accept any HTTP response (including 4xx/5xx) — a response means the host is up.
+    # Only treat connection-level failures (http_code empty or 000) as unreachable.
+    if [[ -z "$http_code" || "$http_code" == "000" ]]; then
+        red_echo "ERROR: Nexus URL '${url}' is unreachable (connection failed)."
+        red_echo "       Refusing to disable original repos to avoid leaving the system without package sources."
+        red_echo "       Fix the URL or omit --disable-originals if Nexus is not accessible."
+        exit 1
+    fi
+    yellow_echo "Nexus reachable (HTTP ${http_code})"
+}
+
 # Disable original OS repo files so yum/apt uses ONLY the Nexus repo.
 # RPM: renames *.repo  (excluding nexus-*.repo) → *.repo.disabled
 # DEB: renames sources.list and sources.list.d/*.list (excluding nexus-*.list)
@@ -260,8 +312,9 @@ inject() {
             nexus_repo="debian${debian_major}"
             ;;
         *)
-            yellow_echo "WARNING: No Nexus mapping for OS '${OS_KEY}', skipping"
-            exit 0
+            # Should never be reached after early validation, but guard anyway.
+            red_echo "ERROR: No Nexus mapping for OS_KEY '${OS_KEY}'"
+            exit 1
             ;;
     esac
 
@@ -281,26 +334,27 @@ metadata_expire=1h
 "
         done
 
-        # Write the nexus repo into a dedicated directory that yum.conf will
-        # point reposdir at.  This way, even if a package update (e.g. centos-release)
-        # restores files under /etc/yum.repos.d/, yum never loads them again.
-        local nexus_reposdir="/etc/yum.repos.d.nexus"
-        mkdir -p "$nexus_reposdir"
-        local dest="${nexus_reposdir}/nexus-${OS_KEY}.repo"
-        yellow_echo "Writing: ${dest}  (${#subrepos[@]} sections)"
-        _write_file "$dest" "$repo_content"
-
-        # Override reposdir in yum.conf so yum only looks in our dedicated dir.
-        if grep -q '^reposdir=' /etc/yum.conf 2>/dev/null; then
-            sed -i "s|^reposdir=.*|reposdir=${nexus_reposdir}|" /etc/yum.conf
+        if [[ "$DISABLE_ORIGINALS" == true ]]; then
+            # Validate Nexus is reachable before disabling originals — if the URL is
+            # wrong the system must not be left without any working package source.
+            _check_nexus_reachability "${nexus_base}"
+            # Write nexus repo to the standard directory alongside existing repos,
+            # then rename originals so yum ignores them (.repo suffix required by yum).
+            # NOTE: package updates (e.g. centos-release) may restore original .repo
+            # files; re-run this script or exclude such packages with
+            # `yum update --exclude=centos-release` if that is a concern.
+            local dest="/etc/yum.repos.d/nexus-${OS_KEY}.repo"
+            yellow_echo "Writing: ${dest}  (${#subrepos[@]} sections)"
+            _write_file "$dest" "$repo_content"
+            _disable_original_repos "rpm"
+            green_echo "Done — Nexus yum repo active; original repos disabled"
         else
-            echo "reposdir=${nexus_reposdir}" >> /etc/yum.conf
+            # Safe mode: write into the standard reposdir; existing repos are kept.
+            local dest="/etc/yum.repos.d/nexus-${OS_KEY}.repo"
+            yellow_echo "Writing: ${dest}  (${#subrepos[@]} sections)"
+            _write_file "$dest" "$repo_content"
+            green_echo "Done — Nexus yum repo added; original repos kept"
         fi
-        yellow_echo "Set reposdir=${nexus_reposdir} in /etc/yum.conf"
-
-        # Also disable existing repo files to avoid confusion if reposdir is ever reset.
-        _disable_original_repos "rpm"
-        green_echo "Done — Nexus yum repo active; original repos disabled"
 
     # ---- DEB: write .list file ----
     else
@@ -309,8 +363,8 @@ metadata_expire=1h
         codename=$(_field "$os_rel_content" "VERSION_CODENAME")
         [[ -z "$codename" ]] && codename=$(_field "$os_rel_content" "UBUNTU_CODENAME")
         if [[ -z "$codename" ]]; then
-            yellow_echo "WARNING: Cannot detect codename from /etc/os-release, skipping DEB injection"
-            exit 0
+            red_echo "ERROR: Cannot detect release codename from /etc/os-release — cannot configure apt source"
+            exit 1
         fi
 
         local components="main restricted universe multiverse"
@@ -334,8 +388,13 @@ Acquire::https::${nexus_host}::Verify-Host \"false\";
         local ssl_dest="/etc/apt/apt.conf.d/99nexus-ssl.conf"
         yellow_echo "Writing: ${ssl_dest}  (host=${nexus_host})"
         _write_file "$ssl_dest" "$ssl_conf"
-        _disable_original_repos "deb"
-        green_echo "Done — Nexus apt source active; original sources disabled"
+        if [[ "$DISABLE_ORIGINALS" == true ]]; then
+            _check_nexus_reachability "${nexus_base}"
+            _disable_original_repos "deb"
+            green_echo "Done — Nexus apt source active; original sources disabled"
+        else
+            green_echo "Done — Nexus apt source added; original sources kept"
+        fi
     fi
 }
 
