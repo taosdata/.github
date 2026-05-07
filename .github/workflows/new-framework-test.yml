@@ -118,15 +118,12 @@ jobs:
         continue-on-error: true
         run: |
           :: 前置清理：杀掉上次残留的进程，避免 DLL/日志文件被占用
-          taskkill /F ^
-            /IM "python.exe" ^
-            /IM "python3.exe" ^
-            /IM "taosd.exe" ^
-            /IM "tmq_sim.exe" ^
-            /IM "taosdump.exe" ^
-            /IM "taosBenchmark.exe" ^
-            >nul 2>&1
-          if %errorlevel% EQU 0 (echo Processes terminated) else (echo No processes found)
+          set "FOUND_PROCESS=0"
+          for %%I in (python.exe python3.exe taosd.exe tmq_sim.exe taosdump.exe taosBenchmark.exe) do (
+            taskkill /F /T /IM "%%~I" >nul 2>&1
+            if not errorlevel 1 set "FOUND_PROCESS=1"
+          )
+          if "%FOUND_PROCESS%"=="1" (echo Processes terminated) else (echo No processes found)
 
       - name: Debug env
         run: |
