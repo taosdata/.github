@@ -112,6 +112,22 @@ jobs:
           ref: "main"
           fetch-depth: 0
 
+      - name: init environment
+        if: always() && matrix.platform == 'windows'
+        shell: cmd
+        continue-on-error: true
+        run: |
+          :: 前置清理：杀掉上次残留的进程，避免 DLL/日志文件被占用
+          taskkill /F ^
+            /IM "python.exe" ^
+            /IM "python3.exe" ^
+            /IM "taosd.exe" ^
+            /IM "tmq_sim.exe" ^
+            /IM "taosdump.exe" ^
+            /IM "taosBenchmark.exe" ^
+            >nul 2>&1
+          if %errorlevel% EQU 0 (echo Processes terminated) else (echo No processes found)
+
       - name: Debug env
         run: |
           echo "platform=${{ matrix.platform }}"
