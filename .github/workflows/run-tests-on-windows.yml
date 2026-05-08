@@ -55,13 +55,13 @@ jobs:
         continue-on-error: true
         if: always()
         run: |
-          tasklist /FI "IMAGENAME eq python3.exe" /NH | findstr /I python3.exe >nul
-          if %errorlevel% equ 0 (
-              wmic process where "name='python3.exe'" delete
-              echo Python3 process has been terminated.
-          ) else (
-              echo No Python3 process was found.
+          :: 前置清理：杀掉上次残留的进程，避免 DLL/日志文件被占用
+          set "FOUND_PROCESS=0"
+          for %%I in (python.exe python3.exe taosd.exe tmq_sim.exe taosdump.exe taosBenchmark.exe) do (
+            taskkill /F /T /IM "%%~I" >nul 2>&1
+            if not errorlevel 1 set "FOUND_PROCESS=1"
           )
+          if "%FOUND_PROCESS%"=="1" (echo Processes terminated) else (echo No processes found)
 
       - name: Set environment variables based on condition
         run: |
@@ -248,13 +248,10 @@ jobs:
         continue-on-error: true
         if: always()
         run: |
-          taskkill /F ^
-            /IM "python.exe" ^
-            /IM "python3.exe" ^
-            /IM "taosd.exe" ^
-            /IM "tmq_sim.exe" ^
-            /IM "taosdump.exe" ^
-            /IM "taosBenchmark.exe" ^
-            >nul 2>&1
-          if %errorlevel% EQU 0 (echo Processes terminated) else (echo No processes found)
+          set "FOUND_PROCESS=0"
+          for %%I in (python.exe python3.exe taosd.exe tmq_sim.exe taosdump.exe taosBenchmark.exe) do (
+            taskkill /F /T /IM "%%~I" >nul 2>&1
+            if not errorlevel 1 set "FOUND_PROCESS=1"
+          )
+          if "%FOUND_PROCESS%"=="1" (echo Processes terminated) else (echo No processes found)
           exit /b 0
