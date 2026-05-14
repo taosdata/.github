@@ -76,7 +76,7 @@ class RefLockErrorHandler(ABC):
 
 class Type1Handler(RefLockErrorHandler):
     # error: cannot lock ref 'refs/remotes/origin/fix/3.0/TD-32817': is at 7af5 but expected eaba
-    # match the branch name before ‘is at’ with a regular expression
+    # match the branch name before 'is at' with a regular expression
     def match(self, error_output: str) -> bool:
         return "is at" in error_output and "but expected" in error_output
 
@@ -89,7 +89,7 @@ class Type1Handler(RefLockErrorHandler):
 
 
 class Type2Handler(RefLockErrorHandler):
-    # match the branch name before ‘exists; cannot create’ with a regular expression
+    # match the branch name before 'exists; cannot create' with a regular expression
     def match(self, error_output: str) -> bool:
         return "exists; cannot create" in error_output
 
@@ -154,9 +154,36 @@ def handle_error(error_output):
         return False
 
 
+def clean_gc_log():
+    """Remove stale .git/gc.log to unblock automatic gc and prevent fetch from hanging."""
+    gc_log = os.path.join(".git", "gc.log")
+    if os.path.exists(gc_log):
+        print(f"Found stale {gc_log}, removing to unblock gc.")
+        try:
+            os.remove(gc_log)
+        except OSError as e:
+            print(f"Failed to remove {gc_log}: {e}")
+
+
+def run_gc():
+    """Run git gc to repack loose objects and prevent slow fetches."""
+    print("Running: git gc --auto")
+    result = subprocess.run(
+        ["git", "gc", "--auto"],
+        capture_output=True,
+        text=True,
+        timeout=300,
+    )
+    if result.returncode != 0:
+        print(f"git gc --auto failed: {result.stderr}")
+    else:
+        print("git gc --auto successful.")
+    return result
+
+
 def git_fetch():
     print("Running: git fetch")
-    result = subprocess.run(["git", "fetch"], capture_output=True, text=True)
+    result = subprocess.run(["git", "fetch"], capture_output=True, text=True, timeout=600)
     if result.returncode != 0:
         print("git fetch failed:")
         print(result.stderr)
@@ -168,7 +195,7 @@ def git_fetch():
 def git_prune():
     print("Running: git remote prune origin")
     result = subprocess.run(
-        ["git", "remote", "prune", "origin"], capture_output=True, text=True
+        ["git", "remote", "prune", "origin"], capture_output=True, text=True, timeout=300
     )
     if result.returncode != 0:
         print("git remote prune origin failed:")
@@ -179,6 +206,9 @@ def git_prune():
 
 
 def main():
+    clean_gc_log()
+    run_gc()
+
     max_retries = 2
     for attempt in range(max_retries + 1):
         fetch_result = git_fetch()

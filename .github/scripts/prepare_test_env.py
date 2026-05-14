@@ -336,8 +336,9 @@ class TestPreparer:
             "extra_param", extra_param, env_file=os.getenv("GITHUB_ENV", "")
         )
 
-    def _execute_remote_command(self, host_config, command):
+    def _execute_remote_command(self, host_config, command, timeout=600):
         """Execute a command on remote host via SSH"""
+        host = host_config["host"]
         try:
             import paramiko
 
@@ -352,7 +353,8 @@ class TestPreparer:
             )
 
             # Execute command
-            stdin, stdout, stderr = ssh.exec_command(command)
+            logger.info(f"[{host}] Executing: {command[:120]}...")
+            stdin, stdout, stderr = ssh.exec_command(command, timeout=timeout)
             stdout_text = stdout.read().decode("utf-8")
             stderr_text = stderr.read().decode("utf-8")
             exit_code = stdout.channel.recv_exit_status()
@@ -361,9 +363,12 @@ class TestPreparer:
 
             success = exit_code == 0
             output = stdout_text if success else stderr_text
+            if not success:
+                logger.warning(f"[{host}] Command failed (exit {exit_code}): {stderr_text[:200]}")
             return success, output
 
         except Exception as e:
+            logger.error(f"[{host}] Remote command error: {e}")
             return False, str(e)
 
     def _prepare_repositories_remote(self, host_config):
