@@ -8,8 +8,10 @@ from abc import ABC, abstractmethod
 def remove_empty_parents(path: str, stop_dir: str):
     current = os.path.dirname(path)
     stop_dir = os.path.normpath(stop_dir)
-    while current and os.path.normpath(current).startswith(stop_dir):
-        if os.path.normpath(current) == stop_dir:
+    while current:
+        norm_current = os.path.normpath(current)
+        # Stop at stop_dir itself or if path is outside stop_dir
+        if norm_current == stop_dir or not norm_current.startswith(stop_dir + os.sep):
             break
         try:
             os.rmdir(current)
@@ -68,9 +70,22 @@ class RefLockErrorHandler(ABC):
         ref_file = os.path.join(".git", branch_name)
         reflog_file = os.path.join(".git", "logs", branch_name)
 
-        if not os.path.exists(ref_file):
+        if not os.path.isfile(ref_file):
+            if os.path.isdir(ref_file):
+                # ref path is a directory (conflict case), remove it
+                try:
+                    os.rmdir(ref_file)
+                    print(f"Removed conflicting ref directory: {ref_file}")
+                except OSError:
+                    pass
             remove_empty_parents(ref_file, os.path.join(".git", "refs"))
-        if not os.path.exists(reflog_file):
+        if not os.path.isfile(reflog_file):
+            if os.path.isdir(reflog_file):
+                try:
+                    os.rmdir(reflog_file)
+                    print(f"Removed conflicting reflog directory: {reflog_file}")
+                except OSError:
+                    pass
             remove_empty_parents(reflog_file, os.path.join(".git", "logs", "refs"))
 
 
@@ -80,7 +95,7 @@ class Type1Handler(RefLockErrorHandler):
     def match(self, error_output: str) -> bool:
         return "is at" in error_output and "but expected" in error_output
 
-    def parse_branch(self, error_output: str) -> str:
+    def parse_branch(self, error_output: str) -> Optional[str]:
         # 匹配 cannot lock ref 部分，兼容中英文
         match = re.search(
             r"cannot lock ref '(refs/remotes/origin/[^']+)': is at", error_output
@@ -93,7 +108,7 @@ class Type2Handler(RefLockErrorHandler):
     def match(self, error_output: str) -> bool:
         return "exists; cannot create" in error_output
 
-    def parse_branch(self, error_output: str) -> str:
+    def parse_branch(self, error_output: str) -> Optional[str]:
         match = re.search(r"'(refs/remotes/origin/[^']+)' exists;", error_output)
         return match.group(1) if match else None
 
@@ -102,7 +117,7 @@ class Type2Handler(RefLockErrorHandler):
         # cannot lock ref 'refs/remotes/origin/dev':
         # 'refs/remotes/origin/dev/trigger-ci-for-3.0' exists; cannot create 'refs/remotes/origin/dev'
         match = re.search(
-            r"cannot lock ref '(refs/remotes/origin/[^']+)': '(refs/remotes/origin/[^']+)' exists; cannot create '(refs/remotes/origin/[^']+)'",
+            r"cannot lock ref '(refs/remotes/origin/[^']+)':\s*'(refs/remotes/origin/[^']+)' exists; cannot create '(refs/remotes/origin/[^']+)'",
             error_output,
         )
         if match:
@@ -124,7 +139,7 @@ class Type3Handler(RefLockErrorHandler):
     def match(self, error_output: str) -> bool:
         return "Unable to create" in error_output and "File exists" in error_output
 
-    def parse_branch(self, error_output: str) -> str:
+    def parse_branch(self, error_output: str) -> Optional[str]:
         match = re.search(
             r"(?:error|references): cannot lock ref '(refs/remotes/origin/[^']+)': Unable to",
             error_output,
