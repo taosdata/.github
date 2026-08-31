@@ -72,7 +72,7 @@ jobs:
       WKC: ${{ matrix.WKC }}
       IS_TDINTERNAL: ${{ inputs.tdinternal }}
       CURRENT_PLATFORM: ${{ matrix.platform }}
-      TARGET_BRANCH: ${{ inputs.specified_target_branch }}
+      TARGET_BRANCH: ${{ inputs.specified_tdengine_test_branch }}
       PYTHONIOENCODING: utf-8
       PYTHONUTF8: "1"
       LANG: en_US.UTF-8      
@@ -96,48 +96,61 @@ jobs:
           echo "Setting SOURCE_BRANCH_TDENGINE and SOURCE_BRANCH_TDINTERNAL based on inputs..."
           echo "SOURCE_BRANCH_TDINTERNAL=${{ inputs.specified_tdinternal_test_branch }}" >> $GITHUB_ENV
           echo "SOURCE_BRANCH_TDENGINE=${{ inputs.specified_tdengine_test_branch }}" >> $GITHUB_ENV
+          echo "TARGET_BRANCH=${{ inputs.specified_tdengine_test_branch }}" >> $GITHUB_ENV
           echo "Current step debug (GITHUB_ENV content):"
           cat $GITHUB_ENV
 
       - name: Prepare TDinternal repository
+        env:
+          REPO_BRANCH: ${{ env.SOURCE_BRANCH_TDINTERNAL }}
         run: |
-          echo "Preparing TDinternal repository..."
-          cd ${{ env.WK }}
+          set -euo pipefail
+          echo "Preparing TDinternal repository (branch: ${REPO_BRANCH})..."
+          cd "${{ env.WK }}"
           git reset --hard
-          git clean -f
+          git clean -fd
           git remote prune origin
-          git fetch
-          if git rev-parse --verify origin/${{ env.SOURCE_BRANCH_TDINTERNAL }} >/dev/null 2>&1; then
-            git checkout ${{ env.SOURCE_BRANCH_TDINTERNAL }}
-          else
-            echo "Branch ${{ env.SOURCE_BRANCH_TDINTERNAL }} does not exist. Switching to default branch 3.0."
-            git switch -c 3.0 origin/3.0
+          git fetch origin
+          if ! git rev-parse --verify "origin/${REPO_BRANCH}" >/dev/null 2>&1; then
+            echo "Branch '${REPO_BRANCH}' does not exist on origin."
+            git branch -r | head -20
+            exit 1
           fi
-          echo "Pulling latest code from 3.0 branch..."
-          git pull || { echo "Failed to pull the latest code."; exit 1; }
-          #git pull origin 3.0 || { echo "Failed to pull from 3.0 branch"; exit 1; }
+          if git show-ref --verify --quiet "refs/heads/${REPO_BRANCH}"; then
+            git switch "${REPO_BRANCH}"
+          else
+            git switch -c "${REPO_BRANCH}" "origin/${REPO_BRANCH}"
+          fi
+          echo "Pulling latest code from ${REPO_BRANCH}..."
+          git pull --ff-only origin "${REPO_BRANCH}" || git pull origin "${REPO_BRANCH}"
           echo "Current branch: $(git branch --show-current)"
-          echo "Current commit:" && git log -1 --oneline  
+          git log -1 --oneline
 
       - name: Prepare TDengine repository
+        env:
+          REPO_BRANCH: ${{ env.SOURCE_BRANCH_TDENGINE }}
         run: |
-          echo "Preparing TDengine repository..."
-          cd ${{ env.WKC }}
+          set -euo pipefail
+          echo "Preparing TDengine repository (branch: ${REPO_BRANCH})..."
+          cd "${{ env.WKC }}"
           git reset --hard
-          git clean -f
+          git clean -fd
           git remote prune origin
-          git fetch
-          if git rev-parse --verify origin/${{ env.SOURCE_BRANCH_TDENGINE }} >/dev/null 2>&1; then
-            git switch ${{ env.SOURCE_BRANCH_TDENGINE }}
-          else
-            echo "Branch ${{ env.SOURCE_BRANCH_TDENGINE }} does not exist. Switching to default branch 3.0."
-            git switch -c 3.0 origin/3.0
+          git fetch origin
+          if ! git rev-parse --verify "origin/${REPO_BRANCH}" >/dev/null 2>&1; then
+            echo "Branch '${REPO_BRANCH}' does not exist on origin."
+            git branch -r | head -20
+            exit 1
           fi
-          echo "Pulling latest code from 3.0 branch..."
-          git pull || { echo "Failed to pull the latest code."; exit 1; }
-          #git pull origin 3.0 || { echo "Failed to pull from 3.0 branch"; exit 1; }
+          if git show-ref --verify --quiet "refs/heads/${REPO_BRANCH}"; then
+            git switch "${REPO_BRANCH}"
+          else
+            git switch -c "${REPO_BRANCH}" "origin/${REPO_BRANCH}"
+          fi
+          echo "Pulling latest code from ${REPO_BRANCH}..."
+          git pull --ff-only origin "${REPO_BRANCH}" || git pull origin "${REPO_BRANCH}"
           echo "Current branch: $(git branch --show-current)"
-          echo "Current commit:" && git log -1 --oneline  
+          git log -1 --oneline
 
       - name: Build docker or repo
         run: python3 build.py
