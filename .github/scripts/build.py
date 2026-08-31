@@ -11,6 +11,7 @@ class TestBuild:
         self.wkdir = self.utils.get_env_var('WKDIR')
         self.build_type = self.utils.get_env_var('BUILD_TYPE')
         self.target_branch = self.utils.get_env_var('TARGET_BRANCH')
+        self.tdengine_branch = self.utils.get_env_var('SOURCE_BRANCH_TDENGINE')
         self.wk = self.utils.path(os.path.join(self.wkdir, 'TDinternal'))
         self.wkc = self.utils.path(os.path.join(self.wk, 'community'))
         self.platform = platform.system().lower()
@@ -47,13 +48,19 @@ class TestBuild:
             if os.path.isfile(p):
                 return p
         return None
+
+    def _taosadapter_branch(self):
+        """container_build.sh -b selects taosadapter git tag; keep it aligned with TDengine."""
+        branch = (self.tdengine_branch or self.target_branch or 'main').strip()
+        return branch or 'main'
     
     def docker_build(self):
         """Build TDinternal repo in docker, just for linux platform"""
+        adapter_branch = self._taosadapter_branch()
         cmds = [
             'date',
             f'rm -rf {self.wkc}/debug',
-            f'cd {self.wkc}/test/ci && time ./container_build.sh -w {self.wkdir} -e -b 3.0' # -b {self.target_branch}
+            f'cd {self.wkc}/test/ci && time ./container_build.sh -w {self.wkdir} -e -b {adapter_branch}'
         ]
         self.utils.run_commands(cmds)
 
