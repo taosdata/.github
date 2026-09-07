@@ -63,7 +63,7 @@ jobs:
 
     needs: validate_tests
 
-    timeout-minutes: 1000
+    timeout-minutes: 1440
 
     env:
       CONTAINER_NAME: 'taosd-test'
