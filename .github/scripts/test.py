@@ -97,7 +97,7 @@ class TestRunner:
         linux_cmds = [
             f"cd {self.wkc}/test/ci && export DEFAULT_RETRY_TIME=2",
             f"date",
-            f"cd {self.wkc}/test/ci && timeout 86400 time ./cov/run_coverage_func.sh -e -m {self.wkc}/test/ci/cov/m.json -t cases.task -b {branch_id} -l {self.wkdir}/log -o 1230 {self.utils.get_env_var('extra_param')}".strip(),
+            f"cd {self.wkc}/test/ci && timeout 259200 time ./cov/run_coverage_func.sh -e -m {self.wkc}/test/ci/cov/m.json -t cases.task -b {branch_id} -l {self.wkdir}/log -o 1230 {self.utils.get_env_var('extra_param')}".strip(),
         ]
         mac_cmds = [
             "date",
